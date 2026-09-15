@@ -16,9 +16,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<!-- Used to turn a bill into an actual PDF file so it can be shared/attached on WhatsApp -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --bg:#F5F8F7;
@@ -91,12 +88,6 @@
     #mobileTopbar .hamburger{width:26px;height:20px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;flex-shrink:0;}
     #mobileTopbar .hamburger span{display:block;height:2.5px;background:#fff;border-radius:2px;}
     #mobileTopbar .title{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;}
-    #mobileTopbar .mobile-settings-btn{margin-left:auto;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(255,255,255,0.12);cursor:pointer;flex-shrink:0;}
-    #mobileTopbar .mobile-settings-btn:hover{background:rgba(255,255,255,0.22);}
-    /* The floating gear button sits fixed at bottom-right, which physically overlaps the last
-       column of horizontally-scrolling tables (e.g. the Ledger's WhatsApp/Delete buttons) once
-       scrolled into view — moving Settings into the top bar above avoids that entirely. */
-    .settings-fab{display:none;}
 
     #mobileNavOverlay{
       display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:1001;
@@ -181,9 +172,6 @@
   button.sm{padding:4px 8px;font-size:10px;}
   button.icon-btn{display:inline-flex;align-items:center;justify-content:center;padding:5px 7px;}
   button.icon-btn svg{display:block;}
-  /* Ledger table row actions (WhatsApp + Delete): generous gap and tap targets so they don't
-     get fat-fingered on phones. */
-  .ledger-row-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
 
   /* Cards / metrics */
   .grid{display:grid;gap:13px;}
@@ -219,11 +207,6 @@
   .row.c2{grid-template-columns:1fr 1fr;}
   .row.c3{grid-template-columns:1fr 1fr 1fr;}
   .row.c4{grid-template-columns:1fr 1fr 1fr 1fr;}
-  /* Grid columns default to a min-width based on their content's intrinsic size — a native
-     date-picker input refuses to shrink below a certain width, which was pushing it past its
-     column and overlapping the next field. min-width:0 lets columns actually shrink to fit. */
-  .row > .field{min-width:0;overflow:hidden;}
-  .field input,.field select{min-width:0;max-width:100%;}
 
   .empty{text-align:center;padding:32px 16px;color:var(--muted);}
   .empty h3{color:var(--text);margin-bottom:5px;font-size:13px;}
@@ -253,13 +236,13 @@
   }
   #printOverlay{position:fixed;inset:0;background:rgba(10,20,17,0.5);display:none;align-items:flex-start;justify-content:center;overflow-y:auto;z-index:1000;padding:30px 0;}
   #printOverlay.show{display:flex;}
-  #printArea, .invoice-doc{background:#fff;width:720px;padding:36px 40px;border-radius:8px;}
-  #printArea h2, .invoice-doc h2{font-family:'Source Serif 4',serif;font-size:22px;color:var(--primary-dark);}
-  #printArea table, .invoice-doc table{margin-top:14px;}
-  #printArea .inv-head, .invoice-doc .inv-head{display:flex;justify-content:space-between;border-bottom:2px solid var(--primary-dark);padding-bottom:14px;margin-bottom:14px;}
-  #printArea .inv-meta, .invoice-doc .inv-meta{text-align:right;font-size:12.5px;color:var(--muted);}
-  #printArea .inv-block, .invoice-doc .inv-block{font-size:13px;margin-bottom:14px;}
-  #printArea .inv-block b, .invoice-doc .inv-block b{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px;}
+  #printArea{background:#fff;width:720px;padding:36px 40px;border-radius:8px;}
+  #printArea h2{font-family:'Source Serif 4',serif;font-size:22px;color:var(--primary-dark);}
+  #printArea table{margin-top:14px;}
+  #printArea .inv-head{display:flex;justify-content:space-between;border-bottom:2px solid var(--primary-dark);padding-bottom:14px;margin-bottom:14px;}
+  #printArea .inv-meta{text-align:right;font-size:12.5px;color:var(--muted);}
+  #printArea .inv-block{font-size:13px;margin-bottom:14px;}
+  #printArea .inv-block b{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px;}
 
   .top-actions{display:flex;gap:6px;flex-wrap:wrap;}
 
@@ -309,26 +292,6 @@
   }
   @media (max-width:700px){
     .row.c2,.row.c3{grid-template-columns:1fr;}
-    /* Ledger: keep Date/Amount/Note and From/To on one line each, even on phones —
-       just make the columns narrower instead of stacking to 3-4 lines. */
-    #view-payments .row.c2,#view-payments .row.c3{grid-template-columns:1fr 1fr 1fr;}
-    #view-payments .row.c2{grid-template-columns:1fr 1fr;}
-    #view-payments .field label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    #view-payments .field input{padding:6px 6px;font-size:12px;}
-    .ledger-row-actions{gap:14px;}
-    .ledger-row-actions button.icon-btn{padding:9px 11px;min-width:38px;min-height:38px;}
-    .ledger-row-actions button.icon-btn svg{width:22px;height:22px;}
-    .ledger-row-actions button.danger{padding:9px 12px;min-height:38px;}
-    /* Ledger table (Date/Particulars/Debit/Credit/Balance/Actions): a 6-column table can't fit
-       a narrow phone screen without shrinking to the point of overlap, so on mobile it becomes
-       a stack of labeled rows instead — same data, no horizontal scrolling or squeezed columns. */
-    #payLedgerTable thead{display:none;}
-    #payLedgerTable, #payLedgerTable tbody, #payLedgerTable tr, #payLedgerTable td{display:block;width:100%;}
-    #payLedgerTable tr{padding:10px 12px;border-bottom:1px solid var(--border);}
-    #payLedgerTable td{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0;border:none;text-align:right;}
-    #payLedgerTable td::before{content:attr(data-label);font-size:10.5px;font-weight:600;color:var(--muted);text-align:left;flex-shrink:0;}
-    #payLedgerTable td[data-label="Actions"]::before{display:none;}
-    #payLedgerTable td[data-label="Actions"]{justify-content:flex-end;padding-top:8px;}
     .bill-layout{grid-template-columns:1fr 2fr;gap:6px;}
     .bill-layout .panel{padding:10px 8px;}
     .bill-layout .panel h3{font-size:11px;margin-bottom:7px;}
@@ -368,7 +331,6 @@
   <div id="mobileTopbar">
     <div class="hamburger" id="btnOpenMobileNav"><span></span><span></span><span></span></div>
     <div class="title">MediBill</div>
-    <div class="mobile-settings-btn" id="btnMobileSettings" title="Shop Settings">⚙</div>
   </div>
 
   <!-- Dims/reveals the rest of the page behind the mobile drawer; tapping it closes the drawer -->
@@ -434,6 +396,7 @@
         <div class="nav-subtoggle" data-view="drlist">Dr List</div>
         <div class="nav-subtoggle" data-view="investment">Dr Investment</div>
         <div class="nav-subtoggle" data-view="drreport">Report</div>
+        <div class="nav-subtoggle" data-view="schedule">Schedule</div>
       </div>
     </div>
     <div class="nav-submenu" id="submenu-notes">
@@ -649,11 +612,7 @@
       <div class="bill-layout">
         <div class="panel">
           <h3>Customer details</h3>
-          <div class="field chemist-picker">
-            <label>Customer name</label>
-            <input id="custName" autocomplete="off" placeholder="Walk-in customer">
-            <div class="chemist-suggestions" id="custNameSuggestBox" style="display:none;"></div>
-          </div>
+          <div class="field"><label>Customer name</label><input id="custName" list="custNameSuggestions" placeholder="Walk-in customer"></div>
           <div class="field"><label>Phone number</label><input id="custPhone" placeholder="Optional"></div>
           <button class="ghost sm" id="btnQuickAddParty" type="button" style="margin:-6px 0 10px;">+ Add new party</button>
           <h3 style="margin-top:16px;">Cart</h3>
@@ -807,7 +766,7 @@
             </div>
 
             <div class="panel" style="padding:0;overflow-x:auto;">
-              <table id="payLedgerTable">
+              <table>
                 <thead><tr><th>Date</th><th>Particulars</th><th class="num">Debit (billed) ₹</th><th class="num">Credit (received) ₹</th><th class="num">Balance ₹</th><th></th></tr></thead>
                 <tbody id="payLedgerBody"></tbody>
               </table>
@@ -1017,6 +976,18 @@
       </div>
     </div>
 
+    <!-- DOCTOR SCHEDULE -->
+    <div class="view" id="view-schedule">
+      <div class="page-head"><div><h2>Schedule</h2><p>A repeating weekly visit plan, day-wise (not date-wise). Week 1 &amp; Week 3 follow the same plan; Week 2 &amp; Week 4 follow the same plan.</p></div></div>
+      <div class="panel" style="padding:12px;">
+        <div class="nav-subtoggle-row" style="flex-direction:row;max-width:420px;margin:0;padding:0;">
+          <div class="sched-week-tab open" data-week="week1" style="flex:1;text-align:center;padding:9px 4px;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;background:var(--accent);color:#fff;">Week 1 &amp; 3</div>
+          <div class="sched-week-tab" data-week="week2" style="flex:1;text-align:center;padding:9px 4px;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;background:rgba(0,0,0,0.05);color:var(--muted);">Week 2 &amp; 4</div>
+        </div>
+      </div>
+      <div id="scheduleDays"></div>
+    </div>
+
     <!-- NOTES -->
     <div class="view" id="view-notes">
       <div class="page-head"><div><h2>Notes</h2><p>Quick reminders. Tick a note as done and it moves to Completed Notes.</p></div></div>
@@ -1058,13 +1029,12 @@
       </div>
       <div class="panel" style="max-width:560px;">
         <h3>WhatsApp messages</h3>
-        <p style="font-size:13px;color:var(--muted);margin-top:-8px;margin-bottom:14px;">Generating or confirming a bill opens that party's WhatsApp chat directly with a message — Bill Amount and Total Payment Pending — pre-filled; the number is selected automatically since it's a text message. Payments work the same way, with Payment Received and Total Payment Pending pre-filled. To send the bill PDF itself, use the "PDF" link next to any bill in Bill History — that opens your phone's Share sheet with the file attached, and you pick the WhatsApp contact yourself (a file share can't have a number pre-selected).</p>
+        <p style="font-size:13px;color:var(--muted);margin-top:-8px;margin-bottom:14px;">When a party has a phone number saved, MediBill can open a pre-filled WhatsApp message for their bill or payment. WhatsApp does not allow fully silent sending from a webpage — you'll still need to tap Send inside WhatsApp once it opens.</p>
         <div class="field" style="display:flex;align-items:center;gap:8px;">
           <input type="checkbox" id="sWhatsappAuto" style="width:auto;">
-          <label for="sWhatsappAuto" style="margin:0;">Automatically open WhatsApp when a bill is generated/confirmed or a payment is recorded</label>
+          <label for="sWhatsappAuto" style="margin:0;">Automatically open a WhatsApp message when a bill or payment is added</label>
         </div>
         <div class="field"><label>Default country code (used when a saved number has none)</label><input id="sWhatsappCC" placeholder="e.g. 91" style="max-width:120px;"></div>
-        <div class="field"><label>Message sign-off</label><input id="sWhatsappSignoff" placeholder="e.g. ONESTA"></div>
         <button class="primary" id="btnSaveWhatsappSettings">Save WhatsApp settings</button>
       </div>
       <div class="panel" style="max-width:560px;">
@@ -1102,6 +1072,7 @@
 
 <div class="toast" id="toast"></div>
 <datalist id="medNameSuggestions"></datalist>
+<datalist id="custNameSuggestions"></datalist>
 <datalist id="pfCitySuggestions"></datalist>
 <datalist id="pfLocationSuggestions"></datalist>
 
@@ -1116,6 +1087,7 @@ let parties = [];
 let notes = [];
 let investments = [];
 let drList = [];
+let schedule = { week1:{}, week2:{} };
 let settings = { shopName:'', address:'', phone:'', gstin:'', prefix:'INV-', nextNo:1 };
 let cart = [];
 let purchaseRows = [];
@@ -1150,76 +1122,40 @@ function sendWhatsAppMessage(phone, message){
   if(!digits){ toast('No valid phone number saved for WhatsApp'); return; }
   window.open('https://wa.me/'+digits+'?text='+encodeURIComponent(message), '_blank');
 }
-/* Same "Hi <party>, Total Payment Pending: <amount> ... Regards and Thanks, <signoff>" wording
-   is used everywhere so every WhatsApp message (bill or payment) reads the same way. */
-function buildPendingWhatsAppMessage(partyName, pending){
-  const signoff = settings.whatsappSignoff || 'ONESTA';
-  const name = partyName || 'there';
-  const pendingLine = pending>0
-    ? `Total Payment Pending: ${fmt(pending)}`
-    : `Total Payment Pending: ${fmt(0)} (fully paid, thank you)`;
-  return `Hi ${name}, ${pendingLine}.\n\nRegards and Thanks,\n${signoff}`;
-}
 function buildBillWhatsAppMessage(bill){
-  const signoff = settings.whatsappSignoff || 'ONESTA';
-  const name = bill.customerName || 'there';
+  const shop = settings.shopName || 'Our Pharmacy';
   const pending = bill.customerName ? computePartyTotals(bill.customerName).pending : bill.grandTotal;
-  const pendingLine = pending>0
-    ? `Total Payment Pending: ${fmt(pending)}`
-    : `Total Payment Pending: ${fmt(0)} (fully paid, thank you)`;
-  return `Hi ${name}, Bill Amount: ${fmt(bill.grandTotal)}.\n${pendingLine}.\n\nRegards and Thanks,\n${signoff}`;
+  const lines = [
+    `Hello ${bill.customerName||'there'}, here is your bill from ${shop}.`,
+    `Bill No: ${bill.billNo}`,
+    `Date: ${new Date(bill.date).toLocaleDateString('en-IN')}`,
+    `Amount: ${fmt(bill.grandTotal)}`,
+  ];
+  if(pending>0) lines.push(`Pending balance: ${fmt(pending)}`);
+  lines.push('Thank you!');
+  return lines.join('\n');
 }
-/* Payment message explicitly states the amount just received, then the updated pending balance —
-   both numbers matter to the party, so neither should be left out. */
 function buildPaymentWhatsAppMessage(party, payment){
-  const signoff = settings.whatsappSignoff || 'ONESTA';
-  const name = party || 'there';
+  const shop = settings.shopName || 'Our Pharmacy';
   const pending = computePartyTotals(party).pending;
-  const pendingLine = pending>0
-    ? `Total Payment Pending: ${fmt(pending)}`
-    : `Total Payment Pending: ${fmt(0)} (fully paid, thank you)`;
-  return `Hi ${name}, Payment Received: ${fmt(payment.amount)}.\n${pendingLine}.\n\nRegards and Thanks,\n${signoff}`;
+  const lines = [
+    `Hello ${party}, we've received your payment of ${fmt(payment.amount)} on ${new Date(payment.date).toLocaleDateString('en-IN')}.`,
+    `Updated pending balance: ${fmt(pending)}`,
+    `Thank you — ${shop}`
+  ];
+  return lines.join('\n');
 }
-/* Shares just the bill PDF via the device's native Share sheet — used only from the manual
-   "PDF" link in Bill History, where the shop owner picks the contact themselves. Kept separate
-   from the auto-send-on-generate flow below: a FILE share can never have its contact
-   pre-selected by a webpage, so this is deliberately a manual, on-demand action. */
-async function shareBillPdfManually(bill){
-  try{
-    const file = await generateBillPdfFile(bill);
-    if(!file) return;
-    if(navigator.canShare && navigator.canShare({ files:[file] })){
-      try{
-        await navigator.share({ files:[file], title: 'Bill '+bill.billNo });
-        return;
-      }catch(e){
-        if(e && e.name==='AbortError') return; // shop owner cancelled the share sheet
-      }
-    }
-    downloadFile(file);
-    toast('Bill PDF downloaded — attach it in WhatsApp to send');
-  }catch(e){
-    console.error('Bill PDF generation/share failed', e);
-    toast('Could not create the bill PDF');
-  }
-}
-/* Auto-send on Generate/Confirm Bill: opens the party's own WhatsApp chat directly with a plain
-   text message (Bill Amount + Total Payment Pending) — text-only, so the correct number IS
-   reliably pre-selected. The PDF itself is sent separately, on demand, via the "PDF" link in
-   Bill History (see shareBillPdfManually above), where the shop owner picks the contact. */
+/* Tries the bill's own phone field first, falling back to the party's saved phone. */
 function sendBillWhatsAppIfPossible(bill){
   const phone = bill.customerPhone || (bill.customerName ? (findPartyRecord(bill.customerName)||{}).phone : '');
   if(!phone) return;
   sendWhatsAppMessage(phone, buildBillWhatsAppMessage(bill));
 }
-/* Payments open the party's own WhatsApp chat directly — text-only, so (unlike the bill PDF)
-   the correct number IS reliably pre-selected here. */
 function sendPaymentWhatsAppIfPossible(party, payment){
   const phone = (findPartyRecord(party)||{}).phone;
   if(!phone) return;
   sendWhatsAppMessage(phone, buildPaymentWhatsAppMessage(party, payment));
 }
-
 
 const LS_PREFIX = 'medibill_';
 async function loadAll(){
@@ -1233,6 +1169,7 @@ async function loadAll(){
   try{ const v = localStorage.getItem(LS_PREFIX+'notes'); notes = v ? JSON.parse(v) : []; }catch(e){ notes = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'investments'); investments = v ? JSON.parse(v) : []; }catch(e){ investments = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'drlist'); drList = v ? JSON.parse(v) : []; }catch(e){ drList = []; }
+  try{ const v = localStorage.getItem(LS_PREFIX+'schedule'); schedule = v ? JSON.parse(v) : { week1:{}, week2:{} }; }catch(e){ schedule = { week1:{}, week2:{} }; }
   try{ const v = localStorage.getItem(LS_PREFIX+'settings'); if(v) settings = JSON.parse(v); }catch(e){}
 }
 async function saveMedicines(){ try{ localStorage.setItem(LS_PREFIX+'medicines', JSON.stringify(medicines)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
@@ -1245,6 +1182,7 @@ async function saveParties(){ try{ localStorage.setItem(LS_PREFIX+'parties', JSO
 async function saveNotes(){ try{ localStorage.setItem(LS_PREFIX+'notes', JSON.stringify(notes)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveInvestments(){ try{ localStorage.setItem(LS_PREFIX+'investments', JSON.stringify(investments)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveDrList(){ try{ localStorage.setItem(LS_PREFIX+'drlist', JSON.stringify(drList)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
+async function saveSchedule(){ try{ localStorage.setItem(LS_PREFIX+'schedule', JSON.stringify(schedule)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveSettings(){ try{ localStorage.setItem(LS_PREFIX+'settings', JSON.stringify(settings)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 
 /* ---------- Cloud sync (Firebase) — optional, off until a config is saved in Settings ---------- */
@@ -1398,6 +1336,7 @@ function listenToCloud(){
     notes = data.notes || [];
     investments = data.investments || [];
     drList = data.drList || [];
+    schedule = data.schedule || { week1:{}, week2:{} };
     if(data.settings) settings = data.settings;
     try{
       localStorage.setItem(LS_PREFIX+'medicines', JSON.stringify(medicines));
@@ -1410,6 +1349,7 @@ function listenToCloud(){
       localStorage.setItem(LS_PREFIX+'notes', JSON.stringify(notes));
       localStorage.setItem(LS_PREFIX+'investments', JSON.stringify(investments));
       localStorage.setItem(LS_PREFIX+'drlist', JSON.stringify(drList));
+      localStorage.setItem(LS_PREFIX+'schedule', JSON.stringify(schedule));
       localStorage.setItem(LS_PREFIX+'settings', JSON.stringify(settings));
     }catch(e){}
     applyingRemoteUpdate = false;
@@ -1427,7 +1367,7 @@ function pushToCloud(immediate){
   clearTimeout(syncPushTimer);
   const doPush = ()=>{
     syncDb.collection(SYNC_COLLECTION).doc(currentUid).set({
-      medicines, bills, tempBills, purchases, expenses, payments, parties, notes, investments, drList, settings,
+      medicines, bills, tempBills, purchases, expenses, payments, parties, notes, investments, drList, schedule, settings,
       updatedAt: new Date().toISOString()
     }).then(()=> setSyncStatus('Synced — last update '+new Date().toLocaleTimeString('en-IN')))
       .catch(e=> setSyncStatus('Sync error: '+e.message));
@@ -1473,7 +1413,7 @@ document.getElementById('btnDisconnectSync').addEventListener('click', ()=>{
 
 /* ---------- Backup / Restore (safety net, since browser data can be cleared) ---------- */
 function downloadBackup(){
-  const data = { medicines, bills, tempBills, purchases, expenses, payments, parties, notes, investments, settings, exportedAt: new Date().toISOString() };
+  const data = { medicines, bills, tempBills, purchases, expenses, payments, parties, notes, investments, drList, schedule, settings, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1497,8 +1437,10 @@ function restoreBackup(file){
       parties = data.parties || [];
       notes = data.notes || [];
       investments = data.investments || [];
+      drList = data.drList || [];
+      schedule = data.schedule || { week1:{}, week2:{} };
       settings = data.settings || settings;
-      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await saveExpenses(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveSettings();
+      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await saveExpenses(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveSettings();
       renderDashboard(); toast('Backup restored');
     }catch(e){ toast('Invalid backup file'); }
   };
@@ -1519,7 +1461,7 @@ document.querySelectorAll('.nav-item').forEach(el=>{
 /* Top-level accordion: Billing / Ledger / Dr Investment / Notes */
 const NOTES_GROUP_VIEWS = ['notes','completednotes'];
 const LEDGER_GROUP_VIEWS = ['payments'];
-const INVESTMENT_GROUP_VIEWS = ['drlist','investment','drreport'];
+const INVESTMENT_GROUP_VIEWS = ['drlist','investment','drreport','schedule'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
   el.addEventListener('click', ()=>{
     const key = el.dataset.toggle;
@@ -1608,6 +1550,7 @@ const MOBILE_MENU = [
       { label:'Dr List', view:'drlist' },
       { label:'Dr Investment', view:'investment' },
       { label:'Report', view:'drreport' },
+      { label:'Schedule', view:'schedule' },
   ]},
   { label:'Notes', children:[
       { label:'All Notes', view:'notes' },
@@ -1701,7 +1644,6 @@ function closeMobileNav(){
   document.getElementById('mobileNavBackdrop').classList.remove('open');
 }
 document.getElementById('btnOpenMobileNav').addEventListener('click', openMobileNav);
-document.getElementById('btnMobileSettings').addEventListener('click', ()=> showView('settings'));
 document.getElementById('btnCloseMobileNav').addEventListener('click', closeMobileNav);
 document.getElementById('mobileNavBackdrop').addEventListener('click', closeMobileNav);
 document.getElementById('btnMobileNavBack').addEventListener('click', ()=>{
@@ -1751,6 +1693,7 @@ function showView(name){
   if(name==='drlist'){ renderDrList(); }
   if(name==='investment'){ populateInvestmentSelects(); renderInvestments(); }
   if(name==='drreport'){ populateReportDoctorSelect(); renderDrReport(); }
+  if(name==='schedule'){ renderSchedule(); }
   if(name==='settings') fillSettingsForm();
 }
 
@@ -2403,7 +2346,6 @@ window.confirmTempBill = async function(id){
   tempBills.splice(idx,1);
   await saveBills(); await saveSettings(); await saveTempBills();
   toast('Confirmed: '+billNo);
-  if(settings.whatsappAuto !== false) sendBillWhatsAppIfPossible(bill);
   renderTempBills();
 };
 /* Delete: cancels the temp bill and returns its reserved stock to the medicine list. */
@@ -2439,7 +2381,6 @@ function renderBillsHistory(){
         <button class="sm ghost" onclick='editBillById("${b.id}")'>Edit</button>
         <button class="sm ghost" onclick='printBillById("${b.id}")'>Print</button>
         <button class="sm ghost" onclick='sendBillWhatsAppById("${b.id}")'>WhatsApp</button>
-        <button class="sm ghost" onclick='sendBillPdfById("${b.id}")' title="Share the bill PDF — you pick the WhatsApp contact">PDF</button>
         <button class="sm danger" onclick='deleteBill("${b.id}")'>Delete</button>
       </div></td>
     </tr>`).join('');
@@ -2461,18 +2402,12 @@ window.printBillById = function(id){
   setTimeout(()=> window.print(), 150);
 };
 window.openPrintViewById = window.viewBillById; // kept for backward compatibility
-/* Manual resend: lets the shop owner (re)send a bill's WhatsApp text message on demand */
+/* Manual resend: lets the shop owner (re)send a bill's WhatsApp message on demand */
 window.sendBillWhatsAppById = function(id){
   const b = bills.find(x=>x.id===id); if(!b) return;
   const phone = b.customerPhone || (b.customerName ? (findPartyRecord(b.customerName)||{}).phone : '');
   if(!phone){ toast('No phone number saved for this customer'); return; }
   sendBillWhatsAppIfPossible(b);
-};
-/* "PDF" link in Bill History: shares just the bill PDF via the Share sheet — the shop owner
-   picks the WhatsApp contact themselves, since a file share can't have a number pre-selected. */
-window.sendBillPdfById = function(id){
-  const b = bills.find(x=>x.id===id); if(!b) return;
-  shareBillPdfManually(b);
 };
 
 /* ---------- Edit an existing bill ---------- */
@@ -2526,49 +2461,12 @@ document.getElementById('btnBackToSale').addEventListener('click', ()=>{
 function getBillPartyNames(){
   return [...new Set(bills.map(b=>(b.customerName||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
-/* Kept as a no-op for backward compatibility with existing call sites — the Customer Name
-   field now shows its own live dropdown (see showCustNameSuggestions below) instead of relying
-   on a native <datalist>, which many mobile browsers (notably iOS Safari) don't reliably show
-   a tap-to-open dropdown for. */
-function updateCustNameSuggestions(){}
-/* Reliable, tap-to-open dropdown of already-billed/known party names for the New Bill screen.
-   Built the same way as the Chemist picker on the Medicine Stock screen. */
-function showCustNameSuggestions(){
-  const q = (document.getElementById('custName').value||'').trim().toLowerCase();
-  const box = document.getElementById('custNameSuggestBox');
+function updateCustNameSuggestions(){
   const names = new Set(getBillPartyNames());
   parties.forEach(p=>{ if(p.name && p.name.trim()) names.add(p.name.trim()); });
-  const all = [...names].sort((a,b)=>a.localeCompare(b));
-  const available = all.filter(n=> !q || n.toLowerCase().includes(q));
-  box.style.display = 'block';
-  if(!available.length){
-    box.innerHTML = `<div class="chemist-suggestion-empty">${all.length ? 'No matching party' : 'No billed parties yet'}</div>`;
-    return;
-  }
-  box.innerHTML = available.slice(0,30).map(n=>
-    `<div class="chemist-suggestion-item" onclick="pickCustName('${n.replace(/'/g,"\\'")}')">${escapeHtml(n)}</div>`
-  ).join('');
+  document.getElementById('custNameSuggestions').innerHTML =
+    [...names].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join('');
 }
-window.pickCustName = function(name){
-  document.getElementById('custName').value = name;
-  document.getElementById('custNameSuggestBox').style.display = 'none';
-  updateCustDuesBox();
-};
-document.getElementById('custName').addEventListener('input', showCustNameSuggestions);
-document.getElementById('custName').addEventListener('focus', showCustNameSuggestions);
-document.getElementById('custName').addEventListener('keydown', (e)=>{
-  if(e.key==='Enter'){
-    e.preventDefault();
-    const first = document.querySelector('#custNameSuggestBox .chemist-suggestion-item');
-    if(first) first.click();
-  }
-});
-document.addEventListener('click', (e)=>{
-  if(!e.target.closest('#custName') && !e.target.closest('#custNameSuggestBox')){
-    const box = document.getElementById('custNameSuggestBox');
-    if(box) box.style.display='none';
-  }
-});
 function populateSelectWithParties(selId, placeholder){
   const sel = document.getElementById(selId);
   const current = sel.value;
@@ -2858,14 +2756,14 @@ function renderLedgerDetail(){
   document.getElementById('payLedgerEmpty').style.display = filtered.length? 'none':'block';
   body.innerHTML = filtered.map(e=>`
     <tr>
-      <td data-label="Date">${new Date(e.date).toLocaleDateString('en-IN')}</td>
-      <td data-label="Particulars">${e.type==='bill' ? 'Bill '+e.ref : (e.ref||'Payment received')}</td>
-      <td class="num" data-label="Debit (billed) ₹">${e.debit? fmt(e.debit):'—'}</td>
-      <td class="num" data-label="Credit (received) ₹">${e.credit? fmt(e.credit):'—'}</td>
-      <td class="num" data-label="Balance ₹" style="font-weight:600;">${fmt(e.balance)}</td>
-      <td data-label="Actions">${e.type==='payment'
-        ? `<div class="ledger-row-actions"><button class="sm ghost icon-btn" title="Send WhatsApp message" onclick="sendPaymentWhatsAppById('${e.id}')">${WHATSAPP_ICON_SVG}</button><button class="sm danger" onclick="deletePayment('${e.id}')">Delete</button></div>`
-        : `<div class="ledger-row-actions"><button class="sm ghost icon-btn" title="Send WhatsApp message" onclick="sendBillWhatsAppByRef('${(e.ref||'').replace(/'/g,"\\'")}')">${WHATSAPP_ICON_SVG}</button></div>`}</td>
+      <td>${new Date(e.date).toLocaleDateString('en-IN')}</td>
+      <td>${e.type==='bill' ? 'Bill '+e.ref : (e.ref||'Payment received')}</td>
+      <td class="num">${e.debit? fmt(e.debit):'—'}</td>
+      <td class="num">${e.credit? fmt(e.credit):'—'}</td>
+      <td class="num" style="font-weight:600;">${fmt(e.balance)}</td>
+      <td>${e.type==='payment'
+        ? `<button class="sm ghost icon-btn" title="Send WhatsApp message" onclick="sendPaymentWhatsAppById('${e.id}')">${WHATSAPP_ICON_SVG}</button> <button class="sm danger" onclick="deletePayment('${e.id}')">Delete</button>`
+        : `<button class="sm ghost icon-btn" title="Send WhatsApp message" onclick="sendBillWhatsAppByRef('${(e.ref||'').replace(/'/g,"\\'")}')">${WHATSAPP_ICON_SVG}</button>`}</td>
     </tr>`).join('');
 }
 /* Manual resend for a payment row in the ledger */
@@ -3457,6 +3355,134 @@ function renderDrReport(){
 }
 document.getElementById('repDoctor').addEventListener('change', renderDrReport);
 
+/* ---------- Doctor Schedule — day-wise weekly plan (Week 1 = Week 3, Week 2 = Week 4) ---------- */
+const SCHEDULE_DAYS = [
+  {key:'mon', label:'Monday'}, {key:'tue', label:'Tuesday'}, {key:'wed', label:'Wednesday'},
+  {key:'thu', label:'Thursday'}, {key:'fri', label:'Friday'}, {key:'sat', label:'Saturday'}, {key:'sun', label:'Sunday'}
+];
+let currentScheduleWeek = 'week1';
+function getDrCities(){
+  return [...new Set(drList.map(d=>(d.city||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+function getDrLocationsForCity(city){
+  const key = (city||'').trim().toLowerCase();
+  const locs = drList.filter(d=>(d.city||'').trim().toLowerCase()===key).map(d=>(d.location||'').trim()).filter(Boolean);
+  return [...new Set(locs)].sort((a,b)=>a.localeCompare(b));
+}
+function getDrsForCityLocation(city, location){
+  const cKey=(city||'').trim().toLowerCase(), lKey=(location||'').trim().toLowerCase();
+  return drList.filter(d=>(d.city||'').trim().toLowerCase()===cKey && (d.location||'').trim().toLowerCase()===lKey)
+               .map(d=>d.name).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+}
+function jsAttrEscape(s){
+  return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+function emptyScheduleDay(){
+  return { areaMode:'list', area:'', areaOther:'', locationMode:'list', location:'', locationOther:'', doctors:[], comment:'' };
+}
+function getScheduleDay(weekKey, dayKey){
+  if(!schedule[weekKey]) schedule[weekKey] = {};
+  if(!schedule[weekKey][dayKey]) schedule[weekKey][dayKey] = emptyScheduleDay();
+  const d = schedule[weekKey][dayKey];
+  if(!Array.isArray(d.doctors)) d.doctors = [];
+  return d;
+}
+function renderSchedule(){
+  document.querySelectorAll('.sched-week-tab').forEach(t=>{
+    const on = t.dataset.week===currentScheduleWeek;
+    t.style.background = on ? 'var(--accent)' : 'rgba(0,0,0,0.05)';
+    t.style.color = on ? '#fff' : 'var(--muted)';
+  });
+  const cities = getDrCities();
+  const wrap = document.getElementById('scheduleDays');
+  wrap.innerHTML = SCHEDULE_DAYS.map(d=>{
+    const day = getScheduleDay(currentScheduleWeek, d.key);
+    const areaIsOther = day.areaMode==='other';
+    const cityOptions = cities.map(c=>`<option value="${escapeHtml(c)}" ${day.areaMode==='list'&&day.area===c?'selected':''}>${escapeHtml(c)}</option>`).join('');
+    const locs = (day.areaMode==='list' && day.area) ? getDrLocationsForCity(day.area) : [];
+    const locOptions = locs.map(l=>`<option value="${escapeHtml(l)}" ${day.locationMode==='list'&&day.location===l?'selected':''}>${escapeHtml(l)}</option>`).join('');
+    const locationIsOther = day.locationMode==='other';
+    const locationDisabled = day.areaMode==='list' && !day.area;
+    const showDoctors = day.areaMode==='list' && day.area && day.locationMode==='list' && day.location;
+    const doctorOptions = showDoctors ? getDrsForCityLocation(day.area, day.location) : [];
+    return `
+    <div class="panel" style="margin-bottom:12px;">
+      <h3 style="margin-bottom:10px;">${d.label}</h3>
+      <div class="row c2">
+        <div class="field">
+          <label>Area</label>
+          <select onchange="schedAreaChange('${d.key}', this.value)">
+            <option value="">Select area…</option>
+            ${cityOptions}
+            <option value="__other__" ${areaIsOther?'selected':''}>Other…</option>
+          </select>
+        </div>
+        ${areaIsOther ? `<div class="field"><label>Area (type manually)</label><input value="${escapeHtml(day.areaOther)}" placeholder="Type area name" oninput="schedAreaOtherInput('${d.key}', this.value)"></div>` : ''}
+      </div>
+      <div class="row c2">
+        <div class="field">
+          <label>Location</label>
+          <select onchange="schedLocationChange('${d.key}', this.value)" ${locationDisabled?'disabled':''}>
+            <option value="">${locationDisabled ? 'Select area first' : 'Select location…'}</option>
+            ${locOptions}
+            <option value="__other__" ${locationIsOther?'selected':''}>Other…</option>
+          </select>
+        </div>
+        ${locationIsOther ? `<div class="field"><label>Location (type manually)</label><input value="${escapeHtml(day.locationOther)}" placeholder="Type location name" oninput="schedLocationOtherInput('${d.key}', this.value)"></div>` : ''}
+      </div>
+      ${showDoctors ? `
+      <div style="margin-top:6px;">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Doctors — <span id="schedCount-${d.key}">${day.doctors.length}</span>/20 selected</label>
+        <div class="med-pick" style="max-height:220px;">
+          ${doctorOptions.length ? doctorOptions.map(name=>{
+            const checked = day.doctors.includes(name);
+            return `<div class="med-pick-row"><span class="nm">${escapeHtml(name)}</span><input type="checkbox" ${checked?'checked':''} onchange="schedDoctorToggle('${d.key}','${jsAttrEscape(name)}', this.checked)"></div>`;
+          }).join('') : `<p style="color:var(--muted);font-size:12.5px;padding:6px 2px;">No doctors added for this area/location yet — add them in Dr List.</p>`}
+        </div>
+      </div>` : `<p style="color:var(--muted);font-size:11.5px;margin:4px 0 0;">${(day.areaMode==='other'||day.locationMode==='other') ? "Custom area/location — the doctor list isn't available for it; use the comment box below instead." : 'Pick both an area and a location above to choose doctors.'}</p>`}
+      <div class="field" style="margin-top:10px;"><label>Comment</label><input value="${escapeHtml(day.comment)}" placeholder="Notes for this day" oninput="schedCommentInput('${d.key}', this.value)"></div>
+    </div>`;
+  }).join('');
+}
+function schedAreaChange(dayKey, value){
+  const day = getScheduleDay(currentScheduleWeek, dayKey);
+  if(value==='__other__'){ day.areaMode='other'; day.area=''; }
+  else { day.areaMode='list'; day.area=value; day.areaOther=''; }
+  day.locationMode='list'; day.location=''; day.locationOther=''; day.doctors=[];
+  saveSchedule(); renderSchedule();
+}
+function schedAreaOtherInput(dayKey, value){
+  getScheduleDay(currentScheduleWeek, dayKey).areaOther = value; saveSchedule();
+}
+function schedLocationChange(dayKey, value){
+  const day = getScheduleDay(currentScheduleWeek, dayKey);
+  if(value==='__other__'){ day.locationMode='other'; day.location=''; }
+  else { day.locationMode='list'; day.location=value; day.locationOther=''; }
+  day.doctors=[];
+  saveSchedule(); renderSchedule();
+}
+function schedLocationOtherInput(dayKey, value){
+  getScheduleDay(currentScheduleWeek, dayKey).locationOther = value; saveSchedule();
+}
+function schedDoctorToggle(dayKey, name, checked){
+  const day = getScheduleDay(currentScheduleWeek, dayKey);
+  if(checked){
+    if(day.doctors.length>=20){ toast('Max 20 doctors per day'); renderSchedule(); return; }
+    if(!day.doctors.includes(name)) day.doctors.push(name);
+  } else {
+    day.doctors = day.doctors.filter(n=>n!==name);
+  }
+  saveSchedule();
+  const countEl = document.getElementById('schedCount-'+dayKey);
+  if(countEl) countEl.textContent = day.doctors.length;
+}
+function schedCommentInput(dayKey, value){
+  getScheduleDay(currentScheduleWeek, dayKey).comment = value; saveSchedule();
+}
+document.querySelectorAll('.sched-week-tab').forEach(t=>{
+  t.addEventListener('click', ()=>{ currentScheduleWeek = t.dataset.week; renderSchedule(); });
+});
+
 /* ---------- Notes (reminders) — tick complete to move to Completed Notes folder ---------- */
 function escapeHtml(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3509,13 +3535,11 @@ document.getElementById('btnAddNote').addEventListener('click', async ()=>{
 });
 
 /* ---------- Print invoice ---------- */
-/* Shared invoice markup, used by both the on-screen print preview and the off-screen
-   copy that gets rasterized into a PDF for WhatsApp — keeps both looking identical. */
-function buildInvoiceHTML(bill){
+function openPrintView(bill){
   const rows = bill.items.map(it=>`
     <tr><td>${it.name}</td><td class="num">${it.qty} ${it.unit}</td><td class="num">₹${it.rate.toFixed(2)}${it.rateType==='incl'?' <span style="font-size:9px;color:var(--muted);">(incl.)</span>':''}</td><td class="num">${it.gst}%</td><td class="num">${fmt(it.amount)}</td></tr>
   `).join('');
-  return `
+  document.getElementById('printArea').innerHTML = `
     <div class="inv-head">
       <div>
         <h2>${settings.shopName || 'Your Pharmacy'}</h2>
@@ -3545,9 +3569,6 @@ function buildInvoiceHTML(bill){
     </div>`; })() : ''}
     <div style="margin-top:26px;font-size:11.5px;color:var(--muted);text-align:center;">Thank you. Medicines once sold are not returnable unless defective.</div>
   `;
-}
-function openPrintView(bill){
-  document.getElementById('printArea').innerHTML = buildInvoiceHTML(bill);
   document.getElementById('printOverlay').classList.add('show');
   document.getElementById('printBar').innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;gap:8px;box-shadow:0 6px 20px rgba(0,0,0,0.15);">
@@ -3560,55 +3581,6 @@ window.closePrintView = function(){
   document.getElementById('printBar').innerHTML='';
 };
 
-/* ---------- Bill PDF (for WhatsApp) ----------
-   Renders the same invoice markup off-screen, rasterizes it with html2canvas and drops it
-   into a jsPDF page, so the bill can be attached as an actual PDF file instead of just text. */
-async function generateBillPdfFile(bill){
-  if(typeof html2canvas==='undefined' || !window.jspdf){
-    toast('PDF library failed to load — check your internet connection and try again');
-    return null;
-  }
-  const holder = document.createElement('div');
-  holder.className = 'invoice-doc';
-  holder.style.position = 'fixed';
-  holder.style.left = '-10000px';
-  holder.style.top = '0';
-  document.body.appendChild(holder);
-  holder.innerHTML = buildInvoiceHTML(bill);
-  try{
-    const canvas = await html2canvas(holder, { scale:2, backgroundColor:'#ffffff' });
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit:'pt', format:'a4' });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth;
-    const imgHeight = canvas.height * (imgWidth / canvas.width);
-    let heightLeft = imgHeight, position = 0;
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    while(heightLeft > 0){
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-    const blob = pdf.output('blob');
-    const filename = (bill.billNo || 'bill').replace(/[^\w-]+/g,'_') + '.pdf';
-    return new File([blob], filename, { type:'application/pdf' });
-  } finally {
-    holder.remove();
-  }
-}
-/* Downloads a PDF blob/file the plain way (used as a fallback when native sharing isn't available). */
-function downloadFile(file){
-  const url = URL.createObjectURL(file);
-  const a = document.createElement('a');
-  a.href = url; a.download = file.name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=> URL.revokeObjectURL(url), 4000);
-}
-
 /* ---------- Settings ---------- */
 function fillSettingsForm(){
   document.getElementById('sShopName').value = settings.shopName||'';
@@ -3620,7 +3592,6 @@ function fillSettingsForm(){
   document.getElementById('sPrefix').value = settings.prefix||'INV-';
   document.getElementById('sWhatsappAuto').checked = settings.whatsappAuto !== false;
   document.getElementById('sWhatsappCC').value = settings.whatsappCC || '91';
-  document.getElementById('sWhatsappSignoff').value = settings.whatsappSignoff || 'ONESTA';
   const cfg = loadSyncConfig();
   document.getElementById('sFirebaseConfig').value = cfg ? JSON.stringify(cfg, null, 2) : '';
 }
@@ -3638,7 +3609,6 @@ document.getElementById('btnSaveSettings').addEventListener('click', async ()=>{
 document.getElementById('btnSaveWhatsappSettings').addEventListener('click', async ()=>{
   settings.whatsappAuto = document.getElementById('sWhatsappAuto').checked;
   settings.whatsappCC = document.getElementById('sWhatsappCC').value.trim() || '91';
-  settings.whatsappSignoff = document.getElementById('sWhatsappSignoff').value.trim() || 'ONESTA';
   await saveSettings();
   toast('WhatsApp settings saved');
 });
