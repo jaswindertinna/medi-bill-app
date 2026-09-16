@@ -193,6 +193,7 @@
   .metric-card.schedule-card .sched-doc-pill{background:var(--primary-light);color:var(--primary-dark);font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:20px;}
   .metric-card.schedule-card .sched-empty{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;}
   .metric-card.schedule-card .sched-comment{font-size:10.5px;color:var(--muted);margin-top:7px;border-top:1px dashed var(--border);padding-top:6px;font-style:italic;}
+  .metric-card.schedule-card .sched-divider{height:1px;background:var(--border);margin:10px 0;}
 
   .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;}
   .panel h3{font-size:12.5px;margin-bottom:11px;}
@@ -428,7 +429,7 @@
       </div>
       <div class="grid metrics">
         <div class="metric-card schedule-card" id="todayScheduleCard" onclick="showView('schedule')" title="Open full Schedule">
-          <div class="label">Today's Schedule</div>
+          <div class="label">Today &amp; Tomorrow's Schedule</div>
           <div id="todaySchedBody"></div>
         </div>
         <div class="metric-card">
@@ -993,14 +994,16 @@
 
     <!-- DOCTOR SCHEDULE -->
     <div class="view" id="view-schedule">
-      <div class="page-head"><div><h2>Schedule</h2><p>A repeating weekly visit plan, day-wise (not date-wise). Week 1 &amp; Week 3 follow the same plan; Week 2 &amp; Week 4 follow the same plan.</p></div></div>
+      <div class="page-head"><div><h2>Schedule</h2><p>Pick a month, then set each date's area, location and doctors. Save when done — the dashboard shows whichever date is today.</p></div></div>
       <div class="panel" style="padding:12px;">
-        <div class="nav-subtoggle-row" style="flex-direction:row;max-width:420px;margin:0;padding:0;">
-          <div class="sched-week-tab open" data-week="week1" style="flex:1;text-align:center;padding:9px 4px;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;background:var(--accent);color:#fff;">Week 1 &amp; 3</div>
-          <div class="sched-week-tab" data-week="week2" style="flex:1;text-align:center;padding:9px 4px;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;background:rgba(0,0,0,0.05);color:var(--muted);">Week 2 &amp; 4</div>
+        <div class="row c2" style="align-items:end;margin:0;">
+          <div class="field" style="margin:0;"><label>Month</label><input type="month" id="schedMonthPicker"></div>
+          <div class="field" style="margin:0;" id="schedActionWrap"></div>
         </div>
+        <div id="schedMonthStatus" style="font-size:11px;color:var(--muted);margin-top:8px;"></div>
       </div>
       <div id="scheduleDays"></div>
+      <div class="panel" style="padding:12px;" id="schedBottomActionWrap"></div>
     </div>
 
     <!-- NOTES -->
@@ -1102,7 +1105,7 @@ let parties = [];
 let notes = [];
 let investments = [];
 let drList = [];
-let schedule = { week1:{}, week2:{} };
+let schedule = { months:{} };
 let settings = { shopName:'', address:'', phone:'', gstin:'', prefix:'INV-', nextNo:1 };
 let cart = [];
 let purchaseRows = [];
@@ -1184,7 +1187,7 @@ async function loadAll(){
   try{ const v = localStorage.getItem(LS_PREFIX+'notes'); notes = v ? JSON.parse(v) : []; }catch(e){ notes = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'investments'); investments = v ? JSON.parse(v) : []; }catch(e){ investments = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'drlist'); drList = v ? JSON.parse(v) : []; }catch(e){ drList = []; }
-  try{ const v = localStorage.getItem(LS_PREFIX+'schedule'); schedule = v ? JSON.parse(v) : { week1:{}, week2:{} }; }catch(e){ schedule = { week1:{}, week2:{} }; }
+  try{ const v = localStorage.getItem(LS_PREFIX+'schedule'); schedule = v ? JSON.parse(v) : { months:{} }; if(!schedule.months) schedule.months = {}; }catch(e){ schedule = { months:{} }; }
   try{ const v = localStorage.getItem(LS_PREFIX+'settings'); if(v) settings = JSON.parse(v); }catch(e){}
 }
 async function saveMedicines(){ try{ localStorage.setItem(LS_PREFIX+'medicines', JSON.stringify(medicines)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
@@ -1351,7 +1354,7 @@ function listenToCloud(){
     notes = data.notes || [];
     investments = data.investments || [];
     drList = data.drList || [];
-    schedule = data.schedule || { week1:{}, week2:{} };
+    schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
     if(data.settings) settings = data.settings;
     try{
       localStorage.setItem(LS_PREFIX+'medicines', JSON.stringify(medicines));
@@ -1453,7 +1456,7 @@ function restoreBackup(file){
       notes = data.notes || [];
       investments = data.investments || [];
       drList = data.drList || [];
-      schedule = data.schedule || { week1:{}, week2:{} };
+      schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
       settings = data.settings || settings;
       await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await saveExpenses(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveSettings();
       renderDashboard(); toast('Backup restored');
@@ -3371,12 +3374,7 @@ function renderDrReport(){
 }
 document.getElementById('repDoctor').addEventListener('change', renderDrReport);
 
-/* ---------- Doctor Schedule — day-wise weekly plan (Week 1 = Week 3, Week 2 = Week 4) ---------- */
-const SCHEDULE_DAYS = [
-  {key:'mon', label:'Monday'}, {key:'tue', label:'Tuesday'}, {key:'wed', label:'Wednesday'},
-  {key:'thu', label:'Thursday'}, {key:'fri', label:'Friday'}, {key:'sat', label:'Saturday'}, {key:'sun', label:'Sunday'}
-];
-let currentScheduleWeek = 'week1';
+/* ---------- Doctor Schedule — pick a month, fill every date, then save the month ---------- */
 function getDrCities(){
   return [...new Set(drList.map(d=>(d.city||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
@@ -3396,40 +3394,54 @@ function jsAttrEscape(s){
 function emptyScheduleDay(){
   return { areaMode:'list', area:'', areaOther:'', locationMode:'list', location:'', locationOther:'', doctors:[], comment:'' };
 }
-function getScheduleDay(weekKey, dayKey){
-  if(!schedule[weekKey]) schedule[weekKey] = {};
-  if(!schedule[weekKey][dayKey]) schedule[weekKey][dayKey] = emptyScheduleDay();
-  const d = schedule[weekKey][dayKey];
+function pad2(n){ return n<10 ? '0'+n : ''+n; }
+function monthKeyFor(y, m0){ return `${y}-${pad2(m0+1)}`; } // m0 = 0-indexed month
+function dateKeyFor(y, m0, day){ return `${y}-${pad2(m0+1)}-${pad2(day)}`; }
+function daysInMonth(y, m0){ return new Date(y, m0+1, 0).getDate(); }
+function todayDateKey(){ const n=new Date(); return dateKeyFor(n.getFullYear(), n.getMonth(), n.getDate()); }
+
+let currentScheduleMonthKey = null;
+let scheduleEditMode = true;
+
+function getScheduleMonth(monthKey){
+  if(!schedule.months) schedule.months = {};
+  if(!schedule.months[monthKey]) schedule.months[monthKey] = { saved:false, days:{} };
+  if(!schedule.months[monthKey].days) schedule.months[monthKey].days = {};
+  return schedule.months[monthKey];
+}
+function getScheduleDay(monthKey, dateKey){
+  const mo = getScheduleMonth(monthKey);
+  if(!mo.days[dateKey]) mo.days[dateKey] = emptyScheduleDay();
+  const d = mo.days[dateKey];
   if(!Array.isArray(d.doctors)) d.doctors = [];
   return d;
 }
-/* Figures out "today" against the repeating Week1/3 vs Week2/4 plan (weeks-of-month: 1-7=W1,
-   8-14=W2, 15-21=W1, 22-28=W2, 29-31=W1) and paints the dashboard's Today's Schedule card. */
-function getTodayScheduleRef(now){
-  now = now || new Date();
-  const jsDayIdx = now.getDay(); // 0=Sun..6=Sat
-  const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][jsDayIdx];
-  const dayLabel = SCHEDULE_DAYS.find(d=>d.key===dayKey) ? SCHEDULE_DAYS.find(d=>d.key===dayKey).label : dayKey;
-  const weekOfMonth = Math.ceil(now.getDate()/7);
-  const weekKey = (weekOfMonth % 2 === 1) ? 'week1' : 'week2';
-  return { dayKey, dayLabel, weekKey, now };
+function scheduleDayHasContent(d){
+  return !!(d && ((d.areaMode==='other'?d.areaOther:d.area) || (d.locationMode==='other'?d.locationOther:d.location) || (d.doctors&&d.doctors.length) || (d.comment&&d.comment.trim())));
 }
-function renderTodayScheduleCard(){
-  const bodyEl = document.getElementById('todaySchedBody');
-  if(!bodyEl) return;
-  const { dayKey, dayLabel, weekKey, now } = getTodayScheduleRef();
-  const day = (schedule[weekKey] && schedule[weekKey][dayKey]) ? schedule[weekKey][dayKey] : null;
-  const weekTag = weekKey==='week1' ? 'Week 1 & 3' : 'Week 2 & 4';
-  const dateStr = now.toLocaleDateString('en-IN',{day:'numeric', month:'short'});
+
+/* Looks up a given calendar date's saved schedule entry. */
+function getScheduleRefFor(date){
+  const monthKey = monthKeyFor(date.getFullYear(), date.getMonth());
+  const dateKey = dateKeyFor(date.getFullYear(), date.getMonth(), date.getDate());
+  const mo = schedule.months ? schedule.months[monthKey] : null;
+  const day = mo && mo.days && mo.days[dateKey] ? mo.days[dateKey] : null;
+  return { mo, day };
+}
+function scheduleBlockHtml(date, label){
+  const { mo, day } = getScheduleRefFor(date);
+  const dayLabel = date.toLocaleDateString('en-IN',{weekday:'long'});
+  const dateStr = date.toLocaleDateString('en-IN',{day:'numeric', month:'short'});
   const areaText = day ? (day.areaMode==='other' ? (day.areaOther||'').trim() : (day.area||'').trim()) : '';
   const locationText = day ? (day.locationMode==='other' ? (day.locationOther||'').trim() : (day.location||'').trim()) : '';
   const doctors = day && Array.isArray(day.doctors) ? day.doctors : [];
   const comment = day ? (day.comment||'').trim() : '';
+  const draftTag = (mo && !mo.saved && scheduleDayHasContent(day)) ? ` <span style="font-size:8.5px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:20px;font-weight:700;">DRAFT</span>` : '';
 
-  let html = `<div class="sched-daylabel">${escapeHtml(dayLabel)}, ${escapeHtml(dateStr)}</div><div class="sched-sub">${escapeHtml(weekTag)} plan</div>`;
+  let html = `<div class="sched-daylabel">${escapeHtml(label)} — ${escapeHtml(dayLabel)}, ${escapeHtml(dateStr)}${draftTag}</div>`;
 
   if(!areaText && !locationText && doctors.length===0 && !comment){
-    html += `<div class="sched-empty">No visits set for today.<br>Tap to add in Schedule →</div>`;
+    html += `<div class="sched-empty">No visits set.<br>Tap to add in Schedule →</div>`;
   } else {
     if(areaText || locationText){
       html += `<div class="sched-block"><div class="sched-block-label">Area / Location</div><div class="sched-area">${escapeHtml([areaText, locationText].filter(Boolean).join(' — ')||'—')}</div></div>`;
@@ -3441,18 +3453,63 @@ function renderTodayScheduleCard(){
     html += `</div>`;
     if(comment){ html += `<div class="sched-comment">"${escapeHtml(comment)}"</div>`; }
   }
+  return html;
+}
+function renderTodayScheduleCard(){
+  const bodyEl = document.getElementById('todaySchedBody');
+  if(!bodyEl) return;
+  const today = new Date();
+  const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate()+1);
+  let html = scheduleBlockHtml(today, 'Today');
+  html += `<div class="sched-divider"></div>`;
+  html += scheduleBlockHtml(tomorrow, 'Tomorrow');
   bodyEl.innerHTML = html;
 }
+
 function renderSchedule(){
-  document.querySelectorAll('.sched-week-tab').forEach(t=>{
-    const on = t.dataset.week===currentScheduleWeek;
-    t.style.background = on ? 'var(--accent)' : 'rgba(0,0,0,0.05)';
-    t.style.color = on ? '#fff' : 'var(--muted)';
-  });
-  const cities = getDrCities();
+  const picker = document.getElementById('schedMonthPicker');
+  if(!picker) return;
+  if(!picker.value){
+    const now = new Date();
+    picker.value = monthKeyFor(now.getFullYear(), now.getMonth());
+  }
+  currentScheduleMonthKey = picker.value;
+  const mo = getScheduleMonth(currentScheduleMonthKey);
+  if(scheduleEditMode == null) scheduleEditMode = !mo.saved;
+
+  const [yy, mm] = currentScheduleMonthKey.split('-').map(Number); // mm is 1-indexed here
+  const monthLabel = new Date(yy, mm-1, 1).toLocaleDateString('en-IN',{month:'long', year:'numeric'});
+  const statusEl = document.getElementById('schedMonthStatus');
+  const actionWrap = document.getElementById('schedActionWrap');
+  const bottomWrap = document.getElementById('schedBottomActionWrap');
   const wrap = document.getElementById('scheduleDays');
-  wrap.innerHTML = SCHEDULE_DAYS.map(d=>{
-    const day = getScheduleDay(currentScheduleWeek, d.key);
+
+  const daysWithContent = Object.values(mo.days||{}).filter(scheduleDayHasContent).length;
+
+  if(mo.saved && !scheduleEditMode){
+    statusEl.innerHTML = `<span style="color:var(--primary-dark);font-weight:700;">✓ Saved</span> — ${escapeHtml(monthLabel)}, ${daysWithContent} day(s) planned.`;
+    actionWrap.innerHTML = `<button class="ghost" style="width:100%;" onclick="editScheduleMonth()">✎ Edit month</button>`;
+    bottomWrap.innerHTML = '';
+    renderScheduleSummary(mo, yy, mm-1, monthLabel);
+    return;
+  }
+
+  statusEl.innerHTML = mo.saved
+    ? `Editing ${escapeHtml(monthLabel)} — tap "Save monthly data" again when you're done.`
+    : `${escapeHtml(monthLabel)} isn't saved yet — fill in the dates below, then save.`;
+  actionWrap.innerHTML = `<button class="primary" style="width:100%;" onclick="saveScheduleMonth()">💾 Save monthly data</button>`;
+
+  const cities = getDrCities();
+  const nDays = daysInMonth(yy, mm-1);
+  const tKey = todayDateKey();
+  let html = '';
+  for(let dnum=1; dnum<=nDays; dnum++){
+    const dateKey = dateKeyFor(yy, mm-1, dnum);
+    const dObj = new Date(yy, mm-1, dnum);
+    const weekdayLabel = dObj.toLocaleDateString('en-IN',{weekday:'long'});
+    const dateLabel = dObj.toLocaleDateString('en-IN',{day:'numeric', month:'short'});
+    const isToday = dateKey === tKey;
+    const day = getScheduleDay(currentScheduleMonthKey, dateKey);
     const areaIsOther = day.areaMode==='other';
     const cityOptions = cities.map(c=>`<option value="${escapeHtml(c)}" ${day.areaMode==='list'&&day.area===c?'selected':''}>${escapeHtml(c)}</option>`).join('');
     const locs = (day.areaMode==='list' && day.area) ? getDrLocationsForCity(day.area) : [];
@@ -3461,67 +3518,118 @@ function renderSchedule(){
     const locationDisabled = day.areaMode==='list' && !day.area;
     const showDoctors = day.areaMode==='list' && day.area && day.locationMode==='list' && day.location;
     const doctorOptions = showDoctors ? getDrsForCityLocation(day.area, day.location) : [];
-    return `
-    <div class="panel" style="margin-bottom:12px;">
-      <h3 style="margin-bottom:10px;">${d.label}</h3>
+    html += `
+    <div class="panel" style="margin-bottom:12px;${isToday?'border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light);':''}">
+      <h3 style="margin-bottom:10px;">${escapeHtml(weekdayLabel)}, ${escapeHtml(dateLabel)}${isToday?' <span style="font-size:9.5px;background:var(--primary);color:#fff;padding:2px 8px;border-radius:20px;font-weight:700;vertical-align:middle;">TODAY</span>':''}</h3>
       <div class="row c2">
         <div class="field">
           <label>Area</label>
-          <select onchange="schedAreaChange('${d.key}', this.value)">
+          <select onchange="schedAreaChange('${dateKey}', this.value)">
             <option value="">Select area…</option>
             ${cityOptions}
             <option value="__other__" ${areaIsOther?'selected':''}>Other…</option>
           </select>
         </div>
-        ${areaIsOther ? `<div class="field"><label>Area (type manually)</label><input value="${escapeHtml(day.areaOther)}" placeholder="Type area name" oninput="schedAreaOtherInput('${d.key}', this.value)"></div>` : ''}
+        ${areaIsOther ? `<div class="field"><label>Area (type manually)</label><input value="${escapeHtml(day.areaOther)}" placeholder="Type area name" oninput="schedAreaOtherInput('${dateKey}', this.value)"></div>` : ''}
       </div>
       <div class="row c2">
         <div class="field">
           <label>Location</label>
-          <select onchange="schedLocationChange('${d.key}', this.value)" ${locationDisabled?'disabled':''}>
+          <select onchange="schedLocationChange('${dateKey}', this.value)" ${locationDisabled?'disabled':''}>
             <option value="">${locationDisabled ? 'Select area first' : 'Select location…'}</option>
             ${locOptions}
             <option value="__other__" ${locationIsOther?'selected':''}>Other…</option>
           </select>
         </div>
-        ${locationIsOther ? `<div class="field"><label>Location (type manually)</label><input value="${escapeHtml(day.locationOther)}" placeholder="Type location name" oninput="schedLocationOtherInput('${d.key}', this.value)"></div>` : ''}
+        ${locationIsOther ? `<div class="field"><label>Location (type manually)</label><input value="${escapeHtml(day.locationOther)}" placeholder="Type location name" oninput="schedLocationOtherInput('${dateKey}', this.value)"></div>` : ''}
       </div>
       ${showDoctors ? `
       <div style="margin-top:6px;">
-        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Doctors — <span id="schedCount-${d.key}">${day.doctors.length}</span>/20 selected</label>
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">Doctors — <span id="schedCount-${dateKey}">${day.doctors.length}</span>/20 selected</label>
         <div class="med-pick" style="max-height:220px;">
           ${doctorOptions.length ? doctorOptions.map(name=>{
             const checked = day.doctors.includes(name);
-            return `<div class="med-pick-row"><span class="nm">${escapeHtml(name)}</span><input type="checkbox" ${checked?'checked':''} onchange="schedDoctorToggle('${d.key}','${jsAttrEscape(name)}', this.checked)"></div>`;
+            return `<div class="med-pick-row"><span class="nm">${escapeHtml(name)}</span><input type="checkbox" ${checked?'checked':''} onchange="schedDoctorToggle('${dateKey}','${jsAttrEscape(name)}', this.checked)"></div>`;
           }).join('') : `<p style="color:var(--muted);font-size:12.5px;padding:6px 2px;">No doctors added for this area/location yet — add them in Dr List.</p>`}
         </div>
       </div>` : `<p style="color:var(--muted);font-size:11.5px;margin:4px 0 0;">${(day.areaMode==='other'||day.locationMode==='other') ? "Custom area/location — the doctor list isn't available for it; use the comment box below instead." : 'Pick both an area and a location above to choose doctors.'}</p>`}
-      <div class="field" style="margin-top:10px;"><label>Comment</label><input value="${escapeHtml(day.comment)}" placeholder="Notes for this day" oninput="schedCommentInput('${d.key}', this.value)"></div>
+      <div class="field" style="margin-top:10px;"><label>Comment</label><input value="${escapeHtml(day.comment)}" placeholder="Notes for this day" oninput="schedCommentInput('${dateKey}', this.value)"></div>
     </div>`;
-  }).join('');
+  }
+  wrap.innerHTML = html;
+  bottomWrap.innerHTML = `<button class="primary" style="width:100%;" onclick="saveScheduleMonth()">💾 Save monthly data</button>`;
 }
-function schedAreaChange(dayKey, value){
-  const day = getScheduleDay(currentScheduleWeek, dayKey);
+
+/* Read-only view shown once a month is saved: one row per date that actually has a plan. */
+function renderScheduleSummary(mo, yy, m0, monthLabel){
+  const wrap = document.getElementById('scheduleDays');
+  const days = mo.days || {};
+  const dateKeys = Object.keys(days).filter(k=>scheduleDayHasContent(days[k])).sort();
+  if(!dateKeys.length){
+    wrap.innerHTML = `<div class="empty"><h3>No visits planned</h3><p>Tap "Edit month" above to add area/location and doctors for each date in ${escapeHtml(monthLabel)}.</p></div>`;
+    return;
+  }
+  const tKey = todayDateKey();
+  wrap.innerHTML = `<div class="panel" style="padding:0;overflow-x:auto;">
+    <table>
+      <thead><tr><th>Date</th><th>Area / Location</th><th>Doctors</th><th>Comment</th></tr></thead>
+      <tbody>
+        ${dateKeys.map(k=>{
+          const d = days[k];
+          const dObj = new Date(k+'T00:00:00');
+          const weekdayLabel = dObj.toLocaleDateString('en-IN',{weekday:'short'});
+          const dateLabel = dObj.toLocaleDateString('en-IN',{day:'numeric', month:'short'});
+          const areaText = d.areaMode==='other' ? d.areaOther : d.area;
+          const locationText = d.locationMode==='other' ? d.locationOther : d.location;
+          const doctors = Array.isArray(d.doctors) ? d.doctors : [];
+          const isToday = k===tKey;
+          return `<tr${isToday?' style="background:var(--primary-light);"':''}>
+            <td><b>${escapeHtml(weekdayLabel)}</b> ${escapeHtml(dateLabel)}${isToday?' <span class="pill ok">Today</span>':''}</td>
+            <td>${escapeHtml([areaText,locationText].filter(Boolean).join(' — ')||'—')}</td>
+            <td>${doctors.length ? escapeHtml(doctors.join(', ')) : '—'}</td>
+            <td>${d.comment ? escapeHtml(d.comment) : '—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function saveScheduleMonth(){
+  const mo = getScheduleMonth(currentScheduleMonthKey);
+  mo.saved = true;
+  scheduleEditMode = false;
+  saveSchedule();
+  toast('Schedule saved');
+  renderSchedule();
+  renderTodayScheduleCard();
+}
+function editScheduleMonth(){
+  scheduleEditMode = true;
+  renderSchedule();
+}
+function schedAreaChange(dateKey, value){
+  const day = getScheduleDay(currentScheduleMonthKey, dateKey);
   if(value==='__other__'){ day.areaMode='other'; day.area=''; }
   else { day.areaMode='list'; day.area=value; day.areaOther=''; }
   day.locationMode='list'; day.location=''; day.locationOther=''; day.doctors=[];
   saveSchedule(); renderSchedule();
 }
-function schedAreaOtherInput(dayKey, value){
-  getScheduleDay(currentScheduleWeek, dayKey).areaOther = value; saveSchedule();
+function schedAreaOtherInput(dateKey, value){
+  getScheduleDay(currentScheduleMonthKey, dateKey).areaOther = value; saveSchedule();
 }
-function schedLocationChange(dayKey, value){
-  const day = getScheduleDay(currentScheduleWeek, dayKey);
+function schedLocationChange(dateKey, value){
+  const day = getScheduleDay(currentScheduleMonthKey, dateKey);
   if(value==='__other__'){ day.locationMode='other'; day.location=''; }
   else { day.locationMode='list'; day.location=value; day.locationOther=''; }
   day.doctors=[];
   saveSchedule(); renderSchedule();
 }
-function schedLocationOtherInput(dayKey, value){
-  getScheduleDay(currentScheduleWeek, dayKey).locationOther = value; saveSchedule();
+function schedLocationOtherInput(dateKey, value){
+  getScheduleDay(currentScheduleMonthKey, dateKey).locationOther = value; saveSchedule();
 }
-function schedDoctorToggle(dayKey, name, checked){
-  const day = getScheduleDay(currentScheduleWeek, dayKey);
+function schedDoctorToggle(dateKey, name, checked){
+  const day = getScheduleDay(currentScheduleMonthKey, dateKey);
   if(checked){
     if(day.doctors.length>=20){ toast('Max 20 doctors per day'); renderSchedule(); return; }
     if(!day.doctors.includes(name)) day.doctors.push(name);
@@ -3529,14 +3637,17 @@ function schedDoctorToggle(dayKey, name, checked){
     day.doctors = day.doctors.filter(n=>n!==name);
   }
   saveSchedule();
-  const countEl = document.getElementById('schedCount-'+dayKey);
+  const countEl = document.getElementById('schedCount-'+dateKey);
   if(countEl) countEl.textContent = day.doctors.length;
 }
-function schedCommentInput(dayKey, value){
-  getScheduleDay(currentScheduleWeek, dayKey).comment = value; saveSchedule();
+function schedCommentInput(dateKey, value){
+  getScheduleDay(currentScheduleMonthKey, dateKey).comment = value; saveSchedule();
 }
-document.querySelectorAll('.sched-week-tab').forEach(t=>{
-  t.addEventListener('click', ()=>{ currentScheduleWeek = t.dataset.week; renderSchedule(); });
+document.getElementById('schedMonthPicker').addEventListener('change', function(){
+  currentScheduleMonthKey = this.value;
+  const mo = getScheduleMonth(currentScheduleMonthKey);
+  scheduleEditMode = !mo.saved;
+  renderSchedule();
 });
 
 /* ---------- Notes (reminders) — tick complete to move to Completed Notes folder ---------- */
