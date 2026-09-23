@@ -530,6 +530,7 @@
         <div class="nav-item" data-view="tempbills"><span class="nav-dot"></span>Temp Bill</div>
       </div>
       <div class="nav-subsubmenu" id="subsubmenu-purchase">
+        <div class="nav-item" data-view="purchaseorder"><span class="nav-dot"></span>Purchase Order</div>
         <div class="nav-item" data-view="newpurchase"><span class="nav-dot"></span>New Purchase</div>
         <div class="nav-item" data-view="purchases"><span class="nav-dot"></span>Purchase History</div>
         <div class="nav-item" data-view="inventory"><span class="nav-dot"></span>Medicine Stock</div>
@@ -708,6 +709,70 @@
         <div class="top-actions" style="margin-top:6px;">
           <button class="primary" id="btnSaveMed">Save medicine</button>
           <button class="ghost" id="btnCancelMed">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PURCHASE ORDER (planning tool — build an order, save it as one line in the list; edit / delete / share later) -->
+    <div class="view" id="view-purchaseorder">
+      <div class="page-head">
+        <div><h2>Purchase order</h2><p id="poDesc"></p></div>
+        <div class="top-actions">
+          <button class="ghost sm" id="btnBackPO">← Back to orders</button>
+          <input style="width:210px" id="poSearch" placeholder="Search medicine...">
+          <button class="ghost sm" id="btnClearPO">Clear order</button>
+          <button class="primary sm" id="btnNewPO">+ New order</button>
+        </div>
+      </div>
+
+      <!-- Saved orders: one line per order -->
+      <div id="poListWrap">
+        <div class="panel" style="padding:0;overflow-x:auto;">
+          <table id="poListTable">
+            <thead><tr>
+              <th style="min-width:130px;">Date</th><th class="num" style="min-width:60px;">Items</th><th class="num" style="min-width:100px;">Value ₹</th><th></th>
+            </tr></thead>
+            <tbody id="poListBody"></tbody>
+          </table>
+          <div class="empty" id="poListEmpty" style="display:none;">
+            <h3>No saved orders yet</h3>
+            <p>Tap "+ New order" to plan one.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order form (new / editing) -->
+      <div id="poFormWrap">
+        <div class="panel" style="padding:0;overflow-x:auto;">
+          <table id="poTable">
+            <thead><tr>
+              <th style="min-width:190px;">Product</th><th class="num" style="min-width:90px;">Current stock</th><th class="num" style="min-width:70px;" title="Strips (or sachets) in one box">Strips / box</th><th class="num" style="min-width:100px;">Price ₹ / box (pc)</th><th class="num" style="min-width:90px;">Order qty (box / pc)</th><th class="num" style="min-width:80px;">= Strips</th><th class="num" style="min-width:100px;">Value ₹</th>
+            </tr></thead>
+            <tbody id="poTableBody"></tbody>
+          </table>
+          <div class="empty" id="poEmpty" style="display:none;">
+            <h3>No medicines yet</h3>
+            <p>Add medicines on the Medicine Stock tab, or add a new product below.</p>
+          </div>
+        </div>
+        <div class="panel" style="padding:0;overflow-x:auto;">
+          <div style="padding:14px 22px 4px;font-weight:700;font-size:13.5px;">Not in your stock list</div>
+          <div style="padding:0 22px 8px;font-size:12px;color:var(--muted);">Add any product you want to order that isn't already a medicine in your system.</div>
+          <table>
+            <thead><tr>
+              <th style="min-width:190px;">Product name</th><th class="num" style="min-width:100px;">Price ₹ / box (pc)</th><th class="num" style="min-width:90px;">Order qty (box / pc)</th><th class="num" style="min-width:100px;">Value ₹</th><th></th>
+            </tr></thead>
+            <tbody id="poCustomBody"></tbody>
+          </table>
+          <div style="padding:14px 22px;">
+            <button class="ghost sm" id="btnAddPORow">+ Add new product</button>
+          </div>
+        </div>
+        <div class="panel" style="max-width:380px;margin-left:auto;">
+          <div class="totals-line"><span>Items in order</span><span id="poItemCount">0</span></div>
+          <div class="totals-line grand"><span>Total order value</span><span id="poGrandTotal">₹0.00</span></div>
+          <button class="ghost" id="btnCopyPO" style="width:100%;margin-top:14px;">Copy order summary</button>
+          <button class="primary" id="btnSavePO" style="width:100%;margin-top:10px;">Save order</button>
         </div>
       </div>
     </div>
@@ -1402,6 +1467,7 @@ let medicines = [];
 let bills = [];
 let tempBills = [];
 let purchases = [];
+let purchaseOrders = [];
 let expenses = [];
 let payments = [];
 let parties = [];
@@ -1478,6 +1544,7 @@ async function loadAll(){
   try{ const v = localStorage.getItem(LS_PREFIX+'bills'); bills = v ? JSON.parse(v) : []; }catch(e){ bills = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'tempbills'); tempBills = v ? JSON.parse(v) : []; }catch(e){ tempBills = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'purchases'); purchases = v ? JSON.parse(v) : []; }catch(e){ purchases = []; }
+  try{ const v = localStorage.getItem(LS_PREFIX+'purchaseorders'); purchaseOrders = v ? JSON.parse(v) : []; }catch(e){ purchaseOrders = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'expenses'); expenses = v ? JSON.parse(v) : []; }catch(e){ expenses = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'payments'); payments = v ? JSON.parse(v) : []; }catch(e){ payments = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'parties'); parties = v ? JSON.parse(v) : []; }catch(e){ parties = []; }
@@ -1837,6 +1904,7 @@ function listenToCloud(){
     bills = data.bills || [];
     tempBills = data.tempBills || [];
     purchases = data.purchases || [];
+    purchaseOrders = data.purchaseOrders || [];
     expenses = data.expenses || [];
     payments = data.payments || [];
     parties = data.parties || [];
@@ -1850,6 +1918,7 @@ function listenToCloud(){
       localStorage.setItem(LS_PREFIX+'bills', JSON.stringify(bills));
       localStorage.setItem(LS_PREFIX+'tempbills', JSON.stringify(tempBills));
       localStorage.setItem(LS_PREFIX+'purchases', JSON.stringify(purchases));
+      localStorage.setItem(LS_PREFIX+'purchaseorders', JSON.stringify(purchaseOrders));
       localStorage.setItem(LS_PREFIX+'expenses', JSON.stringify(expenses));
       localStorage.setItem(LS_PREFIX+'payments', JSON.stringify(payments));
       localStorage.setItem(LS_PREFIX+'parties', JSON.stringify(parties));
@@ -1874,7 +1943,7 @@ function pushToCloud(immediate){
   clearTimeout(syncPushTimer);
   const doPush = ()=>{
     syncDb.collection(SYNC_COLLECTION).doc(currentUid).set({
-      medicines, bills, tempBills, purchases, expenses, payments, parties, notes, investments, drList, schedule, settings,
+      medicines, bills, tempBills, purchases, purchaseOrders, expenses, payments, parties, notes, investments, drList, schedule, settings,
       updatedAt: new Date().toISOString()
     }).then(()=> setSyncStatus('Synced — last update '+new Date().toLocaleTimeString('en-IN')))
       .catch(e=> setSyncStatus('Sync error: '+e.message));
@@ -1920,7 +1989,7 @@ document.getElementById('btnDisconnectSync').addEventListener('click', ()=>{
 
 /* ---------- Backup / Restore (safety net, since browser data can be cleared) ---------- */
 function downloadBackup(){
-  const data = { medicines, bills, tempBills, purchases, expenses, payments, parties, notes, investments, drList, schedule, settings, exportedAt: new Date().toISOString() };
+  const data = { medicines, bills, tempBills, purchases, purchaseOrders, expenses, payments, parties, notes, investments, drList, schedule, settings, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1939,6 +2008,7 @@ function restoreBackup(file){
       bills = data.bills || [];
       tempBills = data.tempBills || [];
       purchases = data.purchases || [];
+      purchaseOrders = data.purchaseOrders || [];
       expenses = data.expenses || [];
       payments = data.payments || [];
       parties = data.parties || [];
@@ -1947,7 +2017,7 @@ function restoreBackup(file){
       drList = data.drList || [];
       schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
       settings = data.settings || settings;
-      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await saveExpenses(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveSettings();
+      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveSettings();
       renderDashboard(); toast('Backup restored');
     }catch(e){ toast('Invalid backup file'); }
   };
@@ -2013,7 +2083,7 @@ document.querySelectorAll('.nav-toggle').forEach(el=>{
   });
 });
 /* Second-level accordion inside Billing: Purchase / Sale / Report */
-const PURCHASE_GROUP_VIEWS = ['newpurchase','purchases','inventory'];
+const PURCHASE_GROUP_VIEWS = ['purchaseorder','newpurchase','purchases','inventory'];
 const SALE_GROUP_VIEWS = ['newbill','tempbills'];
 const REPORT_GROUP_VIEWS = ['partysale','productsale','expenses'];
 document.querySelectorAll('.nav-subtoggle').forEach(el=>{
@@ -2045,6 +2115,7 @@ const MOBILE_MENU = [
           { label:'Temp Bill', view:'tempbills' },
       ]},
       { label:'Purchase', children:[
+          { label:'Purchase Order', view:'purchaseorder' },
           { label:'New Purchase', view:'newpurchase' },
           { label:'Purchase History', view:'purchases' },
           { label:'Medicine Stock', view:'inventory' },
@@ -2239,6 +2310,7 @@ function showView(name){
   document.getElementById('partyListSidebarSection').style.display = (name==='partylist') ? '' : 'none';
   if(name==='dashboard') renderDashboard();
   if(name==='inventory') renderInventory();
+  if(name==='purchaseorder') poEnter();
   if(name==='newpurchase') resetPurchaseForm();
   if(name==='purchases') renderPurchasesHistory();
   if(name==='newbill'){ if(!editingBillId && !document.getElementById('billDate').value) document.getElementById('billDate').value = new Date().toISOString().slice(0,10); renderBillMedList(); updateCustNameSuggestions(); updateCustDuesBox(); }
@@ -2535,6 +2607,275 @@ document.getElementById('btnSaveMed').addEventListener('click', async ()=>{
   }
   await saveMedicines();
   showView('inventory');
+});
+
+/* ---------- Purchase Order ----------
+   Build an order (pick qty per product / add custom products), then Save. Saved orders live in `purchaseOrders`
+   and show as one line each (date, items, value, Edit / Delete / Share). Nothing here touches stock.
+   poState is only the in-progress draft (auto-kept so a refresh doesn't lose it). */
+const PO_LS_KEY = LS_PREFIX+'purchaseorder';
+function poBlank(){ return { qty:{}, price:{}, pb:{}, custom:[], editingId:null }; } // qty (BOXES) / price (per BOX) / pb (strips per box) keyed by medicine id; custom = [{rid,name,price,qty}]
+let poState = poBlank();
+let poLoaded = false;
+let poMode = 'list'; // 'list' = saved orders, 'form' = building / editing an order
+function loadPOState(){
+  if(poLoaded) return;
+  poLoaded = true;
+  try{
+    const v = localStorage.getItem(PO_LS_KEY);
+    if(v){ const parsed = JSON.parse(v); poState = { qty:parsed.qty||{}, price:parsed.price||{}, pb:parsed.pb||{}, custom:parsed.custom||[], editingId:parsed.editingId||null }; }
+  }catch(e){ poState = poBlank(); }
+}
+function savePOState(){ try{ localStorage.setItem(PO_LS_KEY, JSON.stringify(poState)); }catch(e){} }
+async function savePurchaseOrders(){ try{ localStorage.setItem(LS_PREFIX+'purchaseorders', JSON.stringify(purchaseOrders)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
+function poEsc(v){ return String(v==null?'':v).replace(/"/g,'&quot;'); }
+function poDefaultPrice(m){ return (m.purchaseRate!=null && m.purchaseRate!=='') ? Number(m.purchaseRate) : (m.rate!=null ? Number(m.rate) : 0); } // per strip / selling unit
+/* Orders are placed in BOXES. Strips per box: what you typed on the row, else what the last purchase bill used, else read from the pack (10X10 -> 10). */
+function poIsPcName(name, pack, unit){
+  const u = String(unit||'').toLowerCase();
+  if(/^(bottle|pcs?|vial|tube|sachet)$/.test(u) && u!=='sachet') return true;
+  const d = purchaseDetectUnits(name, pack).unit;
+  return d==='bottle' || d==='pcs';
+}
+function poIsPc(m){ return poIsPcName(m.name, m.pack, m.unit); }
+function poPerBox(m){
+  if(poIsPc(m)) return 1;
+  const o = parseFloat(poState.pb && poState.pb[m.id]); if(o>0) return o;
+  const nm = String(m.name||'').trim().toLowerCase();
+  for(let i=purchases.length-1;i>=0;i--){
+    const it = (purchases[i].items||[]).find(x=> String(x.name||'').trim().toLowerCase()===nm && parseFloat(x.unitsPerBox)>0);
+    if(it) return parseFloat(it.unitsPerBox);
+  }
+  return purchaseDetectUnits(m.name, m.pack).perBox || 1;
+}
+function poStripsText(qty, pb, pc){ const q = parseFloat(qty)||0; return (!pc && q>0) ? (Math.round(q*pb*100)/100)+' strips' : '—'; }
+function poBoxPrice(m, pb){ return Math.round(poDefaultPrice(m)*pb*100)/100; } // default price per BOX = per-strip cost x strips per box
+function poStockHint(m, pb){ const st = Number(m.stock)||0; return pb>1 ? '≈ '+(Math.round(st/pb*10)/10)+' box' : ''; }
+function poFmtDate(iso){
+  try{ return new Date(iso).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}); }
+  catch(e){ return String(iso||''); }
+}
+/* Current draft -> list of order lines (only rows with qty > 0 and a name) */
+function poCollectLines(){
+  const lines = [];
+  medicines.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(m=>{
+    const qty = parseFloat(poState.qty[m.id])||0;
+    if(qty<=0) return;
+    const pb = poPerBox(m);
+    const price = poState.price[m.id]!=null ? (parseFloat(poState.price[m.id])||0) : poBoxPrice(m, pb);
+    lines.push({ medId:m.id, name:m.name, qty, price, value:price*qty, unit:(poIsPc(m)?'pc':'box'), perBox:pb });
+  });
+  poState.custom.forEach(r=>{
+    const qty = parseFloat(r.qty)||0;
+    if(qty<=0 || !String(r.name||'').trim()) return;
+    const price = parseFloat(r.price)||0;
+    lines.push({ medId:null, name:String(r.name).trim(), qty, price, value:price*qty, unit:(poIsPcName(r.name,'','')?'pc':'box'), perBox:null });
+  });
+  return lines;
+}
+function poBuildText(lines, total, dateIso){
+  if(!lines.length) return 'No items in the order yet.';
+  const out = ['Purchase Order'];
+  if(settings && settings.shopName) out.push(settings.shopName);
+  if(dateIso) out.push('Date: '+poFmtDate(dateIso));
+  out.push('');
+  lines.forEach((l,i)=> out.push(`${i+1}. ${l.name} - ${l.qty} ${l.unit||'strip'}`));
+  out.push('', `Items: ${lines.length}`);
+  return out.join('\n');
+}
+/* Called when the Purchase Order tab opens: resume a draft if there is one, otherwise show the saved list */
+function poEnter(){
+  loadPOState();
+  poMode = (poState.editingId || poCollectLines().length || !purchaseOrders.length) ? 'form' : 'list';
+  renderPurchaseOrder();
+}
+function renderPurchaseOrder(){
+  loadPOState();
+  const listMode = (poMode==='list');
+  const show = (id, on)=>{ document.getElementById(id).style.display = on ? '' : 'none'; };
+  show('poListWrap', listMode);   show('poFormWrap', !listMode);
+  show('btnNewPO', listMode);
+  show('poSearch', !listMode);    show('btnClearPO', !listMode);
+  show('btnBackPO', !listMode && (purchaseOrders.length>0 || !!poState.editingId));
+  document.getElementById('poDesc').textContent = listMode
+    ? 'Your saved purchase orders. Add as many as you like — edit, delete or share any of them.'
+    : (poState.editingId ? 'Editing a saved order — change quantities or prices, then update it.'
+                         : 'Plan an order in boxes (syrups and bottles in pcs): set the quantity for the products you want, add anything not in your stock list yet, and see the total order value. Nothing here updates stock — it\'s just for planning.');
+  if(listMode){ renderPOList(); return; }
+  document.getElementById('btnSavePO').textContent = poState.editingId ? 'Update order' : 'Save order';
+  const search = (document.getElementById('poSearch').value||'').trim().toLowerCase();
+  const list = medicines.filter(m=> !search || m.name.toLowerCase().includes(search))
+                         .slice().sort((a,b)=> a.name.localeCompare(b.name));
+  document.getElementById('poEmpty').style.display = medicines.length ? 'none' : '';
+  const body = document.getElementById('poTableBody');
+  body.innerHTML = list.map(m=>{
+    const pb = poPerBox(m);
+    const price = (poState.price[m.id]!=null) ? poState.price[m.id] : poBoxPrice(m, pb);
+    const qty = poState.qty[m.id]!=null ? poState.qty[m.id] : '';
+    const value = (parseFloat(price)||0) * (parseFloat(qty)||0);
+    return `<tr data-med-id="${m.id}">
+      <td>${poEsc(m.name)}</td>
+      <td class="num stock-cell">${m.stock!=null ? m.stock : 0} ${poEsc(m.unit||'strip')}<div class="box-hint" style="font-size:10.5px;color:var(--muted);">${poStockHint(m, pb)}</div></td>
+      <td class="num">${poIsPc(m) ? '—' : `<input class="qtybox" data-f="pb" style="width:60px" type="number" min="1" step="1" value="${poEsc(pb)}" title="Strips (or sachets) in one box" oninput="updatePOMed(this,'${m.id}','pb')">`}</td>
+      <td><input class="qtybox" data-f="price" style="width:90px" type="number" min="0" step="0.01" value="${poEsc(price)}" oninput="updatePOMed(this,'${m.id}','price')"></td>
+      <td><input class="qtybox" data-f="qty" style="width:80px" type="number" min="0" step="1" value="${poEsc(qty)}" oninput="updatePOMed(this,'${m.id}','qty')"></td>
+      <td class="num strips-cell">${poStripsText(qty, pb, poIsPc(m))}</td>
+      <td class="num amt-cell">${fmt(value)}</td>
+    </tr>`;
+  }).join('');
+  const cbody = document.getElementById('poCustomBody');
+  cbody.innerHTML = poState.custom.map(r=>{
+    const value = (parseFloat(r.price)||0) * (parseFloat(r.qty)||0);
+    return `<tr data-rid="${r.rid}">
+      <td><input value="${poEsc(r.name)}" placeholder="Product name" oninput="updatePOCustom(this,'${r.rid}','name')"></td>
+      <td><input class="qtybox" style="width:90px" type="number" min="0" step="0.01" value="${poEsc(r.price)}" oninput="updatePOCustom(this,'${r.rid}','price')"></td>
+      <td><input class="qtybox" style="width:80px" type="number" min="0" step="1" value="${poEsc(r.qty)}" oninput="updatePOCustom(this,'${r.rid}','qty')"></td>
+      <td class="num amt-cell">${fmt(value)}</td>
+      <td><button class="sm ghost" onclick="removePOCustom('${r.rid}')">✕</button></td>
+    </tr>`;
+  }).join('');
+  computePOTotals();
+}
+/* One line per saved order: date, items, value, Edit / Delete / Share */
+function renderPOList(){
+  const sorted = purchaseOrders.slice().sort((a,b)=> String(b.savedAt).localeCompare(String(a.savedAt)));
+  document.getElementById('poListTable').style.display = sorted.length ? '' : 'none';
+  document.getElementById('poListEmpty').style.display = sorted.length ? 'none' : '';
+  document.getElementById('poListBody').innerHTML = sorted.map(o=>`<tr>
+    <td>${poEsc(poFmtDate(o.savedAt))}</td>
+    <td class="num">${o.lines.length}</td>
+    <td class="num amt-cell">${fmt(o.total)}</td>
+    <td style="white-space:nowrap;text-align:right;">
+      <button class="sm ghost" onclick="poEditOrder('${o.id}')">Edit</button>
+      <button class="sm danger" onclick="poDeleteOrder('${o.id}')">Delete</button>
+      <button class="sm ghost" onclick="poShareOrder('${o.id}')">Share</button>
+    </td>
+  </tr>`).join('');
+}
+function computePOTotals(){
+  const lines = poCollectLines();
+  document.getElementById('poItemCount').textContent = lines.length;
+  document.getElementById('poGrandTotal').textContent = fmt(lines.reduce((t,l)=>t+l.value,0));
+}
+window.updatePOMed = function(el, medId, field){
+  const value = el.value;
+  if(field==='price') poState.price[medId] = value;
+  if(field==='qty') poState.qty[medId] = value;
+  if(field==='pb') poState.pb[medId] = value;
+  savePOState();
+  // Patch just this row's amount + the totals — avoids rebuilding inputs (and losing focus/cursor) while typing.
+  const m = medicines.find(x=>x.id===medId);
+  const row = el.closest('tr');
+  if(m && row){
+    const pb = poPerBox(m);
+    if(field==='pb'){
+      const pin = row.querySelector('[data-f="price"]');
+      if(poState.price[medId]==null && pin) pin.value = poBoxPrice(m, pb);   // default price follows strips/box until you type your own
+      const hint = row.querySelector('.box-hint'); if(hint) hint.textContent = poStockHint(m, pb);
+    }
+    const price = poState.price[medId]!=null ? poState.price[medId] : poBoxPrice(m, pb);
+    const qty = poState.qty[medId]!=null ? poState.qty[medId] : '';
+    row.querySelector('.amt-cell').textContent = fmt((parseFloat(price)||0)*(parseFloat(qty)||0));
+    const sc = row.querySelector('.strips-cell'); if(sc) sc.textContent = poStripsText(qty, pb, poIsPc(m));
+  }
+  computePOTotals();
+};
+window.updatePOCustom = function(el, rid, field){
+  const row = poState.custom.find(r=>r.rid===rid); if(!row) return;
+  row[field] = el.value;
+  savePOState();
+  const tr = el.closest('tr');
+  if(tr) tr.querySelector('.amt-cell').textContent = fmt((parseFloat(row.price)||0)*(parseFloat(row.qty)||0));
+  computePOTotals();
+};
+window.removePOCustom = function(rid){
+  poState.custom = poState.custom.filter(r=>r.rid!==rid);
+  savePOState();
+  renderPurchaseOrder();
+};
+/* ----- saved-order actions ----- */
+window.poEditOrder = function(id){
+  const o = purchaseOrders.find(x=>x.id===id); if(!o) return;
+  const st = poBlank(); st.editingId = o.id;
+  o.lines.forEach(l=>{
+    const m = l.medId ? medicines.find(x=>x.id===l.medId) : null;
+    if(m){
+      if(l.unit==='box' || l.unit==='pc'){ st.qty[m.id] = String(l.qty); st.price[m.id] = String(l.price); if(l.perBox>0) st.pb[m.id] = String(l.perBox); }
+      else { // older order saved per strip -> show it in boxes (same total value)
+        const pb = poPerBox(m), r2 = v=>String(Math.round(v*100)/100);
+        st.pb[m.id] = String(pb); st.qty[m.id] = r2((parseFloat(l.qty)||0)/pb); st.price[m.id] = r2((parseFloat(l.price)||0)*pb);
+      }
+    }
+    else st.custom.push({ rid:uid(), name:l.name, price:String(l.price), qty:String(l.qty) }); // custom product, or medicine no longer in stock
+  });
+  poState = st; savePOState();
+  document.getElementById('poSearch').value = '';
+  poMode = 'form';
+  renderPurchaseOrder();
+};
+window.poDeleteOrder = async function(id){
+  const o = purchaseOrders.find(x=>x.id===id); if(!o) return;
+  if(!confirm('Delete this order ('+poFmtDate(o.savedAt)+', '+fmt(o.total)+')?')) return;
+  purchaseOrders = purchaseOrders.filter(x=>x.id!==id);
+  await savePurchaseOrders();
+  renderPurchaseOrder();
+  toast('Order deleted');
+};
+window.poShareOrder = async function(id){
+  const o = purchaseOrders.find(x=>x.id===id); if(!o) return;
+  const text = poBuildText(o.lines, o.total, o.savedAt); // full order, every line
+  if(navigator.share){
+    try{ await navigator.share({ title:'Purchase Order', text }); return; }
+    catch(e){ if(e && e.name==='AbortError') return; }
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank'); // desktop fallback: WhatsApp
+};
+/* ----- buttons ----- */
+document.getElementById('poSearch').addEventListener('input', renderPurchaseOrder);
+document.getElementById('btnAddPORow').addEventListener('click', ()=>{
+  loadPOState();
+  poState.custom.push({ rid: uid(), name:'', price:'', qty:'' });
+  savePOState();
+  renderPurchaseOrder();
+});
+document.getElementById('btnClearPO').addEventListener('click', ()=>{
+  if(!confirm('Clear all quantities and custom products from this order?')) return;
+  poState = Object.assign(poBlank(), { editingId: poState.editingId });
+  savePOState();
+  renderPurchaseOrder();
+});
+document.getElementById('btnNewPO').addEventListener('click', ()=>{
+  poState = poBlank(); savePOState();
+  document.getElementById('poSearch').value = '';
+  poMode = 'form';
+  renderPurchaseOrder();
+});
+document.getElementById('btnBackPO').addEventListener('click', ()=>{
+  const has = poCollectLines().length > 0;
+  if((poState.editingId || has) && !confirm(poState.editingId ? 'Discard your changes to this order?' : 'Discard this unsaved order?')) return;
+  poState = poBlank(); savePOState();
+  poMode = 'list';
+  renderPurchaseOrder();
+});
+document.getElementById('btnCopyPO').addEventListener('click', async ()=>{
+  const lines = poCollectLines();
+  const text = poBuildText(lines, lines.reduce((t,l)=>t+l.value,0), null);
+  try{ await navigator.clipboard.writeText(text); toast('Order summary copied'); }
+  catch(e){ toast('Could not copy — select and copy manually'); }
+});
+document.getElementById('btnSavePO').addEventListener('click', async ()=>{
+  loadPOState();
+  const lines = poCollectLines();
+  if(!lines.length){ toast('Add a quantity for at least one product before saving'); return; }
+  const total = lines.reduce((t,l)=>t+l.value,0);
+  const existing = poState.editingId ? purchaseOrders.find(o=>o.id===poState.editingId) : null;
+  if(existing){ existing.lines = lines; existing.total = total; existing.updatedAt = new Date().toISOString(); }
+  else purchaseOrders.push({ id:uid(), savedAt:new Date().toISOString(), lines, total });
+  await savePurchaseOrders();
+  poState = poBlank(); savePOState();
+  poMode = 'list'; // hide the form, show the saved-orders list
+  renderPurchaseOrder();
+  toast(existing ? 'Order updated' : 'Order saved');
 });
 
 /* ---------- New Purchase (bulk-add multiple medicines in one shot) ---------- */
