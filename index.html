@@ -3121,7 +3121,7 @@ window.addToCart = function(medId){
        be switched to MRP − 60% per line; without an MRP we fall back to the stored sale rate. */
     const mrp = (m.mrp!=null && m.mrp!=='') ? Number(m.mrp) : null;
     const startRate = mrp!=null ? rateFromMrp(mrp, 20) : m.rate;
-    cart.push({medId:m.id, name:m.name, mrp, mrpPct: mrp!=null ? 20 : null, rate:startRate, gst:m.gst, unit:m.unit, qty:1, free:0, maxStock:m.stock, rateType: m.rateType||'incl'});
+    cart.push({medId:m.id, name:m.name, mrp, mrpPct: mrp!=null ? 20 : null, rate:startRate, gst:m.gst, unit:m.unit, qty:1, free:0, maxStock:m.stock, rateType: m.rateType||'incl', batch:m.batch||'', expiry:m.expiry||''});
   }
   renderCart();
 };
@@ -3288,7 +3288,7 @@ document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
     if(!canon){ toast('Bills can only be made to Dr List or Chemist List — use + Add doctor / + Add chemist first'); return; }
     customerName = canon.name;
   }
-  const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:c.rateType||'excl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal}));
+  const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:c.rateType||'excl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal, batch:c.batch||'', expiry:c.expiry||''}));
 
   if(editingBillId){
     const idx = bills.findIndex(b=>b.id===editingBillId);
@@ -3355,7 +3355,7 @@ document.getElementById('btnSaveTempBill').addEventListener('click', async ()=>{
   const canon = getCustPickerRows().find(r=> r.name.toLowerCase()===customerName.toLowerCase());
   if(!canon){ toast('Bills can only be made to Dr List or Chemist List — use + Add doctor / + Add chemist first'); return; }
   customerName = canon.name;
-  const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:c.rateType||'excl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal}));
+  const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:c.rateType||'excl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal, batch:c.batch||'', expiry:c.expiry||''}));
 
   if(editingBillId){ toast('Cannot save an edit as a temp bill — update or cancel the edit first'); return; }
 
@@ -3471,6 +3471,7 @@ window.editBillById = function(id, returnView){
       medId: m ? m.id : null,
       name: it.name, unit: it.unit, rate: it.rate, gst: it.gst,
       rateType: it.rateType||'excl', qty: it.qty, free: Number(it.free)||0,
+      batch: it.batch || (m ? m.batch : '') || '', expiry: it.expiry || (m ? m.expiry : '') || '',
       // original qty + free is still "available" to this bill until saved
       maxStock: m ? (Number(m.stock) + Number(it.qty) + (Number(it.free)||0)) : (Number(it.qty) + (Number(it.free)||0))
     };
@@ -5476,13 +5477,19 @@ function buildInvoiceHtml(bill){
   const rows = bill.items.map(it=>{
     const gst = Number(it.gst)||0;
     const rate = Number(it.rate)||0;
+    /* Older bills, saved before batch/expiry were captured on the bill item itself, don't carry
+       these fields — fall back to whatever the medicine record currently has for that name. */
+    const medRec = (!it.batch || !it.expiry) ? medicines.find(m=>(m.name||'').trim().toLowerCase()===(it.name||'').trim().toLowerCase()) : null;
+    const itBatch = it.batch || (medRec ? medRec.batch : '') || '';
+    const itExpiry = it.expiry || (medRec ? medRec.expiry : '') || '';
     /* Rate excluding GST, whichever way the item was entered */
     const baseRate = it.rateType==='incl' ? (gst>0 ? rate/(1+gst/100) : rate) : rate;
     const discRate = baseRate * dFactor;          // rate after discount, before GST
-    const finalRate = discRate * (1+gst/100);     // what the party actually pays per unit
+    const finalRate = discRate * (1+gst/100);     // what the party actually pays per unit (used for amount, not shown separately)
     const amount = finalRate * (Number(it.qty)||0);
+    const expLabel = /^\d{4}-\d{2}$/.test(itExpiry) ? (itExpiry.slice(5,7)+'/'+itExpiry.slice(2,4)) : (itExpiry||'—');
     return `
-    <tr><td>${it.name}</td><td class="num">${it.qty} ${it.unit}</td><td class="num">${(Number(it.free)||0) ? (Number(it.free)+' '+it.unit) : '—'}</td><td class="num">₹${discRate.toFixed(2)}</td><td class="num">${gst}%</td><td class="num">₹${finalRate.toFixed(2)}</td><td class="num">${fmt(amount)}</td></tr>
+    <tr><td>${it.name}</td><td class="num">${itBatch||'—'}</td><td class="num">${expLabel}</td><td class="num">${it.qty} ${it.unit}</td><td class="num">${(Number(it.free)||0) ? (Number(it.free)+' '+it.unit) : '—'}</td><td class="num">₹${discRate.toFixed(2)}</td><td class="num">${gst}%</td><td class="num">${fmt(amount)}</td></tr>
   `;
   }).join('');
   const partyAddress = (()=>{
@@ -5523,7 +5530,7 @@ function buildInvoiceHtml(bill){
       </div>
     </div>
     <table>
-      <thead><tr><th>Medicine</th><th class="num">Qty</th><th class="num">Free</th><th class="num">Rate${discPct>0?'<br><span style="font-weight:400;font-size:9px;">after disc.</span>':''}</th><th class="num">GST</th><th class="num">Final rate</th><th class="num">Amount</th></tr></thead>
+      <thead><tr><th>Medicine</th><th class="num">Batch</th><th class="num">Expiry</th><th class="num">Qty</th><th class="num">Free</th><th class="num">Rate${discPct>0?'<br><span style="font-weight:400;font-size:9px;">after disc.</span>':''}</th><th class="num">GST</th><th class="num">Amount</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div style="margin-top:14px;max-width:260px;margin-left:auto;">
