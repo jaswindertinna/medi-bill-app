@@ -399,12 +399,18 @@
   .inv-date .val{font-size:12.5px;font-weight:600;color:var(--primary-dark);margin-top:1px;}
   .inv-date .sub{font-size:10px;color:var(--muted);font-weight:400;}
   #drInvSummaryTable{table-layout:fixed;}
-  #drInvSummaryTable th:nth-child(1){width:28%;}
-  #drInvSummaryTable th:nth-child(2), #drInvSummaryTable th:nth-child(3), #drInvSummaryTable th:nth-child(4){width:21%;}
-  #drInvSummaryTable th:nth-child(5){width:9%;min-width:64px;}
+  #drInvSummaryTable th:nth-child(1){width:24%;}
+  #drInvSummaryTable th:nth-child(2), #drInvSummaryTable th:nth-child(3), #drInvSummaryTable th:nth-child(4){width:19%;}
+  #drInvSummaryTable th:nth-child(5){width:19%;min-width:130px;}
   #drInvSummaryTable td:nth-child(5){text-align:right;}
   button.inv-view-btn{background:var(--primary);color:#fff;border:1px solid var(--primary);padding:4px 12px;font-size:10.5px;font-weight:600;border-radius:6px;}
   button.inv-view-btn:hover{background:var(--primary-dark);border-color:var(--primary-dark);}
+  button.inv-edit-btn{background:#fff;color:var(--primary-dark);border:1px solid var(--primary);padding:4px 12px;font-size:10.5px;font-weight:600;border-radius:6px;}
+  button.inv-edit-btn:hover{background:var(--primary-light);}
+  button.inv-view-btn.active, button.inv-edit-btn.active{background:var(--primary-dark);color:#fff;border-color:var(--primary-dark);}
+  .inv-actions-cell{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;}
+  .inv-line-stats{display:flex;flex-wrap:wrap;gap:6px 20px;margin:0 0 10px;padding:8px 11px;background:var(--primary-light);border-radius:8px;}
+  .inv-bill-table th, .inv-bill-table td{font-size:11.5px;}
   .inv-cycle-foot{display:flex;justify-content:flex-end;margin-top:8px;}
   @media (max-width:700px){ .inv-stats{grid-template-columns:1fr 1fr 1fr;gap:6px;} .inv-stat .val{font-size:13px;} }
   .inv-cycle.done .chemist-chip{padding-right:11px;}
@@ -560,6 +566,7 @@
         <div class="nav-subtoggle" data-view="investment">Dr Investment</div>
         <div class="nav-subtoggle" data-view="drreport">Report</div>
         <div class="nav-subtoggle" data-view="schedule">Schedule</div>
+        <div class="nav-subtoggle" data-view="businessplan">Business Plan</div>
       </div>
     </div>
     <div class="nav-submenu" id="submenu-list">
@@ -1331,7 +1338,7 @@
       </div>
 
       <div id="invDetailCol">
-        <div class="empty" id="invDetailEmpty"><h3>Select a doctor</h3><p>Tap View next to Pending in the table above to see each investment tab, the chemists and products linked, and the sale tallied so far.</p></div>
+        <div class="empty" id="invDetailEmpty"><h3>Select a doctor</h3><p>Tap View to see each investment's dates, sale, payment status and bills — or Edit to link/unlink chemists and products.</p></div>
         <div id="invDetailContent" style="display:none;"></div>
       </div>
     </div>
@@ -1346,6 +1353,24 @@
       </div>
       <div id="drReportBody">
         <div class="empty" id="drReportEmpty"><h3>No doctor selected</h3><p>Choose a doctor above who has at least one investment recorded.</p></div>
+      </div>
+    </div>
+
+    <!-- BUSINESS PLAN -->
+    <div class="view" id="view-businessplan">
+      <div class="page-head"><div><h2>Business Plan</h2><p><b>Temp</b>: type any Dr name and profit yourself. <b>Actual</b>: pick the Dr from Dr List — profit comes from the chemists linked under Dr Investment.</p></div></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="primary" id="bpTabTemp">Temp</button>
+        <button id="bpTabActual">Actual</button>
+      </div>
+      <div class="panel" id="bpAddPanel"></div>
+      <div class="panel" style="padding:0;overflow-x:auto;">
+        <table>
+          <thead><tr><th>Dr name</th><th>Address</th><th class="num">Profit ₹</th><th></th></tr></thead>
+          <tbody id="bpBody"></tbody>
+          <tfoot id="bpFoot"></tfoot>
+        </table>
+        <div class="empty" id="bpEmpty" style="display:none;"><h3>No entries yet</h3><p>Add a Dr above to start the list.</p></div>
       </div>
     </div>
 
@@ -1475,6 +1500,7 @@ let notes = [];
 let investments = [];
 let drList = [];
 let schedule = { months:{} };
+let businessPlan = { temp:[], actual:[] };
 let settings = { shopName:'', address:'', phone:'', gstin:'', prefix:'INV-', nextNo:1 };
 let cart = [];
 let purchaseRows = [];
@@ -1552,6 +1578,7 @@ async function loadAll(){
   try{ const v = localStorage.getItem(LS_PREFIX+'investments'); investments = v ? JSON.parse(v) : []; }catch(e){ investments = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'drlist'); drList = v ? JSON.parse(v) : []; }catch(e){ drList = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'schedule'); schedule = v ? JSON.parse(v) : { months:{} }; if(!schedule.months) schedule.months = {}; }catch(e){ schedule = { months:{} }; }
+  try{ const v = localStorage.getItem(LS_PREFIX+'businessplan'); businessPlan = v ? JSON.parse(v) : { temp:[], actual:[] }; normBusinessPlan(); }catch(e){ businessPlan = { temp:[], actual:[] }; }
   try{ const v = localStorage.getItem(LS_PREFIX+'settings'); if(v) settings = JSON.parse(v); }catch(e){}
 }
 async function saveMedicines(){ try{ localStorage.setItem(LS_PREFIX+'medicines', JSON.stringify(medicines)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
@@ -1565,6 +1592,8 @@ async function saveNotes(){ try{ localStorage.setItem(LS_PREFIX+'notes', JSON.st
 async function saveInvestments(){ try{ localStorage.setItem(LS_PREFIX+'investments', JSON.stringify(investments)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveDrList(){ try{ localStorage.setItem(LS_PREFIX+'drlist', JSON.stringify(drList)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveSchedule(){ try{ localStorage.setItem(LS_PREFIX+'schedule', JSON.stringify(schedule)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
+async function saveBusinessPlan(){ try{ localStorage.setItem(LS_PREFIX+'businessplan', JSON.stringify(businessPlan)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
+function normBusinessPlan(){ if(!businessPlan || typeof businessPlan!=='object') businessPlan={}; if(!Array.isArray(businessPlan.temp)) businessPlan.temp=[]; if(!Array.isArray(businessPlan.actual)) businessPlan.actual=[]; }
 async function saveSettings(){ try{ localStorage.setItem(LS_PREFIX+'settings', JSON.stringify(settings)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 
 /* ---------- PIN lock (device-local; gates the app before anything else is usable) ---------- */
@@ -1912,6 +1941,7 @@ function listenToCloud(){
     investments = data.investments || [];
     drList = data.drList || [];
     schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
+    businessPlan = data.businessPlan || { temp:[], actual:[] }; normBusinessPlan();
     if(data.settings) settings = data.settings;
     try{
       localStorage.setItem(LS_PREFIX+'medicines', JSON.stringify(medicines));
@@ -1926,6 +1956,7 @@ function listenToCloud(){
       localStorage.setItem(LS_PREFIX+'investments', JSON.stringify(investments));
       localStorage.setItem(LS_PREFIX+'drlist', JSON.stringify(drList));
       localStorage.setItem(LS_PREFIX+'schedule', JSON.stringify(schedule));
+      localStorage.setItem(LS_PREFIX+'businessplan', JSON.stringify(businessPlan));
       localStorage.setItem(LS_PREFIX+'settings', JSON.stringify(settings));
     }catch(e){}
     applyingRemoteUpdate = false;
@@ -1943,7 +1974,7 @@ function pushToCloud(immediate){
   clearTimeout(syncPushTimer);
   const doPush = ()=>{
     syncDb.collection(SYNC_COLLECTION).doc(currentUid).set({
-      medicines, bills, tempBills, purchases, purchaseOrders, expenses, payments, parties, notes, investments, drList, schedule, settings,
+      medicines, bills, tempBills, purchases, purchaseOrders, expenses, payments, parties, notes, investments, drList, schedule, businessPlan, settings,
       updatedAt: new Date().toISOString()
     }).then(()=> setSyncStatus('Synced — last update '+new Date().toLocaleTimeString('en-IN')))
       .catch(e=> setSyncStatus('Sync error: '+e.message));
@@ -1989,7 +2020,7 @@ document.getElementById('btnDisconnectSync').addEventListener('click', ()=>{
 
 /* ---------- Backup / Restore (safety net, since browser data can be cleared) ---------- */
 function downloadBackup(){
-  const data = { medicines, bills, tempBills, purchases, purchaseOrders, expenses, payments, parties, notes, investments, drList, schedule, settings, exportedAt: new Date().toISOString() };
+  const data = { medicines, bills, tempBills, purchases, purchaseOrders, expenses, payments, parties, notes, investments, drList, schedule, businessPlan, settings, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2016,8 +2047,9 @@ function restoreBackup(file){
       investments = data.investments || [];
       drList = data.drList || [];
       schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
+      businessPlan = data.businessPlan || { temp:[], actual:[] }; normBusinessPlan();
       settings = data.settings || settings;
-      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveSettings();
+      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveBusinessPlan(); await saveSettings();
       renderDashboard(); toast('Backup restored');
     }catch(e){ toast('Invalid backup file'); }
   };
@@ -2042,7 +2074,7 @@ document.querySelectorAll('.nav-item').forEach(el=>{
 /* Top-level accordion: Billing / Ledger / Dr Investment / Notes */
 const NOTES_GROUP_VIEWS = ['notes','completednotes'];
 const LEDGER_GROUP_VIEWS = ['payments'];
-const INVESTMENT_GROUP_VIEWS = ['investment','drreport','schedule'];
+const INVESTMENT_GROUP_VIEWS = ['investment','drreport','schedule','businessplan'];
 const LIST_GROUP_VIEWS = ['drlist','chemistlist'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
   el.addEventListener('click', ()=>{
@@ -2133,6 +2165,7 @@ const MOBILE_MENU = [
       { label:'Dr Investment', view:'investment' },
       { label:'Report', view:'drreport' },
       { label:'Schedule', view:'schedule' },
+      { label:'Business Plan', view:'businessplan' },
   ]},
   { label:'List', children:[
       { label:'Dr List', view:'drlist' },
@@ -2328,6 +2361,7 @@ function showView(name){
   if(name==='investment'){ populateInvestmentSelects(); renderInvestments(); }
   if(name==='drreport'){ populateReportDoctorSelect(); renderDrReport(); }
   if(name==='schedule'){ renderSchedule(); }
+  if(name==='businessplan'){ renderBusinessPlan(); }
   if(name==='settings') fillSettingsForm();
 }
 
@@ -5038,6 +5072,7 @@ document.getElementById('btnAddDr').addEventListener('click', async ()=>{
 const INV_TARGET_MULT = 4;
 let invDraftLinks = [];      // chemist/product links being built in the "New investment" form
 let selectedInvDoctor = null; // lower-cased doctor name whose tabs are open below the table
+let selectedInvMode = 'view'; // 'view' (read-only summary + bill list) or 'edit' (chemist/product linker)
 let invLastFocus = null;      // "ctx|kind|idx" — search box to refocus after a re-render
 
 function invKey(n){ return (n||'').trim().toLowerCase(); }
@@ -5155,15 +5190,99 @@ function invRefocus(){
 }
 
 function invDateLabel(d){ return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
-function invCycleHtml(c){
-  const inv = c.inv, ctx = inv.id;
+/* Payment received/pending for a set of chemist links — pulled from the Ledger (payments vs
+   billed) for each linked chemist, same basis the Dr Investment Report already uses. */
+function invLinkPaymentTotals(links){
+  let received=0, pending=0;
+  const seen = new Set();
+  (links||[]).forEach(l=>{
+    const key = invKey(l.chemist);
+    if(!key || seen.has(key)) return;
+    seen.add(key);
+    const t = computePartyTotals(l.chemist);
+    received += t.totalReceived;
+    pending += Math.max(0, t.pending);
+  });
+  return { received, pending };
+}
+/* Every bill of this cycle's linked chemists, dated within the cycle's sale window — but with
+   only the linked products' line items counted/shown when specific products were picked. */
+function invCycleBillRows(inv, from, to){
   const links = readInvLinks(inv);
-  const pct = c.target>0 ? Math.min(100, c.completed/c.target*100) : 0;
+  const byChemist = {};
+  links.forEach(l=>{ byChemist[invKey(l.chemist)] = { chemist:l.chemist, want:new Set((l.products||[]).map(invKey)) }; });
+  const rows = [];
+  bills.forEach(b=>{
+    const pl = byChemist[invKey(b.customerName)]; if(!pl) return;
+    const d = new Date(b.date);
+    if(isNaN(d) || d<from || (to && d>=to)) return;
+    let items = [], amt = 0;
+    if(!pl.want.size){
+      amt = Number(b.grandTotal)||0;
+      items = (b.items||[]).map(it=>({ name:it.name, qty:it.qty }));
+    } else {
+      (b.items||[]).forEach(it=>{
+        if(!pl.want.has(invKey(it.name))) return;
+        amt += itemSaleAmounts(it).saleIncl;
+        items.push({ name:it.name, qty:it.qty });
+      });
+      if(!items.length) return;
+    }
+    rows.push({ chemist:pl.chemist, billNo:b.billNo, date:b.date, items, amount:amt });
+  });
+  rows.sort((a,b)=> new Date(b.date)-new Date(a.date));
+  return rows;
+}
+/* Read-only "View" card: the one-line summary row, then every bill of the linked chemist(s),
+   trimmed to just the linked product(s) on each bill. */
+function invCycleViewHtml(c){
+  const inv = c.inv;
+  const links = readInvLinks(inv);
   const reached = c.target>0 && c.completed>=c.target;
   const status = c.active
     ? `<span class="pill soon">Active</span>${reached ? ' <span class="pill ok">Target reached</span>' : ''}`
     : `<span class="pill ok">Completed</span>`;
   const saleEnd = (!c.active && c.to > c.from) ? new Date(c.to.getTime()-86400000) : null;
+  const pay = invLinkPaymentTotals(links);
+  const billRows = invCycleBillRows(inv, c.from, c.to);
+  return `<div class="inv-cycle ${c.active?'':'done'}">
+    <div class="inv-cycle-head">
+      <div><span class="inv-cycle-title">Investment ${c.no}</span><span class="inv-cycle-sub">${escapeHtml(inv.invType)||'—'}</span></div>
+      <div>${status}</div>
+    </div>
+    <div class="inv-line-stats">
+      <div class="inv-date"><div class="lbl">Inv date</div><div class="val">${invDateLabel(invStart(inv))}</div></div>
+      <div class="inv-date"><div class="lbl">Sale date</div><div class="val">${invDateLabel(c.from)}${saleEnd ? ` <span class="sub">to ${invDateLabel(saleEnd)}</span>` : ''}</div></div>
+      <div class="inv-date"><div class="lbl">Inv value</div><div class="val">${fmt(c.amount)}</div></div>
+      <div class="inv-date"><div class="lbl">Completed</div><div class="val" style="color:var(--primary);">${fmt(c.completed)}</div></div>
+      <div class="inv-date"><div class="lbl">Pending (${INV_TARGET_MULT}×)</div><div class="val" style="${c.pending>0?'color:var(--danger);':''}">${fmt(c.pending)}</div></div>
+      <div class="inv-date"><div class="lbl">Payment rec.</div><div class="val" style="color:var(--primary);">${fmt(pay.received)}</div></div>
+      <div class="inv-date"><div class="lbl">Payment pending</div><div class="val" style="${pay.pending>0?'color:var(--danger);':''}">${fmt(pay.pending)}</div></div>
+    </div>
+    ${inv.note ? `<div class="inv-note">${escapeHtml(inv.note)}</div>` : ''}
+    <div class="inv-links">
+      <div class="inv-links-title">Linked chemists &amp; products</div>
+      ${invLinksHtml(inv.id, links, false, c.sale.perLink)}
+    </div>
+    <div class="inv-links" style="margin-top:14px;">
+      <div class="inv-links-title">Bills (linked product(s) only)</div>
+      ${billRows.length ? `<div class="panel" style="padding:0;overflow-x:auto;margin-top:6px;">
+        <table class="inv-bill-table">
+          <thead><tr><th>Bill no.</th><th>Date</th><th>Chemist</th><th>Product(s)</th><th class="num">Amount ₹</th></tr></thead>
+          <tbody>${billRows.map(r=>`<tr><td>${escapeHtml(r.billNo||'—')}</td><td>${new Date(r.date).toLocaleDateString('en-IN')}</td><td>${escapeHtml(r.chemist)}</td><td>${r.items.map(it=>escapeHtml(it.name)+(it.qty?` ×${it.qty}`:'')).join(', ')}</td><td class="num">${fmt(r.amount)}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>` : `<div class="inv-link-hint">No bills yet for the linked chemist(s)/product(s) in this period.</div>`}
+    </div>
+  </div>`;
+}
+/* Editable "Edit" card: dates/amount for context, plus the chemist/product linker (add or
+   remove either) — available for any investment, not just the active one. */
+function invCycleEditHtml(c){
+  const inv = c.inv, ctx = inv.id;
+  const links = ensureInvLinks(inv);
+  const status = c.active
+    ? `<span class="pill soon">Active</span>`
+    : `<span class="pill ok">Completed</span>`;
   return `<div class="inv-cycle ${c.active?'':'done'}">
     <div class="inv-cycle-head">
       <div><span class="inv-cycle-title">Investment ${c.no}</span><span class="inv-cycle-sub">${escapeHtml(inv.invType)||'—'}</span></div>
@@ -5171,18 +5290,13 @@ function invCycleHtml(c){
     </div>
     <div class="inv-dates">
       <div class="inv-date"><div class="lbl">Inv date</div><div class="val">${invDateLabel(invStart(inv))}</div></div>
-      <div class="inv-date"><div class="lbl">Sale date</div><div class="val">${invDateLabel(c.from)}${saleEnd ? ` <span class="sub">to ${invDateLabel(saleEnd)}</span>` : ''}<div class="sub">${c.active ? 'sale counts from this date' : 'sale was counted from this date'}</div></div></div>
+      <div class="inv-date"><div class="lbl">Sale date</div><div class="val">${invDateLabel(c.from)}</div></div>
+      <div class="inv-date"><div class="lbl">Inv value</div><div class="val">${fmt(c.amount)}</div></div>
     </div>
-    <div class="inv-stats">
-      <div class="inv-stat"><div class="lbl">Investment</div><div class="val">${fmt(c.amount)}</div></div>
-      <div class="inv-stat ok"><div class="lbl">Completed (sale)</div><div class="val">${fmt(c.completed)}</div></div>
-      <div class="inv-stat ${c.pending>0?'danger':'ok'}"><div class="lbl">Pending (${INV_TARGET_MULT}× = ${fmt(c.target)})</div><div class="val">${fmt(c.pending)}</div></div>
-    </div>
-    <div class="inv-bar"><span style="width:${pct.toFixed(1)}%"></span></div>
     ${inv.note ? `<div class="inv-note">${escapeHtml(inv.note)}</div>` : ''}
     <div class="inv-links">
-      <div class="inv-links-title">Linked chemists &amp; products</div>
-      ${invLinksHtml(ctx, links, c.active, c.sale.perLink)}
+      <div class="inv-links-title">Linked chemists &amp; products — add more, or remove below</div>
+      ${invLinksHtml(ctx, links, true, c.sale.perLink)}
     </div>
     <div class="inv-cycle-foot"><button class="sm danger" data-invact="del-cycle" data-ctx="${ctx}">Delete this investment</button></div>
   </div>`;
@@ -5204,7 +5318,10 @@ function renderInvestments(){
       <td class="num">${fmt(d.invested)}</td>
       <td class="num" style="color:var(--primary);">${fmt(d.completed)}</td>
       <td class="num" style="${d.pending>0?'color:var(--danger);':''}">${fmt(d.pending)}</td>
-      <td><button type="button" class="inv-view-btn" data-invact="select-doc" data-key="${escapeHtml(d.key)}">${d.key===selectedInvDoctor?'Hide':'View'}</button></td>
+      <td><div class="inv-actions-cell">
+        <button type="button" class="inv-view-btn ${d.key===selectedInvDoctor && selectedInvMode==='view' ? 'active' : ''}" data-invact="select-doc-view" data-key="${escapeHtml(d.key)}">View</button>
+        <button type="button" class="inv-edit-btn ${d.key===selectedInvDoctor && selectedInvMode==='edit' ? 'active' : ''}" data-invact="select-doc-edit" data-key="${escapeHtml(d.key)}">Edit</button>
+      </div></td>
     </tr>`).join('');
 
   const sel = list.find(d=>d.key===selectedInvDoctor);
@@ -5225,12 +5342,13 @@ function renderInvestments(){
       if(drInfo.location) meta.push(`<span class="dr-meta"><b>Location:</b> ${escapeHtml(drInfo.location)}</span>`);
       if(drInfo.phone) meta.push(`<span class="dr-meta"><b>Phone:</b> ${escapeHtml(drInfo.phone)}</span>`);
     }
+    const cycleHtmlFn = selectedInvMode==='edit' ? invCycleEditHtml : invCycleViewHtml;
     content.innerHTML = `
       <div class="dr-card-head" style="justify-content:space-between;align-items:center;">
         <div style="display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;"><h3>${escapeHtml(sel.name)}</h3>${meta.join('')}</div>
         <button class="sm primary" data-invact="new-for-doc" data-name="${escapeHtml(sel.name)}">+ New investment</button>
       </div>
-      ${sel.cycles.map(invCycleHtml).join('')}`;
+      ${sel.cycles.map(cycleHtmlFn).join('')}`;
   }
   invRefocus();
 }
@@ -5292,6 +5410,7 @@ document.getElementById('btnAddInvestment').addEventListener('click', async ()=>
   investments.push({ id:uid(), date, saleFrom, doctor, amount, invType, chemists:links.map(l=>l.chemist), links, note });
   await saveInvestments();
   selectedInvDoctor = invKey(doctor);
+  selectedInvMode = 'edit';
   closeInvForm();
   renderInvestments();
   document.getElementById('invDetailCol').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -5304,8 +5423,6 @@ async function invLinkMutate(ctx, fn, focusKey){
     fn(invDraftLinks); invLastFocus = focusKey; renderDraftLinks(); return;
   }
   const inv = investments.find(i=>i.id===ctx); if(!inv) return;
-  const cycles = invCyclesFor(invKey(inv.doctor));
-  if(!cycles.length || cycles[cycles.length-1].inv!==inv){ toast('Only the latest investment can be edited'); return; }
   fn(ensureInvLinks(inv));
   syncInvChemists(inv);
   invLastFocus = focusKey;
@@ -5361,11 +5478,18 @@ document.addEventListener('click', async e=>{
     return;
   }
   const act = el.dataset.invact, ctx = el.dataset.ctx;
-  if(act==='select-doc'){
-    const wasOpen = selectedInvDoctor === el.dataset.key;
-    selectedInvDoctor = wasOpen ? null : el.dataset.key;
+  if(act==='select-doc-view'){
+    const same = selectedInvDoctor===el.dataset.key && selectedInvMode==='view';
+    selectedInvDoctor = same ? null : el.dataset.key;
+    selectedInvMode = 'view';
     renderInvestments();
-    if(!wasOpen) document.getElementById('invDetailCol').scrollIntoView({ behavior:'smooth', block:'start' });
+    if(!same) document.getElementById('invDetailCol').scrollIntoView({ behavior:'smooth', block:'start' });
+  } else if(act==='select-doc-edit'){
+    const same = selectedInvDoctor===el.dataset.key && selectedInvMode==='edit';
+    selectedInvDoctor = same ? null : el.dataset.key;
+    selectedInvMode = 'edit';
+    renderInvestments();
+    if(!same) document.getElementById('invDetailCol').scrollIntoView({ behavior:'smooth', block:'start' });
   } else if(act==='new-for-doc'){
     openInvForm(el.dataset.name);
   } else if(act==='pick'){
@@ -5428,13 +5552,14 @@ function drStatsForRange(doctorKey, chemistKeys, from, to){
   const salePending = target - ret; // how much sale (of the target) is still pending
   return { invested, ret, profit, target, salePending };
 }
-function periodCardHtml(label, stats, paymentPending){
+function periodCardHtml(label, stats, paymentReceived, paymentPending){
   return `<div class="dr-period-card">
     <h4>${label}</h4>
     <div class="stat-row"><span class="lbl">Total investment</span><span class="val">${fmt(stats.invested)}</span></div>
     <div class="stat-row accent"><span class="lbl">Return (chemist sale)</span><span class="val">${fmt(stats.ret)}</span></div>
     <div class="stat-row ${stats.profit<0?'danger':''}"><span class="lbl">Profit (chemist margin)</span><span class="val">${fmt(stats.profit)}</span></div>
     <div class="stat-row ${stats.salePending>0?'danger':''}"><span class="lbl">Sale pending (${INV_TARGET_MULT}× target)</span><span class="val">${fmt(stats.salePending)}</span></div>
+    <div class="stat-row"><span class="lbl">Payment received</span><span class="val" style="color:var(--primary);">${fmt(paymentReceived)}</span></div>
     <div class="stat-row ${paymentPending>0?'danger':''}"><span class="lbl">Payment pending (to collect)</span><span class="val">${fmt(paymentPending)}</span></div>
   </div>`;
 }
@@ -5453,8 +5578,8 @@ function renderDrReport(){
 
   const drInfo = drList.find(d=>(d.name||'').trim().toLowerCase()===doctorKey);
 
-  let paymentPending = 0;
-  chemistNames.forEach(c=>{ paymentPending += Math.max(0, computePartyTotals(c).pending); });
+  let paymentReceived = 0, paymentPending = 0;
+  chemistNames.forEach(c=>{ const t = computePartyTotals(c); paymentReceived += t.totalReceived; paymentPending += Math.max(0, t.pending); });
 
   const allStats = drStatsForRange(doctorKey, chemistKeys, null, null);
   const [wkFrom, wkTo] = weekRange();
@@ -5477,12 +5602,94 @@ function renderDrReport(){
       ${metaBits.join('')}
     </div>
     <div class="dr-report-grid">
-      ${periodCardHtml('All time', allStats, paymentPending)}
-      ${periodCardHtml('Monthly', monthStats, paymentPending)}
-      ${periodCardHtml('Weekly', weekStats, paymentPending)}
+      ${periodCardHtml('All time', allStats, paymentReceived, paymentPending)}
+      ${periodCardHtml('Monthly', monthStats, paymentReceived, paymentPending)}
+      ${periodCardHtml('Weekly', weekStats, paymentReceived, paymentPending)}
     </div>`;
 }
 document.getElementById('repDoctor').addEventListener('change', renderDrReport);
+
+/* ---------- Business Plan — Temp (manual Dr + profit) and Actual (Dr from Dr List, profit from Dr Investment linked chemists) ---------- */
+let bpMode = 'temp';
+function bpActualProfit(doctorName){
+  const key = (doctorName||'').trim().toLowerCase();
+  const chemKeys = new Set();
+  investments.forEach(i=>{
+    if((i.doctor||'').trim().toLowerCase()!==key) return;
+    (i.chemists||[]).forEach(c=>{ const n=(c||'').trim().toLowerCase(); if(n) chemKeys.add(n); });
+  });
+  if(!chemKeys.size) return 0;
+  return drStatsForRange(key, chemKeys, null, null).profit || 0;
+}
+function bpDrAddress(doctorName){
+  const key = (doctorName||'').trim().toLowerCase();
+  const d = drList.find(x=>(x.name||'').trim().toLowerCase()===key);
+  if(!d) return '';
+  return [d.location, d.city].map(v=>(v||'').trim()).filter(Boolean).join(', ');
+}
+function renderBusinessPlan(){
+  normBusinessPlan();
+  document.getElementById('bpTabTemp').className = bpMode==='temp' ? 'primary' : '';
+  document.getElementById('bpTabActual').className = bpMode==='actual' ? 'primary' : '';
+  const addEl = document.getElementById('bpAddPanel');
+  const body = document.getElementById('bpBody');
+  const foot = document.getElementById('bpFoot');
+  const empty = document.getElementById('bpEmpty');
+  let rows = [], total = 0;
+  if(bpMode==='temp'){
+    addEl.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="field" style="flex:1;min-width:160px;margin:0;"><label>Dr name</label><input id="bpTempName" placeholder="Any name"></div>
+      <div class="field" style="flex:1;min-width:160px;margin:0;"><label>Address</label><input id="bpTempAddr" placeholder="Address"></div>
+      <div class="field" style="width:150px;margin:0;"><label>Profit ₹</label><input id="bpTempProfit" type="number" step="any" placeholder="0"></div>
+      <button class="primary" id="bpTempAdd">Add</button></div>`;
+    rows = businessPlan.temp.map(r=>({ id:r.id, name:r.name, address:r.address||'', profit:Number(r.profit)||0 }));
+  } else {
+    const used = new Set(businessPlan.actual.map(r=>(r.doctor||'').trim().toLowerCase()));
+    const opts = drList.map(d=>(d.name||'').trim()).filter(n=>n && !used.has(n.toLowerCase()))
+      .sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    addEl.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="field" style="flex:1;min-width:200px;margin:0;"><label>Dr name (from Dr List)</label>
+        <select id="bpActualDr"><option value="">Select doctor…</option>${opts}</select></div>
+      <button class="primary" id="bpActualAdd">Add</button></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">Address comes from the Dr List (location, city). Profit is the all-time margin on bills of the chemists linked to this Dr under Dr Investment. It updates automatically.</div>`;
+    rows = businessPlan.actual.map(r=>({ id:r.id, name:r.doctor, address:bpDrAddress(r.doctor), profit:bpActualProfit(r.doctor) }));
+  }
+  total = rows.reduce((s,r)=>s+r.profit,0);
+  body.innerHTML = rows.map(r=>`<tr>
+    <td style="font-weight:600;">${escapeHtml(r.name)}</td>
+    <td>${escapeHtml(r.address)||'—'}</td>
+    <td class="num" style="${r.profit<0?'color:var(--danger);':''}">${fmt(r.profit)}</td>
+    <td style="text-align:right;"><button class="sm danger" data-bpdel="${r.id}">Delete</button></td></tr>`).join('');
+  empty.style.display = rows.length ? 'none' : '';
+  foot.innerHTML = rows.length ? `<tr style="background:var(--primary-light);"><td style="font-weight:700;">Total profit</td><td></td><td class="num" style="font-weight:700;${total<0?'color:var(--danger);':''}">${fmt(total)}</td><td></td></tr>` : '';
+}
+document.getElementById('bpTabTemp').addEventListener('click', ()=>{ bpMode='temp'; renderBusinessPlan(); });
+document.getElementById('bpTabActual').addEventListener('click', ()=>{ bpMode='actual'; renderBusinessPlan(); });
+document.getElementById('view-businessplan').addEventListener('click', async (e)=>{
+  const t = e.target;
+  if(t.id==='bpTempAdd'){
+    const name = document.getElementById('bpTempName').value.trim();
+    const pv = document.getElementById('bpTempProfit').value;
+    if(!name){ toast('Enter a Dr name'); return; }
+    if(pv===''|| isNaN(Number(pv))){ toast('Enter profit amount'); return; }
+    const address = document.getElementById('bpTempAddr').value.trim();
+    businessPlan.temp.push({ id:uid(), name, address, profit:Number(pv) });
+    await saveBusinessPlan(); renderBusinessPlan(); return;
+  }
+  if(t.id==='bpActualAdd'){
+    const doctor = document.getElementById('bpActualDr').value;
+    if(!doctor){ toast('Select a doctor from the list'); return; }
+    businessPlan.actual.push({ id:uid(), doctor });
+    await saveBusinessPlan(); renderBusinessPlan(); return;
+  }
+  if(t.dataset && t.dataset.bpdel){
+    if(!confirm('Remove this entry from the plan?')) return;
+    const id = t.dataset.bpdel;
+    if(bpMode==='temp') businessPlan.temp = businessPlan.temp.filter(r=>r.id!==id);
+    else businessPlan.actual = businessPlan.actual.filter(r=>r.id!==id);
+    await saveBusinessPlan(); renderBusinessPlan();
+  }
+});
 
 /* ---------- Doctor Schedule — pick a month, fill every date, then save the month ---------- */
 function getDrCities(){
