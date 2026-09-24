@@ -528,6 +528,12 @@
       <div class="nav-subsubmenu" id="subsubmenu-sale">
         <div class="nav-item" data-view="newbill"><span class="nav-dot"></span>New Bill</div>
         <div class="nav-item" data-view="tempbills"><span class="nav-dot"></span>Temp Bill</div>
+        <div class="nav-item" data-view="partylist" id="navItemPartyList"><span class="nav-dot"></span>History</div>
+        <div id="partyListSidebarSection" style="display:none;">
+          <div id="sidebarPartyListRecent"></div>
+          <input class="nav-submenu-search" id="partyListSearch" placeholder="Search party…">
+          <div id="sidebarPartyListForList"></div>
+        </div>
       </div>
       <div class="nav-subsubmenu" id="subsubmenu-purchase">
         <div class="nav-item" data-view="purchaseorder"><span class="nav-dot"></span>Purchase Order</div>
@@ -560,12 +566,6 @@
       <div class="sec-heading">List</div>
       <div class="nav-item" data-view="drlist"><span class="nav-dot"></span>Dr List</div>
       <div class="nav-item" data-view="chemistlist"><span class="nav-dot"></span>Chemist List</div>
-      <div class="nav-item" data-view="partylist" id="navItemPartyList"><span class="nav-dot"></span>Party List</div>
-      <div id="partyListSidebarSection" style="display:none;">
-        <div id="sidebarPartyListRecent"></div>
-        <input class="nav-submenu-search" id="partyListSearch" placeholder="Search party…">
-        <div id="sidebarPartyListForList"></div>
-      </div>
     </div>
     <div class="nav-submenu" id="submenu-notes">
       <div class="sec-heading">Notes</div>
@@ -911,7 +911,7 @@
     <!-- TEMP BILLS -->
     <div class="view" id="view-tempbills">
       <div class="page-head">
-        <div><h2>Temp bill</h2><p>Bills saved temporarily. Confirm to move it into your bills (Party List › Recent) (stock already deducted), or delete to cancel and return stock.</p></div>
+        <div><h2>Temp bill</h2><p>Bills saved temporarily. Confirm to move it into your bills (History › Recent) (stock already deducted), or delete to cancel and return stock.</p></div>
       </div>
       <div class="panel" style="padding:0;overflow-x:auto;">
         <table>
@@ -1237,8 +1237,8 @@
 
     <!-- PARTY LIST -->
     <div class="view" id="view-partylist">
-      <div class="page-head"><div><h2>Party list</h2><p>Recent shows every bill from the last 30 days. Or pick a party to see their details — everyone billed at least once appears here automatically, including doctors and chemists.</p></div></div>
-      <div class="empty" id="partyListEmptyState"><h3>Select a party</h3><p>Choose a party from the Party List (sidebar on desktop, or tap Party List in the menu on phone/tablet) to see their details.</p></div>
+      <div class="page-head"><div><h2>History</h2><p>Recent shows every bill from the last 30 days. Or pick a party to see their details — everyone billed at least once appears here automatically, including doctors and chemists.</p></div></div>
+      <div class="empty" id="partyListEmptyState"><h3>Select a party</h3><p>Choose a party from the History list (sidebar on desktop, or tap History in the menu on phone/tablet) to see their details.</p></div>
       <!-- Recent: all bills from the last 30 days, same table/actions as a single party -->
       <div id="partyListRecentContent" style="display:none;">
         <div class="page-head" style="margin-bottom:8px;"><h2 style="margin:0;">Recent</h2></div>
@@ -2034,7 +2034,7 @@ function daysToExpiry(monthStr){
 /* ---------- Navigation ---------- */
 document.querySelectorAll('.nav-item').forEach(el=>{
   el.addEventListener('click', ()=>{
-    /* Tapping "Party List" always opens on Recent first */
+    /* Tapping "History" always opens on Recent first */
     if(el.dataset.view==='partylist') selectedPartyListParty = RECENT_KEY;
     showView(el.dataset.view);
   });
@@ -2043,7 +2043,7 @@ document.querySelectorAll('.nav-item').forEach(el=>{
 const NOTES_GROUP_VIEWS = ['notes','completednotes'];
 const LEDGER_GROUP_VIEWS = ['payments'];
 const INVESTMENT_GROUP_VIEWS = ['investment','drreport','schedule'];
-const LIST_GROUP_VIEWS = ['drlist','chemistlist','partylist'];
+const LIST_GROUP_VIEWS = ['drlist','chemistlist'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
   el.addEventListener('click', ()=>{
     const key = el.dataset.toggle;
@@ -2084,7 +2084,7 @@ document.querySelectorAll('.nav-toggle').forEach(el=>{
 });
 /* Second-level accordion inside Billing: Purchase / Sale / Report */
 const PURCHASE_GROUP_VIEWS = ['purchaseorder','newpurchase','purchases','inventory'];
-const SALE_GROUP_VIEWS = ['newbill','tempbills'];
+const SALE_GROUP_VIEWS = ['newbill','tempbills','partylist'];
 const REPORT_GROUP_VIEWS = ['partysale','productsale','expenses'];
 document.querySelectorAll('.nav-subtoggle').forEach(el=>{
   el.addEventListener('click', ()=>{
@@ -2113,6 +2113,7 @@ const MOBILE_MENU = [
       { label:'Bill', children:[
           { label:'New Bill', view:'newbill' },
           { label:'Temp Bill', view:'tempbills' },
+          { label:'History', dynamic:'partyListParties' },
       ]},
       { label:'Purchase', children:[
           { label:'Purchase Order', view:'purchaseorder' },
@@ -2136,7 +2137,6 @@ const MOBILE_MENU = [
   { label:'List', children:[
       { label:'Dr List', view:'drlist' },
       { label:'Chemist List', view:'chemistlist' },
-      { label:'Party List', dynamic:'partyListParties' },
   ]},
   { label:'Notes', children:[
       { label:'All Notes', view:'notes' },
@@ -2165,9 +2165,9 @@ function renderMobileNav(){
     renderMobileLedgerPartyList(list);
     return;
   }
-  /* Party List works the same way — a searchable list of billed parties, not a fixed menu */
+  /* History works the same way — a searchable list of billed parties, not a fixed menu */
   if(currentNode && currentNode.dynamic==='partyListParties'){
-    titleEl.textContent = 'Party List';
+    titleEl.textContent = 'History';
     renderMobilePartyListPartyList(list);
     return;
   }
@@ -2227,7 +2227,7 @@ function renderMobileLedgerPartyList(list){
     });
   });
 }
-/* Searchable party list shown when "Party List" is tapped in the mobile menu — same pattern
+/* Searchable party list shown when "History" is tapped in the mobile menu — same pattern
    as the Ledger picker above, filtered to billed, untagged parties. */
 function renderMobilePartyListPartyList(list){
   const q = mobilePartyListSearch.trim().toLowerCase();
@@ -3888,7 +3888,7 @@ function renderCustDropdown(){
   const pickerRows = getCustPickerRows();
   let base;
   if(custDdTab==='party'){
-    /* Party tab = the Party List (everyone billed before) — limited to people still on Dr List / Chemist List */
+    /* Party tab = the History list (everyone billed before) — limited to people still on Dr List / Chemist List */
     const billed = new Set(getBillPartyNames().map(n=>n.trim().toLowerCase()));
     base = pickerRows.filter(r=> billed.has(r.name.toLowerCase()));
   } else {
@@ -4153,7 +4153,7 @@ document.getElementById('btnSaveParty').addEventListener('click', async ()=>{
 });
 document.getElementById('btnAddChemist').addEventListener('click', ()=>openPartyForm(null, 'chemistlist', 'Medical Store'));
 /* Chemists (parties tagged Medical Store) have their own list below. Doctors live only on the main
-   Dr List — they are not added as parties by hand; they show in Party List once billed. */
+   Dr List — they are not added as parties by hand; they show in History once billed. */
 function renderChemistList(){
   const q = (document.getElementById('chemistListSearch').value||'').trim().toLowerCase();
   const investedNames = getChemistNamesUnderInvestment();
@@ -4178,12 +4178,12 @@ function renderChemistList(){
   }).join('');
 }
 document.getElementById('chemistListSearch').addEventListener('input', renderChemistList);
-/* Party List (under List) — everyone who has been billed at least once. Bills can only go to
+/* History (under Billing > Bill) — everyone who has been billed at least once. Bills can only go to
    Dr List / Chemist List entries, so a doctor or chemist appears here automatically after their
    first bill. Works like Ledger: a searchable list in the green sidebar (desktop) / mobile menu,
    and picking one shows their details in the main panel. */
 var selectedPartyListParty = '__recent__';
-const RECENT_KEY = '__recent__';   /* pseudo-entry pinned at the top of the Party List */
+const RECENT_KEY = '__recent__';   /* pseudo-entry pinned at the top of the History list */
 function getRecentBills(){
   const cutoff = new Date(); cutoff.setHours(0,0,0,0); cutoff.setDate(cutoff.getDate()-30);
   return bills.filter(b=> new Date(b.date) >= cutoff).sort((a,b)=> new Date(b.date)-new Date(a.date));
