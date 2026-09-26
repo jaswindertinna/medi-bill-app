@@ -519,6 +519,7 @@
       <div class="nav-toggle" data-toggle="investment">INVESTMENT</div>
       <div class="nav-toggle" data-toggle="list">LIST</div>
       <div class="nav-toggle" data-toggle="notes">NOTES</div>
+      <div class="nav-toggle" data-toggle="account">ACCOUNT</div>
     </div>
   </div>
 
@@ -577,6 +578,10 @@
     <div class="nav-submenu" id="submenu-notes">
       <div class="sec-heading">Notes</div>
       <div class="nav-item" data-view="completednotes"><span class="nav-dot"></span>Completed Notes</div>
+    </div>
+    <div class="nav-submenu" id="submenu-account">
+      <div class="sec-heading">Account</div>
+      <div class="sec-note">Credit = payments received. Debit = purchase orders + expenses. Manual entries too.</div>
     </div>
   </div>
 
@@ -1410,6 +1415,42 @@
       </div>
     </div>
 
+    <!-- ACCOUNT -->
+    <div class="view" id="view-account">
+      <div class="page-head"><div><h2>Account</h2><p>Credit is filled in automatically from payments received (Ledger). Debit is filled in automatically from purchase orders and expenses. You can also add entries by hand below — e.g. owner investment, bank withdrawal, loan repaid.</p></div></div>
+      <div class="panel">
+        <div class="row c3" style="align-items:end;">
+          <div class="field"><label>Date</label><input type="date" id="acctDate"></div>
+          <div class="field"><label>Type</label>
+            <select id="acctType"><option value="credit">Credit (money in)</option><option value="debit">Debit (money out)</option></select>
+          </div>
+          <div class="field"><label>Amount (₹)</label><input id="acctAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="field"><label>Description</label><input id="acctDesc" placeholder="e.g. Owner investment, bank withdrawal, loan repaid"></div>
+        <button class="primary" id="btnAddAccountEntry">+ Add manual entry</button>
+      </div>
+      <div class="panel">
+        <h3>Filter by date range</h3>
+        <div class="row c3" style="align-items:end;">
+          <div class="field"><label>From</label><input type="date" id="acctFrom"></div>
+          <div class="field"><label>To</label><input type="date" id="acctTo"></div>
+          <div class="field"><button class="primary" id="btnAcctView" style="width:100%;">View</button></div>
+        </div>
+      </div>
+      <div class="grid range-metrics">
+        <div class="metric-card"><div class="label">Total credit</div><div class="value" id="acctTotalCredit">₹0</div></div>
+        <div class="metric-card danger"><div class="label">Total debit</div><div class="value" id="acctTotalDebit">₹0</div></div>
+        <div class="metric-card"><div class="label">Net balance</div><div class="value" id="acctNetBalance">₹0</div></div>
+      </div>
+      <div class="panel" style="padding:0;overflow-x:auto;">
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="num">Amount ₹</th><th class="num">Balance ₹</th><th>Source</th></tr></thead>
+          <tbody id="acctTableBody"></tbody>
+        </table>
+        <div class="empty" id="acctEmpty" style="display:none;"><h3>No entries yet</h3><p>Payments received, purchase orders, and expenses will appear here automatically as you record them, along with any manual entries — filtered by the From/To dates above (leave blank for all-time). Balance runs in date order, oldest to newest.</p></div>
+      </div>
+    </div>
+
     <!-- SETTINGS -->
     <div class="view" id="view-settings">
       <div class="page-head"><div><h2>Shop settings</h2><p>These details appear on every printed invoice.</p></div></div>
@@ -1494,6 +1535,7 @@ let tempBills = [];
 let purchases = [];
 let purchaseOrders = [];
 let expenses = [];
+let accountEntries = [];
 let payments = [];
 let parties = [];
 let notes = [];
@@ -1572,6 +1614,7 @@ async function loadAll(){
   try{ const v = localStorage.getItem(LS_PREFIX+'purchases'); purchases = v ? JSON.parse(v) : []; }catch(e){ purchases = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'purchaseorders'); purchaseOrders = v ? JSON.parse(v) : []; }catch(e){ purchaseOrders = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'expenses'); expenses = v ? JSON.parse(v) : []; }catch(e){ expenses = []; }
+  try{ const v = localStorage.getItem(LS_PREFIX+'accountentries'); accountEntries = v ? JSON.parse(v) : []; }catch(e){ accountEntries = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'payments'); payments = v ? JSON.parse(v) : []; }catch(e){ payments = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'parties'); parties = v ? JSON.parse(v) : []; }catch(e){ parties = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'notes'); notes = v ? JSON.parse(v) : []; }catch(e){ notes = []; }
@@ -1586,6 +1629,7 @@ async function saveBills(){ try{ localStorage.setItem(LS_PREFIX+'bills', JSON.st
 async function saveTempBills(){ try{ localStorage.setItem(LS_PREFIX+'tempbills', JSON.stringify(tempBills)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function savePurchases(){ try{ localStorage.setItem(LS_PREFIX+'purchases', JSON.stringify(purchases)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveExpenses(){ try{ localStorage.setItem(LS_PREFIX+'expenses', JSON.stringify(expenses)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
+async function saveAccountEntries(){ try{ localStorage.setItem(LS_PREFIX+'accountentries', JSON.stringify(accountEntries)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function savePayments(){ try{ localStorage.setItem(LS_PREFIX+'payments', JSON.stringify(payments)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveParties(){ try{ localStorage.setItem(LS_PREFIX+'parties', JSON.stringify(parties)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveNotes(){ try{ localStorage.setItem(LS_PREFIX+'notes', JSON.stringify(notes)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
@@ -1935,6 +1979,7 @@ function listenToCloud(){
     purchases = data.purchases || [];
     purchaseOrders = data.purchaseOrders || [];
     expenses = data.expenses || [];
+    accountEntries = data.accountEntries || [];
     payments = data.payments || [];
     parties = data.parties || [];
     notes = data.notes || [];
@@ -1950,6 +1995,7 @@ function listenToCloud(){
       localStorage.setItem(LS_PREFIX+'purchases', JSON.stringify(purchases));
       localStorage.setItem(LS_PREFIX+'purchaseorders', JSON.stringify(purchaseOrders));
       localStorage.setItem(LS_PREFIX+'expenses', JSON.stringify(expenses));
+      localStorage.setItem(LS_PREFIX+'accountentries', JSON.stringify(accountEntries));
       localStorage.setItem(LS_PREFIX+'payments', JSON.stringify(payments));
       localStorage.setItem(LS_PREFIX+'parties', JSON.stringify(parties));
       localStorage.setItem(LS_PREFIX+'notes', JSON.stringify(notes));
@@ -1974,7 +2020,7 @@ function pushToCloud(immediate){
   clearTimeout(syncPushTimer);
   const doPush = ()=>{
     syncDb.collection(SYNC_COLLECTION).doc(currentUid).set({
-      medicines, bills, tempBills, purchases, purchaseOrders, expenses, payments, parties, notes, investments, drList, schedule, businessPlan, settings,
+      medicines, bills, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, schedule, businessPlan, settings,
       updatedAt: new Date().toISOString()
     }).then(()=> setSyncStatus('Synced — last update '+new Date().toLocaleTimeString('en-IN')))
       .catch(e=> setSyncStatus('Sync error: '+e.message));
@@ -2020,7 +2066,7 @@ document.getElementById('btnDisconnectSync').addEventListener('click', ()=>{
 
 /* ---------- Backup / Restore (safety net, since browser data can be cleared) ---------- */
 function downloadBackup(){
-  const data = { medicines, bills, tempBills, purchases, purchaseOrders, expenses, payments, parties, notes, investments, drList, schedule, businessPlan, settings, exportedAt: new Date().toISOString() };
+  const data = { medicines, bills, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, schedule, businessPlan, settings, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2041,6 +2087,7 @@ function restoreBackup(file){
       purchases = data.purchases || [];
       purchaseOrders = data.purchaseOrders || [];
       expenses = data.expenses || [];
+      accountEntries = data.accountEntries || [];
       payments = data.payments || [];
       parties = data.parties || [];
       notes = data.notes || [];
@@ -2049,7 +2096,7 @@ function restoreBackup(file){
       schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
       businessPlan = data.businessPlan || { temp:[], actual:[] }; normBusinessPlan();
       settings = data.settings || settings;
-      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveBusinessPlan(); await saveSettings();
+      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await saveAccountEntries(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveBusinessPlan(); await saveSettings();
       renderDashboard(); toast('Backup restored');
     }catch(e){ toast('Invalid backup file'); }
   };
@@ -2076,6 +2123,7 @@ const NOTES_GROUP_VIEWS = ['notes','completednotes'];
 const LEDGER_GROUP_VIEWS = ['payments'];
 const INVESTMENT_GROUP_VIEWS = ['investment','drreport','schedule','businessplan'];
 const LIST_GROUP_VIEWS = ['drlist','chemistlist'];
+const ACCOUNT_GROUP_VIEWS = ['account'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
   el.addEventListener('click', ()=>{
     const key = el.dataset.toggle;
@@ -2106,6 +2154,12 @@ document.querySelectorAll('.nav-toggle').forEach(el=>{
       el.classList.add('open');
       submenu.classList.add('open');
       showView('investment');
+      return;
+    }
+    if(key==='account'){
+      el.classList.add('open');
+      submenu.classList.add('open');
+      showView('account');
       return;
     }
     if(!isOpen){
@@ -2175,6 +2229,7 @@ const MOBILE_MENU = [
       { label:'All Notes', view:'notes' },
       { label:'Completed Notes', view:'completednotes' },
   ]},
+  { label:'Account', view:'account' },
   { label:'Settings', view:'settings' },
 ];
 let mobileNavPath = []; // array of MOBILE_MENU node objects, root to current level
@@ -2318,6 +2373,7 @@ function openNavGroupForView(name){
   else if(LEDGER_GROUP_VIEWS.includes(name)) group = 'ledger';
   else if(INVESTMENT_GROUP_VIEWS.includes(name)) group = 'investment';
   else if(LIST_GROUP_VIEWS.includes(name)) group = 'list';
+  else if(ACCOUNT_GROUP_VIEWS.includes(name)) group = 'account';
   document.querySelectorAll('.nav-toggle').forEach(t=>t.classList.toggle('open', t.dataset.toggle===group));
   document.querySelectorAll('.nav-submenu').forEach(s=>s.classList.toggle('open', s.id==='submenu-'+group));
 
@@ -2355,6 +2411,7 @@ function showView(name){
   if(name==='expenses'){ renderExpenses(); }
   if(name==='notes'){ renderNotes(); }
   if(name==='completednotes'){ renderCompletedNotes(); }
+  if(name==='account'){ renderAccount(); }
   if(name==='drlist'){ renderDrList(); }
   if(name==='chemistlist'){ renderChemistList(); }
   if(name==='partylist'){ renderSidebarPartyListForList(); renderPartyListDetail(); }
@@ -4942,6 +4999,108 @@ document.getElementById('btnAddExpense').addEventListener('click', async ()=>{
   toast('Expense added');
 });
 document.getElementById('btnExpView').addEventListener('click', renderExpenses);
+
+/* ---------- Account (firm-level credit/debit) ----------
+   Credit = payments received from parties (Ledger). Debit = purchase order value + expenses.
+   Both are pulled in automatically (read-only rows, tagged "Auto"); accountEntries holds
+   only the manually-added rows, which stay fully editable/deletable. */
+function buildAutoAccountRows(){
+  const rows = [];
+  payments.forEach(p=>{
+    rows.push({
+      id: 'pay_'+p.id, date: p.date, type: 'credit',
+      desc: 'Payment received — ' + (p.party||'Party') + (p.note ? (' ('+p.note+')') : ''),
+      amount: Number(p.amount)||0, source: 'payment'
+    });
+  });
+  purchaseOrders.forEach(o=>{
+    const d = o.date || (o.savedAt ? o.savedAt.slice(0,10) : new Date().toISOString().slice(0,10));
+    const n = (o.lines||[]).length;
+    rows.push({
+      id: 'po_'+o.id, date: d, type: 'debit',
+      desc: 'Purchase order (' + n + ' item' + (n===1?'':'s') + ')',
+      amount: Number(o.total)||0, source: 'po'
+    });
+  });
+  expenses.forEach(x=>{
+    rows.push({
+      id: 'exp_'+x.id, date: x.date, type: 'debit',
+      desc: 'Expense — ' + (x.desc||'—'),
+      amount: Number(x.amount)||0, source: 'expense'
+    });
+  });
+  return rows;
+}
+const ACCOUNT_SOURCE_LABEL = { manual:'Manual', payment:'Auto · Payment received', po:'Auto · Purchase order', expense:'Auto · Expense' };
+function renderAccount(){
+  const fromVal = document.getElementById('acctFrom').value;
+  const toVal = document.getElementById('acctTo').value;
+  let from=null, to=null;
+  if(fromVal){ from=new Date(fromVal); from.setHours(0,0,0,0); }
+  if(toVal){ to=new Date(toVal); to.setHours(23,59,59,999); }
+
+  const manualRows = accountEntries.map(e=>({
+    id: e.id, date: e.date, type: e.type, desc: e.desc||'—', amount: Number(e.amount)||0, source: 'manual'
+  }));
+  const combined = manualRows.concat(buildAutoAccountRows());
+
+  const filtered = combined.filter(e=>{
+    const d = new Date(e.date);
+    if(from && d<from) return false;
+    if(to && d>to) return false;
+    return true;
+  }).sort((a,b)=> new Date(a.date)-new Date(b.date) || String(a.id).localeCompare(String(b.id)));
+
+  let running = 0;
+  const withBalance = filtered.map(e=>{
+    running += (e.type==='debit' ? -e.amount : e.amount);
+    return Object.assign({}, e, { balance: running });
+  });
+
+  const body = document.getElementById('acctTableBody');
+  document.getElementById('acctEmpty').style.display = withBalance.length ? 'none':'block';
+  body.innerHTML = withBalance.slice().reverse().map(e=>{
+    const isCredit = e.type!=='debit';
+    const tail = e.source==='manual'
+      ? `<button class="sm danger" onclick="deleteAccountEntry('${e.id}')">Delete</button>`
+      : `<span style="font-size:10.5px;color:var(--muted);">${ACCOUNT_SOURCE_LABEL[e.source]||''}</span>`;
+    return `<tr>
+      <td>${new Date(e.date).toLocaleDateString('en-IN')}</td>
+      <td>${e.desc}</td>
+      <td><span style="padding:2px 8px;border-radius:4px;font-weight:600;font-size:11px;background:${isCredit?'var(--primary-light)':'var(--danger-light)'};color:${isCredit?'var(--primary-dark)':'var(--danger)'};">${isCredit?'Credit':'Debit'}</span></td>
+      <td class="num">${fmt(e.amount)}</td>
+      <td class="num">${fmt(e.balance)}</td>
+      <td>${tail}</td>
+    </tr>`;
+  }).join('');
+
+  const totalCredit = filtered.filter(e=>e.type!=='debit').reduce((s,e)=>s+e.amount,0);
+  const totalDebit = filtered.filter(e=>e.type==='debit').reduce((s,e)=>s+e.amount,0);
+  document.getElementById('acctTotalCredit').textContent = fmt(totalCredit);
+  document.getElementById('acctTotalDebit').textContent = fmt(totalDebit);
+  document.getElementById('acctNetBalance').textContent = fmt(totalCredit - totalDebit);
+}
+window.deleteAccountEntry = function(id){
+  if(!confirm('Delete this account entry?')) return;
+  accountEntries = accountEntries.filter(e=>e.id!==id);
+  saveAccountEntries(); renderAccount(); toast('Entry deleted');
+};
+document.getElementById('btnAddAccountEntry').addEventListener('click', async ()=>{
+  const date = document.getElementById('acctDate').value;
+  const type = document.getElementById('acctType').value;
+  const desc = document.getElementById('acctDesc').value.trim();
+  const amount = parseFloat(document.getElementById('acctAmount').value);
+  if(!date){ toast('Pick a date for the entry'); return; }
+  if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
+  accountEntries.push({ id:uid(), date, type, desc, amount });
+  await saveAccountEntries();
+  document.getElementById('acctDate').value='';
+  document.getElementById('acctDesc').value='';
+  document.getElementById('acctAmount').value='';
+  renderAccount();
+  toast((type==='debit'?'Debit':'Credit')+' entry added');
+});
+document.getElementById('btnAcctView').addEventListener('click', renderAccount);
 
 /* ---------- Dr List ---------- */
 let editingDrId = null;
