@@ -581,7 +581,7 @@
     </div>
     <div class="nav-submenu" id="submenu-account">
       <div class="sec-heading">Account</div>
-      <div class="sec-note">Credit = payments received. Debit = purchase orders + expenses. Manual entries too.</div>
+      <div class="sec-note">Credit = payments received. Debit = Purchase History + expenses. Manual entries too.</div>
     </div>
   </div>
 
@@ -1417,7 +1417,7 @@
 
     <!-- ACCOUNT -->
     <div class="view" id="view-account">
-      <div class="page-head"><div><h2>Account</h2><p>Credit is filled in automatically from payments received (Ledger). Debit is filled in automatically from purchase orders and expenses. You can also add entries by hand below — e.g. owner investment, bank withdrawal, loan repaid.</p></div></div>
+      <div class="page-head"><div><h2>Account</h2><p>Credit is filled in automatically from payments received (Ledger). Debit is filled in automatically from Purchase History and Expenses. You can also add entries by hand below — e.g. owner investment, bank withdrawal, loan repaid.</p></div></div>
       <div class="panel">
         <div class="row c3" style="align-items:end;">
           <div class="field"><label>Date</label><input type="date" id="acctDate"></div>
@@ -1447,7 +1447,7 @@
           <thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="num">Amount ₹</th><th class="num">Balance ₹</th><th>Source</th></tr></thead>
           <tbody id="acctTableBody"></tbody>
         </table>
-        <div class="empty" id="acctEmpty" style="display:none;"><h3>No entries yet</h3><p>Payments received, purchase orders, and expenses will appear here automatically as you record them, along with any manual entries — filtered by the From/To dates above (leave blank for all-time). Balance runs in date order, oldest to newest.</p></div>
+        <div class="empty" id="acctEmpty" style="display:none;"><h3>No entries yet</h3><p>Payments received, purchases (from Purchase History), and expenses will appear here automatically as you record them, along with any manual entries — filtered by the From/To dates above (leave blank for all-time). Balance runs in date order, oldest to newest.</p></div>
       </div>
     </div>
 
@@ -5013,13 +5013,12 @@ function buildAutoAccountRows(){
       amount: Number(p.amount)||0, source: 'payment'
     });
   });
-  purchaseOrders.forEach(o=>{
-    const d = o.date || (o.savedAt ? o.savedAt.slice(0,10) : new Date().toISOString().slice(0,10));
-    const n = (o.lines||[]).length;
+  purchases.forEach(p=>{
+    const d = p.date ? p.date.slice(0,10) : new Date().toISOString().slice(0,10);
     rows.push({
-      id: 'po_'+o.id, date: d, type: 'debit',
-      desc: 'Purchase order (' + n + ' item' + (n===1?'':'s') + ')',
-      amount: Number(o.total)||0, source: 'po'
+      id: 'pur_'+p.id, date: d, type: 'debit',
+      desc: 'Purchase — ' + (p.party||'Purchase') + (p.invoiceNo ? (' (Inv ' + p.invoiceNo + ')') : ''),
+      amount: Number(p.grandTotal)||0, source: 'purchase'
     });
   });
   expenses.forEach(x=>{
@@ -5031,7 +5030,7 @@ function buildAutoAccountRows(){
   });
   return rows;
 }
-const ACCOUNT_SOURCE_LABEL = { manual:'Manual', payment:'Auto · Payment received', po:'Auto · Purchase order', expense:'Auto · Expense' };
+const ACCOUNT_SOURCE_LABEL = { manual:'Manual', payment:'Auto · Payment received', purchase:'Auto · Purchase (History)', expense:'Auto · Expense' };
 function renderAccount(){
   const fromVal = document.getElementById('acctFrom').value;
   const toVal = document.getElementById('acctTo').value;
