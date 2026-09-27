@@ -1036,9 +1036,13 @@
               <button class="primary" id="btnAddPayment">Add payment received</button>
             </div>
 
-            <div class="row c2" style="margin-bottom:4px;">
-              <div class="field"><label>From <span style="font-weight:400;">(optional)</span></label><input type="date" id="payFrom"></div>
-              <div class="field"><label>To <span style="font-weight:400;">(optional)</span></label><input type="date" id="payTo"></div>
+            <div class="panel">
+              <h3>Filter by date range</h3>
+              <div class="row c3" style="align-items:end;">
+                <div class="field"><label>From <span style="font-weight:400;">(optional)</span></label><input type="date" id="payFrom"></div>
+                <div class="field"><label>To <span style="font-weight:400;">(optional)</span></label><input type="date" id="payTo"></div>
+                <div class="field"><button class="sm ghost" id="btnPayReset" style="width:100%;">Reset</button></div>
+              </div>
             </div>
             <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Leave both blank to share the last 12 months. Set dates above to share a specific period instead.</p>
             <div class="top-actions" style="margin-bottom:14px;">
@@ -1281,9 +1285,13 @@
           <div class="metric-card sm"><div class="label">Profit</div><div class="value" style="color:var(--primary-dark);" id="pldProfit">₹0</div></div>
         </div>
 
-        <div class="row c2" style="margin-bottom:4px;">
-          <div class="field"><label>From <span style="font-weight:400;">(optional)</span></label><input type="date" id="pldFrom"></div>
-          <div class="field"><label>To <span style="font-weight:400;">(optional)</span></label><input type="date" id="pldTo"></div>
+        <div class="panel">
+          <h3>Filter by date range</h3>
+          <div class="row c3" style="align-items:end;">
+            <div class="field"><label>From <span style="font-weight:400;">(optional)</span></label><input type="date" id="pldFrom"></div>
+            <div class="field"><label>To <span style="font-weight:400;">(optional)</span></label><input type="date" id="pldTo"></div>
+            <div class="field"><button class="sm ghost" id="btnPldReset" style="width:100%;">Reset</button></div>
+          </div>
         </div>
         <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Leave both blank to see this party's full bill history.</p>
         <div class="panel" style="padding:0;overflow-x:auto;">
@@ -1433,9 +1441,9 @@
       <div class="panel">
         <h3>Filter by date range</h3>
         <div class="row c3" style="align-items:end;">
-          <div class="field"><label>From</label><input type="date" id="acctFrom"></div>
-          <div class="field"><label>To</label><input type="date" id="acctTo"></div>
-          <div class="field"><button class="primary" id="btnAcctView" style="width:100%;">View</button></div>
+          <div class="field"><label>From <span style="font-weight:400;">(optional)</span></label><input type="date" id="acctFrom"></div>
+          <div class="field"><label>To <span style="font-weight:400;">(optional)</span></label><input type="date" id="acctTo"></div>
+          <div class="field"><button class="sm ghost" id="btnAcctReset" style="width:100%;">Reset</button></div>
         </div>
       </div>
       <div class="grid range-metrics">
@@ -4412,6 +4420,11 @@ function renderPartyListBills(){
 }
 document.getElementById('pldFrom').addEventListener('change', renderPartyListBills);
 document.getElementById('pldTo').addEventListener('change', renderPartyListBills);
+document.getElementById('btnPldReset').addEventListener('click', ()=>{
+  document.getElementById('pldFrom').value = '';
+  document.getElementById('pldTo').value = '';
+  renderPartyListBills();
+});
 document.getElementById('partyListSearch').addEventListener('input', renderSidebarPartyListForList);
 document.getElementById('btnEditPartyListParty').addEventListener('click', ()=>{
   if(!selectedPartyListParty || selectedPartyListParty===RECENT_KEY) return;
@@ -4596,6 +4609,11 @@ window.deletePayment = function(id){
 };
 document.getElementById('payFrom').addEventListener('change', renderLedgerDetail);
 document.getElementById('payTo').addEventListener('change', renderLedgerDetail);
+document.getElementById('btnPayReset').addEventListener('click', ()=>{
+  document.getElementById('payFrom').value = '';
+  document.getElementById('payTo').value = '';
+  renderLedgerDetail();
+});
 
 /* ---------- Share ledger statement (WhatsApp text, or Print/Save PDF) ----------
    Uses the same From/To fields as the on-screen table. If both are left blank,
@@ -5106,7 +5124,13 @@ document.getElementById('btnAddAccountEntry').addEventListener('click', async ()
   renderAccount();
   toast((type==='debit'?'Debit':'Credit')+' entry added');
 });
-document.getElementById('btnAcctView').addEventListener('click', renderAccount);
+document.getElementById('acctFrom').addEventListener('change', renderAccount);
+document.getElementById('acctTo').addEventListener('change', renderAccount);
+document.getElementById('btnAcctReset').addEventListener('click', ()=>{
+  document.getElementById('acctFrom').value = '';
+  document.getElementById('acctTo').value = '';
+  renderAccount();
+});
 
 /* ---------- Dr List ---------- */
 let editingDrId = null;
