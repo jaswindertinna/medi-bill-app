@@ -1277,6 +1277,7 @@
           <div class="metric-card sm"><div class="label">City</div><div class="value" style="font-size:14px;" id="pldCity">—</div></div>
           <div class="metric-card sm"><div class="label">Location</div><div class="value" style="font-size:14px;" id="pldLocation">—</div></div>
           <div class="metric-card danger sm"><div class="label">Pending</div><div class="value" id="pldPending">₹0</div></div>
+          <div class="metric-card sm"><div class="label">Total cost</div><div class="value" id="pldCost">₹0</div></div>
           <div class="metric-card sm"><div class="label">Profit</div><div class="value" style="color:var(--primary-dark);" id="pldProfit">₹0</div></div>
         </div>
 
@@ -4387,7 +4388,9 @@ function renderPartyListBills(){
   if(toV) list = list.filter(b=> new Date(b.date) <= new Date(toV+'T23:59:59'));
   list.sort((a,b)=> new Date(b.date)-new Date(a.date));
   const partyProfit = list.reduce((s,b)=> s + computeProfit(b).inclGst, 0);
+  const partyCost = list.reduce((s,b)=> s + computeProfit(b).cost, 0);
   document.getElementById('pldProfit').textContent = fmt(partyProfit);
+  document.getElementById('pldCost').textContent = fmt(partyCost);
   document.getElementById('pldBillsEmpty').style.display = list.length ? 'none' : 'block';
   document.getElementById('pldBillsTableBody').innerHTML = list.map(b=>`
     <tr>
