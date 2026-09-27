@@ -1036,13 +1036,11 @@
               <button class="primary" id="btnAddPayment">Add payment received</button>
             </div>
 
-            <div class="panel">
-              <h3>Filter by date range</h3>
-              <div class="row c3" style="align-items:end;">
-                <div class="field"><label>From <span style="font-weight:400;">(optional)</span></label><input type="date" id="payFrom"></div>
-                <div class="field"><label>To <span style="font-weight:400;">(optional)</span></label><input type="date" id="payTo"></div>
-                <div class="field"><button class="sm ghost" id="btnPayReset" style="width:100%;">Reset</button></div>
-              </div>
+            <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 6px;">Filter by date range</div>
+            <div class="grid range-metrics compact-metrics" style="margin-bottom:6px;">
+              <div class="metric-card sm"><div class="label">From (optional)</div><input type="date" id="payFrom"></div>
+              <div class="metric-card sm"><div class="label">To (optional)</div><input type="date" id="payTo"></div>
+              <div class="metric-card sm" style="display:flex;align-items:flex-end;"><button class="sm ghost" id="btnPayReset" style="width:100%;">Reset</button></div>
             </div>
             <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Leave both blank to share the last 12 months. Set dates above to share a specific period instead.</p>
             <div class="top-actions" style="margin-bottom:14px;">
@@ -1285,13 +1283,11 @@
           <div class="metric-card sm"><div class="label">Profit</div><div class="value" style="color:var(--primary-dark);" id="pldProfit">₹0</div></div>
         </div>
 
-        <div class="panel">
-          <h3>Filter by date range</h3>
-          <div class="row c3" style="align-items:end;">
-            <div class="field"><label>From <span style="font-weight:400;">(optional)</span></label><input type="date" id="pldFrom"></div>
-            <div class="field"><label>To <span style="font-weight:400;">(optional)</span></label><input type="date" id="pldTo"></div>
-            <div class="field"><button class="sm ghost" id="btnPldReset" style="width:100%;">Reset</button></div>
-          </div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 6px;">Filter by date range</div>
+        <div class="grid range-metrics compact-metrics" style="margin-bottom:6px;">
+          <div class="metric-card sm"><div class="label">From (optional)</div><input type="date" id="pldFrom"></div>
+          <div class="metric-card sm"><div class="label">To (optional)</div><input type="date" id="pldTo"></div>
+          <div class="metric-card sm" style="display:flex;align-items:flex-end;"><button class="sm ghost" id="btnPldReset" style="width:100%;">Reset</button></div>
         </div>
         <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Leave both blank to see this party's full bill history.</p>
         <div class="panel" style="padding:0;overflow-x:auto;">
@@ -1438,13 +1434,11 @@
         <div class="field"><label>Description</label><input id="acctDesc" placeholder="e.g. Owner investment, bank withdrawal, loan repaid"></div>
         <button class="primary" id="btnAddAccountEntry">+ Add manual entry</button>
       </div>
-      <div class="panel">
-        <h3>Filter by date range</h3>
-        <div class="row c3" style="align-items:end;">
-          <div class="field"><label>From <span style="font-weight:400;">(optional)</span></label><input type="date" id="acctFrom"></div>
-          <div class="field"><label>To <span style="font-weight:400;">(optional)</span></label><input type="date" id="acctTo"></div>
-          <div class="field"><button class="sm ghost" id="btnAcctReset" style="width:100%;">Reset</button></div>
-        </div>
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 6px;">Filter by date range</div>
+      <div class="grid range-metrics compact-metrics" style="margin-bottom:10px;">
+        <div class="metric-card sm"><div class="label">From (optional)</div><input type="date" id="acctFrom"></div>
+        <div class="metric-card sm"><div class="label">To (optional)</div><input type="date" id="acctTo"></div>
+        <div class="metric-card sm" style="display:flex;align-items:flex-end;"><button class="sm ghost" id="btnAcctReset" style="width:100%;">Reset</button></div>
       </div>
       <div class="grid range-metrics">
         <div class="metric-card"><div class="label">Total credit</div><div class="value" id="acctTotalCredit">₹0</div></div>
