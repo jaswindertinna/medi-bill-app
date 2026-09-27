@@ -42,9 +42,10 @@
   #app{display:flex;min-height:100vh;}
 
   /* Sidebar — primary column: the 4 main sections (Billing / Ledger / Dr Investment / Notes) */
-  #sidebarColumn{width:150px;flex-shrink:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--primary-dark);}
+  #sidebarColumn{width:169px;flex-shrink:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--primary-dark);}
   #sidebarBrand{padding:16px 14px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.12);display:flex;align-items:flex-start;justify-content:space-between;gap:6px;flex-shrink:0;color:#EAF3F0;}
-  #sidebarBrand h1{font-size:15px;color:#fff;letter-spacing:0.2px;}
+  #sidebarBrand h1{font-size:15px;color:#fff;letter-spacing:0.2px;cursor:pointer;}
+  #sidebarBrand h1:hover{color:#EAF3F0;}
   #sidebarBrand span{font-size:9px;color:#A9C7BF;display:block;margin-top:2px;}
   #sidebar{width:100%;background:var(--primary-dark);color:#EAF3F0;display:flex;flex-direction:column;padding:11px 0 16px 0;flex:1;overflow-y:auto;min-height:0;}
   .sidebar-toggle-btn{background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:6px;font-size:13px;line-height:1;padding:5px 7px;cursor:pointer;flex-shrink:0;margin-top:1px;}
@@ -61,7 +62,7 @@
   }
 
   /* Sidebar — secondary column: contextual sub-navigation for whichever main section is active */
-  #sidebar-secondary{width:100%;background:var(--primary);color:#EAF3F0;flex:1;overflow-y:auto;padding:16px 0;display:flex;flex-direction:column;min-height:0;}
+  #sidebar-secondary{width:100%;background:var(--primary-dark);color:#EAF3F0;flex:1;overflow-y:auto;padding:16px 0;display:flex;flex-direction:column;min-height:0;}
   #sidebar-secondary .sec-heading{padding:0 14px 12px 14px;font-size:10.5px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid rgba(255,255,255,0.15);margin-bottom:10px;}
   #sidebar-secondary .sec-note{padding:0 14px;font-size:10.5px;color:#E3F1EC;line-height:1.5;}
 
@@ -76,14 +77,14 @@
   .nav-toggle:hover{background:rgba(255,255,255,0.08);}
   .nav-toggle.open{background:rgba(255,255,255,0.10);color:#fff;}
 
-  /* Second-level toggles (Sale / Purchase / Report) inside Billing — stacked in the secondary column */
-  .nav-subtoggle-row{display:flex;flex-direction:column;gap:6px;padding:0 10px 8px 10px;}
-  .nav-subtoggle{width:100%;display:flex;align-items:center;justify-content:center;padding:8px 4px;font-size:10.3px;font-weight:700;color:#CFE4DE;cursor:pointer;user-select:none;border-radius:6px;text-align:center;background:rgba(255,255,255,0.08);}
-  .nav-subtoggle:hover{background:rgba(255,255,255,0.15);}
-  .nav-subtoggle.open{background:var(--accent);color:#fff;}
-  .nav-subsubmenu{display:none;flex-direction:column;padding:2px 0 8px 0;background:rgba(0,0,0,0.10);}
+  /* Second-level toggles (Sale / Purchase / Report) inside Billing — stacked in the secondary column.
+     Same left-aligned row style as .nav-item, so every button in the sub-slide looks identical. */
+  .nav-subtoggle-row{display:flex;flex-direction:column;}
+  .nav-subtoggle{display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:12px;color:#CFE4DE;cursor:pointer;border-left:3px solid transparent;user-select:none;}
+  .nav-subtoggle:hover{background:rgba(255,255,255,0.06);}
+  .nav-subtoggle.open{background:rgba(255,255,255,0.1);border-left-color:var(--accent);color:#fff;font-weight:600;}
+  .nav-subsubmenu{display:none;flex-direction:column;padding:2px 0 8px 0;}
   .nav-subsubmenu.open{display:flex;}
-  .nav-subsubmenu .nav-item{padding-left:24px;font-size:11px;}
 
   /* Fixed Settings icon — always accessible, outside the nav accordion */
   .settings-fab{position:fixed;bottom:22px;right:22px;z-index:950;width:50px;height:50px;border-radius:50%;background:var(--primary-dark);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.28);border:2px solid rgba(255,255,255,0.15);user-select:none;}
@@ -92,19 +93,27 @@
   /* ---------- Mobile drill-down menu (phone-style: one screen at a time, with Back) ---------- */
   #mobileTopbar{display:none;}
   #mobileNavOverlay{display:none;}
+  /* Solid green strip that always covers the notch/status-bar area on phone and iPad, so the
+     MCLAINE logo/title never renders under the device's notification icons — it sits below this. */
+  #mobileStatusBarFill{display:none;}
   @media (max-width:900px){
     #sidebarColumn{display:none;}
     #sidebar{display:none;}
     #sidebar-secondary{display:none;}
     #app{display:block;}
+    #mobileStatusBarFill{
+      display:block;position:fixed;top:0;left:0;right:0;
+      height:env(safe-area-inset-top, 0px);
+      background:var(--primary-dark);z-index:901;
+    }
     #mobileTopbar{
       display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:900;
       background:var(--primary-dark);color:#fff;padding:12px 14px;
-      padding-top:calc(env(safe-area-inset-top, 0px) + 18px);
+      margin-top:env(safe-area-inset-top, 0px);
     }
     #mobileTopbar .hamburger{width:26px;height:20px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;flex-shrink:0;}
     #mobileTopbar .hamburger span{display:block;height:2.5px;background:#fff;border-radius:2px;}
-    #mobileTopbar .title{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;}
+    #mobileTopbar .title{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;cursor:pointer;}
 
     #mobileNavOverlay{
       display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:1001;
@@ -503,10 +512,13 @@
 </div>
 <div id="app">
 
+  <!-- Solid green fill for the notch/status-bar area, so the topbar below never looks merged with it -->
+  <div id="mobileStatusBarFill"></div>
+
   <!-- Mobile-only top bar: hamburger opens the full-screen drill-down menu -->
   <div id="mobileTopbar">
     <div class="hamburger" id="btnOpenMobileNav"><span></span><span></span><span></span></div>
-    <div class="title">MCLAINE</div>
+    <div class="title" id="btnMobileLogoHome" role="button" title="Go to Dashboard">MCLAINE</div>
   </div>
 
   <!-- Dims/reveals the rest of the page behind the mobile drawer; tapping it closes the drawer -->
@@ -527,10 +539,10 @@
   <div id="sidebarColumn">
   <div id="sidebarBrand" class="brand">
     <div>
-      <h1>MCLAINE</h1>
+      <h1 id="btnDesktopLogoHome" role="button" title="Go to Dashboard">MCLAINE</h1>
       <span>Pharmaceutical</span>
     </div>
-    <button class="sidebar-toggle-btn" id="btnHideSidebars" title="Hide menu">⇤</button>
+    <button class="sidebar-toggle-btn" id="btnHideSidebars" title="Hide menu">👁</button>
   </div>
   <div id="sidebar">
     <div class="nav-toggle-row">
@@ -550,9 +562,9 @@
     <div class="nav-submenu open" id="submenu-billing">
       <div class="sec-heading">Billing</div>
       <div class="nav-subtoggle-row">
-        <div class="nav-subtoggle" data-subtoggle="sale">Bill</div>
-        <div class="nav-subtoggle" data-subtoggle="purchase">Purchase</div>
-        <div class="nav-subtoggle" data-subtoggle="report">Report</div>
+        <div class="nav-subtoggle" data-subtoggle="sale"><span class="nav-dot"></span>Bill</div>
+        <div class="nav-subtoggle" data-subtoggle="purchase"><span class="nav-dot"></span>Purchase</div>
+        <div class="nav-subtoggle" data-subtoggle="report"><span class="nav-dot"></span>Report</div>
       </div>
 
       <div class="nav-subsubmenu" id="subsubmenu-sale">
@@ -587,10 +599,10 @@
     <div class="nav-submenu" id="submenu-investment">
       <div class="sec-heading">Dr Investment</div>
       <div class="nav-subtoggle-row">
-        <div class="nav-subtoggle" data-view="investment">Dr Investment</div>
-        <div class="nav-subtoggle" data-view="drreport">Report</div>
-        <div class="nav-subtoggle" data-view="schedule">Schedule</div>
-        <div class="nav-subtoggle" data-view="businessplan">Business Plan</div>
+        <div class="nav-subtoggle" data-view="investment"><span class="nav-dot"></span>Dr Investment</div>
+        <div class="nav-subtoggle" data-view="drreport"><span class="nav-dot"></span>Report</div>
+        <div class="nav-subtoggle" data-view="schedule"><span class="nav-dot"></span>Schedule</div>
+        <div class="nav-subtoggle" data-view="businessplan"><span class="nav-dot"></span>Business Plan</div>
       </div>
     </div>
     <div class="nav-submenu" id="submenu-list">
@@ -2197,18 +2209,13 @@ document.querySelectorAll('.nav-toggle').forEach(el=>{
 const PURCHASE_GROUP_VIEWS = ['purchaseorder','newpurchase','purchases','inventory'];
 const SALE_GROUP_VIEWS = ['newbill','tempbills','partylist'];
 const REPORT_GROUP_VIEWS = ['partysale','productsale','expenses'];
+/* Clicking a sub-slide (Bill / Purchase / Report) drills in exactly like clicking a main
+   slide does: the button row it came from is replaced by its own items, full-panel —
+   not expanded in place below itself. See setBillingDrill() further down. */
 document.querySelectorAll('.nav-subtoggle').forEach(el=>{
   el.addEventListener('click', ()=>{
     if(el.dataset.view){ showView(el.dataset.view); return; }
-    const key = el.dataset.subtoggle;
-    const submenu = document.getElementById('subsubmenu-'+key);
-    const isOpen = el.classList.contains('open');
-    document.querySelectorAll('.nav-subtoggle').forEach(t=>t.classList.remove('open'));
-    document.querySelectorAll('.nav-subsubmenu').forEach(s=>s.classList.remove('open'));
-    if(!isOpen){
-      el.classList.add('open');
-      submenu.classList.add('open');
-    }
+    setBillingDrill(el.dataset.subtoggle);
   });
 });
 document.getElementById('settingsFab').addEventListener('click', ()=> showView('settings'));
@@ -2387,6 +2394,17 @@ function closeMobileNav(){
   document.getElementById('mobileNavBackdrop').classList.remove('open');
 }
 document.getElementById('btnOpenMobileNav').addEventListener('click', openMobileNav);
+/* Tapping the MCLAINE logo/title (desktop sidebar or mobile top bar) always goes home:
+   the Dashboard content loads, and the sidebar itself resets to the root section list
+   (Billing/Ledger/Investment/List/Notes/Account) rather than staying drilled into a sub-menu. */
+document.getElementById('btnDesktopLogoHome').addEventListener('click', ()=>{
+  showView('dashboard');
+  deactivateSidebarSecondary();
+});
+document.getElementById('btnMobileLogoHome').addEventListener('click', ()=>{
+  showView('dashboard');
+  closeMobileNav();
+});
 
 // Hide/Expand the whole sidebar column to free up more content width
 (function(){
@@ -2409,7 +2427,54 @@ function activateSidebarSecondary(){
 function deactivateSidebarSecondary(){
   document.getElementById('sidebarColumn').classList.remove('secondary-active');
 }
-document.getElementById('btnSidebarBack').addEventListener('click', deactivateSidebarSecondary);
+/* Second-level drill inside Billing: choosing Bill / Purchase / Report replaces the button
+   row with that group's own items (same panel, same light-green colour, nothing accordions
+   open below) — pass a key ('sale'/'purchase'/'report') to drill in, or null to go back to
+   the button row. Built so a future third level can drill the same way. */
+function setBillingDrill(subgroup){
+  const heading = document.querySelector('#submenu-billing > .sec-heading');
+  const row = document.querySelector('#submenu-billing > .nav-subtoggle-row');
+  if(row) row.style.display = subgroup ? 'none' : '';
+  if(heading){
+    const btn = subgroup ? document.querySelector('#submenu-billing .nav-subtoggle[data-subtoggle="'+subgroup+'"]') : null;
+    heading.textContent = btn ? btn.textContent : 'Billing';
+  }
+  document.querySelectorAll('#submenu-billing .nav-subtoggle').forEach(t=>t.classList.toggle('open', t.dataset.subtoggle===subgroup));
+  document.querySelectorAll('#submenu-billing .nav-subsubmenu').forEach(s=>s.classList.toggle('open', !!subgroup && s.id==='subsubmenu-'+subgroup));
+}
+/* Third-level drill inside Bill: choosing History replaces New Bill/Temp Bill/History with
+   just the party search list (same full-panel swap as the levels above it), instead of the
+   list appearing squeezed in underneath them. */
+function setHistoryDrill(active){
+  document.querySelectorAll('#subsubmenu-sale > .nav-item').forEach(it=> it.style.display = active ? 'none' : '');
+  const section = document.getElementById('partyListSidebarSection');
+  if(section) section.style.display = active ? '' : 'none';
+  const heading = document.querySelector('#submenu-billing > .sec-heading');
+  if(heading){
+    if(active){
+      heading.textContent = 'History';
+    } else if(document.getElementById('subsubmenu-sale').classList.contains('open')){
+      const saleBtn = document.querySelector('#submenu-billing .nav-subtoggle[data-subtoggle="sale"]');
+      if(saleBtn) heading.textContent = saleBtn.textContent;
+    }
+  }
+}
+document.getElementById('btnSidebarBack').addEventListener('click', ()=>{
+  /* One tap steps back exactly one level: out of History first, then out of a drilled-in
+     Billing group, then (on a further tap) out of the secondary panel entirely. */
+  const partySection = document.getElementById('partyListSidebarSection');
+  const row = document.querySelector('#submenu-billing > .nav-subtoggle-row');
+  const billingActive = document.getElementById('submenu-billing').classList.contains('open');
+  if(billingActive && partySection && partySection.style.display!=='none'){
+    setHistoryDrill(false);
+    return;
+  }
+  if(billingActive && row && row.style.display==='none'){
+    setBillingDrill(null);
+    return;
+  }
+  deactivateSidebarSecondary();
+});
 
 document.getElementById('btnCloseMobileNav').addEventListener('click', closeMobileNav);
 document.getElementById('mobileNavBackdrop').addEventListener('click', closeMobileNav);
@@ -2428,14 +2493,12 @@ function openNavGroupForView(name){
   document.querySelectorAll('.nav-submenu').forEach(s=>s.classList.toggle('open', s.id==='submenu-'+group));
 
   let subgroup = null;
-  if(name==='dashboard') subgroup = 'dashboard';
-  else if(PURCHASE_GROUP_VIEWS.includes(name)) subgroup = 'purchase';
+  if(PURCHASE_GROUP_VIEWS.includes(name)) subgroup = 'purchase';
   else if(SALE_GROUP_VIEWS.includes(name)) subgroup = 'sale';
   else if(REPORT_GROUP_VIEWS.includes(name)) subgroup = 'report';
-  if(subgroup){
-    document.querySelectorAll('.nav-subtoggle').forEach(t=>t.classList.toggle('open', t.dataset.subtoggle===subgroup));
-    document.querySelectorAll('.nav-subsubmenu').forEach(s=>s.classList.toggle('open', s.id==='subsubmenu-'+subgroup));
-  }
+  /* dashboard (and any non-billing group) has no sub-slide of its own, so it shows the
+     Bill/Purchase/Report button row rather than a drilled-in group */
+  setBillingDrill(subgroup);
   if(INVESTMENT_GROUP_VIEWS.includes(name)){
     document.querySelectorAll('#submenu-investment .nav-subtoggle').forEach(t=>t.classList.toggle('open', t.dataset.view===name));
   }
@@ -2446,7 +2509,7 @@ function showView(name){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===name));
   openNavGroupForView(name);
   renderSidebarPartyList();
-  document.getElementById('partyListSidebarSection').style.display = (name==='partylist') ? '' : 'none';
+  setHistoryDrill(name==='partylist');
   if(name==='dashboard') renderDashboard();
   if(name==='inventory') renderInventory();
   if(name==='purchaseorder') poEnter();
