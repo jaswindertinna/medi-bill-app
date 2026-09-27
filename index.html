@@ -57,9 +57,9 @@
   .sidebar-back-row{padding:0 10px 10px 10px;}
   .sidebar-back-btn{width:100%;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:7px;font-size:11px;font-weight:700;padding:8px 10px;cursor:pointer;text-align:left;}
   .sidebar-back-btn:hover{background:rgba(255,255,255,0.26);}
-  @media (max-width:900px){
-    .sidebar-toggle-btn,.sidebar-expand-btn,.sidebar-back-row{display:none !important;}
-  }
+  /* Desktop-only sidebar collapse/expand controls are no longer used — the mobile-style
+     drawer menu below is now shown at every screen size (phone, iPad and desktop). */
+  .sidebar-toggle-btn,.sidebar-expand-btn,.sidebar-back-row{display:none !important;}
 
   /* Sidebar — secondary column: contextual sub-navigation for whichever main section is active */
   #sidebar-secondary{width:100%;background:var(--primary-dark);color:#EAF3F0;flex:1;overflow-y:auto;padding:16px 0;display:flex;flex-direction:column;min-height:0;}
@@ -96,55 +96,68 @@
   /* Solid green strip that always covers the notch/status-bar area on phone and iPad, so the
      MCLAINE logo/title never renders under the device's notification icons — it sits below this. */
   #mobileStatusBarFill{display:none;}
-  @media (max-width:900px){
-    #sidebarColumn{display:none;}
-    #sidebar{display:none;}
-    #sidebar-secondary{display:none;}
-    #app{display:block;}
-    #mobileStatusBarFill{
-      display:block;position:fixed;top:0;left:0;right:0;
-      height:env(safe-area-inset-top, 0px);
-      background:var(--primary-dark);z-index:901;
-    }
-    #mobileTopbar{
-      display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:900;
-      background:var(--primary-dark);color:#fff;padding:12px 14px;
-      margin-top:env(safe-area-inset-top, 0px);
-    }
-    #mobileTopbar .hamburger{width:26px;height:20px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;flex-shrink:0;}
-    #mobileTopbar .hamburger span{display:block;height:2.5px;background:#fff;border-radius:2px;}
-    #mobileTopbar .title{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;cursor:pointer;}
-
-    #mobileNavOverlay{
-      display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:1001;
-      width:25%;min-width:190px;max-width:280px;
-      background:var(--primary-dark);color:#EAF3F0;transform:translateX(-100%);transition:transform 0.22s ease;
-      box-shadow:2px 0 18px rgba(0,0,0,0.35);
-    }
-    #mobileNavOverlay.open{transform:translateX(0);}
-    #mobileNavBackdrop{
-      display:none;position:fixed;inset:0;z-index:1000;
-      background:rgba(8,14,12,0.45);opacity:0;transition:opacity 0.22s ease;
-    }
-    #mobileNavBackdrop.open{display:block;opacity:1;}
-    #mobileNavHeader{display:flex;align-items:center;gap:6px;padding:12px 10px;padding-top:calc(env(safe-area-inset-top, 0px) + 12px);border-bottom:1px solid rgba(255,255,255,0.14);flex-shrink:0;}
-    #mobileNavHeader .back-btn{display:flex;align-items:center;gap:3px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;user-select:none;padding:5px 6px 5px 3px;margin-left:-3px;border-radius:6px;flex-shrink:0;}
-    #mobileNavHeader .back-btn:hover{background:rgba(255,255,255,0.08);}
-    #mobileNavHeader .back-btn.hidden{visibility:hidden;}
-    #mobileNavHeader .level-title{font-family:'Source Serif 4',serif;font-weight:600;font-size:14px;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    #mobileNavHeader .close-btn{color:#CFE4DE;font-size:20px;line-height:1;cursor:pointer;padding:4px 4px;flex-shrink:0;}
-    #mobileNavList{flex:1;overflow-y:auto;padding:6px 0;}
-    .mnav-item{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:12px 12px;font-size:12.5px;color:#EAF3F0;cursor:pointer;user-select:none;border-bottom:1px solid rgba(255,255,255,0.06);}
-    .mnav-item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .mnav-item:active,.mnav-item:hover{background:rgba(255,255,255,0.08);}
-    .mnav-item .chev{color:#A9C7BF;font-size:14px;flex-shrink:0;}
-    .mnav-item.leaf-active{color:#fff;font-weight:700;}
-    .mnav-search{width:calc(100% - 24px);margin:8px 12px 4px 12px;padding:9px 10px;font-size:13px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;}
-    .mnav-search::placeholder{color:#DDEFE9;}
-    .mnav-item.party{padding:11px 12px;}
-    .mnav-pending{font-size:10.5px;color:#A9C7BF;flex-shrink:0;}
-    .mnav-empty{padding:14px 12px;font-size:12px;color:#E3F1EC;}
+  /* This drawer-style menu is now used at every screen size — phone, iPad and desktop —
+     instead of only below 900px, so navigation is identical everywhere. */
+  #sidebarColumn{display:none;}
+  #sidebar{display:none;}
+  #sidebar-secondary{display:none;}
+  #app{display:block;}
+  #mobileStatusBarFill{
+    display:block;position:fixed;top:0;left:0;right:0;
+    height:env(safe-area-inset-top, 0px);
+    background:var(--primary-dark);z-index:901;
   }
+  #mobileTopbar{
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;position:sticky;top:0;z-index:900;
+    background:var(--primary-dark);color:#fff;
+    padding:12px 14px;
+    padding-top:calc(env(safe-area-inset-top, 0px) + 12px);
+  }
+  #mobileTopbar .topbar-left{display:flex;align-items:center;gap:10px;min-width:0;}
+  #mobileTopbar .hamburger{width:26px;height:20px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;flex-shrink:0;}
+  #mobileTopbar .hamburger span{display:block;height:2.5px;background:#fff;border-radius:2px;}
+  #mobileTopbar .title{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* Quick-access shortcuts on the green top bar: New Bill / History / Ledger, centered */
+  .topbar-shortcuts{display:flex;gap:6px;justify-self:center;}
+  .topbar-shortcut-btn{
+    background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:#fff;
+    border-radius:7px;font-size:10.5px;font-weight:700;font-family:inherit;
+    padding:7px 10px;cursor:pointer;white-space:nowrap;flex-shrink:0;
+  }
+  .topbar-shortcut-btn:hover{background:rgba(255,255,255,0.24);}
+  .topbar-shortcut-btn.active{background:var(--accent);border-color:var(--accent);}
+
+
+  #mobileNavOverlay{
+    display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:1001;
+    width:25%;min-width:190px;max-width:280px;
+    background:var(--primary-dark);color:#EAF3F0;transform:translateX(-100%);transition:transform 0.22s ease;
+    box-shadow:2px 0 18px rgba(0,0,0,0.35);
+  }
+  #mobileNavOverlay.open{transform:translateX(0);}
+  #mobileNavBackdrop{
+    display:none;position:fixed;inset:0;z-index:1000;
+    background:rgba(8,14,12,0.45);opacity:0;transition:opacity 0.22s ease;
+  }
+  #mobileNavBackdrop.open{display:block;opacity:1;}
+  #mobileNavHeader{display:flex;align-items:center;gap:6px;padding:12px 10px;padding-top:calc(env(safe-area-inset-top, 0px) + 12px);border-bottom:1px solid rgba(255,255,255,0.14);flex-shrink:0;}
+  #mobileNavHeader .back-btn{display:flex;align-items:center;gap:3px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;user-select:none;padding:5px 6px 5px 3px;margin-left:-3px;border-radius:6px;flex-shrink:0;}
+  #mobileNavHeader .back-btn:hover{background:rgba(255,255,255,0.08);}
+  #mobileNavHeader .back-btn.hidden{visibility:hidden;}
+  #mobileNavHeader .level-title{font-family:'Source Serif 4',serif;font-weight:600;font-size:14px;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #mobileNavHeader .close-btn{color:#CFE4DE;font-size:20px;line-height:1;cursor:pointer;padding:4px 4px;flex-shrink:0;}
+  #mobileNavList{flex:1;overflow-y:auto;padding:6px 0;}
+  .mnav-item{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:12px 12px;font-size:12.5px;color:#EAF3F0;cursor:pointer;user-select:none;border-bottom:1px solid rgba(255,255,255,0.06);}
+  .mnav-item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mnav-item:active,.mnav-item:hover{background:rgba(255,255,255,0.08);}
+  .mnav-item .chev{color:#A9C7BF;font-size:14px;flex-shrink:0;}
+  .mnav-item.leaf-active{color:#fff;font-weight:700;}
+  .mnav-search{width:calc(100% - 24px);margin:8px 12px 4px 12px;padding:9px 10px;font-size:13px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;}
+  .mnav-search::placeholder{color:#DDEFE9;}
+  .mnav-item.party{padding:11px 12px;}
+  .mnav-pending{font-size:10.5px;color:#A9C7BF;flex-shrink:0;}
+  .mnav-empty{padding:14px 12px;font-size:12px;color:#E3F1EC;}
 
   /* Login overlay — shown when cloud sync is configured but no account is signed in yet */
   #loginOverlay{position:fixed;inset:0;background:var(--bg);z-index:2000;display:none;align-items:center;justify-content:center;}
@@ -194,7 +207,7 @@
   .ledger-dash-btn{display:block;width:calc(100% - 20px);margin:0 10px 8px;padding:8px 10px;font-size:11.5px;font-weight:700;color:#fff;background:var(--accent);border:none;border-radius:7px;cursor:pointer;text-align:center;}
   .ledger-dash-btn:hover{filter:brightness(1.08);}
 
-  #main{flex:1;padding:22px 27px;max-width:1180px;}
+  #main{flex:1;width:100%;padding:22px 27px;max-width:1180px;margin:0 auto;box-sizing:border-box;}
   .view{display:none;}
   .view.active{display:block;}
   .page-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap;gap:8px;}
@@ -287,7 +300,8 @@
   .toast.show{opacity:1;transform:translateY(0);}
 
   /* New bill layout */
-  .bill-layout{display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start;}
+  .bill-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px;align-items:start;}
+  .bill-layout .panel{min-width:0;}
   .med-pick{max-height:340px;overflow-y:auto;}
   .med-pick-row{display:flex;justify-content:space-between;align-items:center;padding:6px 5px;border-bottom:1px solid var(--border);}
   .med-pick-row:last-child{border-bottom:none;}
@@ -439,7 +453,7 @@
   .inv-cycle.done .chemist-chip{padding-right:11px;}
 
   @media (max-width:900px){
-    .bill-layout{grid-template-columns:1fr 2fr;gap:8px;}
+    .bill-layout{grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:8px;}
     .metrics{grid-template-columns:1fr 1fr;}
     .range-metrics{grid-template-columns:repeat(3,minmax(0,1fr));}
     .dr-report-grid{grid-template-columns:1fr;}
@@ -447,7 +461,7 @@
   @media (max-width:700px){
     .row.c2,.row.c3{grid-template-columns:1fr;}
     #view-newpurchase .row.c4{grid-template-columns:1fr 1fr;}
-    .bill-layout{grid-template-columns:1fr 2fr;gap:6px;}
+    .bill-layout{grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:6px;}
     .bill-layout .panel{padding:10px 8px;}
     .bill-layout .panel h3{font-size:11px;margin-bottom:7px;}
     .bill-layout .field label{font-size:10px;}
@@ -515,10 +529,18 @@
   <!-- Solid green fill for the notch/status-bar area, so the topbar below never looks merged with it -->
   <div id="mobileStatusBarFill"></div>
 
-  <!-- Mobile-only top bar: hamburger opens the full-screen drill-down menu -->
+  <!-- Mobile-only top bar: hamburger opens the full-screen drill-down menu; New Bill/History
+       are quick-access shortcuts, and Ledger toggles the right-side party list panel -->
   <div id="mobileTopbar">
-    <div class="hamburger" id="btnOpenMobileNav"><span></span><span></span><span></span></div>
-    <div class="title" id="btnMobileLogoHome" role="button" title="Go to Dashboard">MCLAINE</div>
+    <div class="topbar-left">
+      <div class="hamburger" id="btnOpenMobileNav"><span></span><span></span><span></span></div>
+      <div class="title" id="btnMobileLogoHome" role="button" title="Go to Dashboard">MCLAINE</div>
+    </div>
+    <div class="topbar-shortcuts">
+      <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill">New Bill</button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopHistory">History</button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopLedger">Ledger</button>
+    </div>
   </div>
 
   <!-- Dims/reveals the rest of the page behind the mobile drawer; tapping it closes the drawer -->
@@ -909,6 +931,11 @@
       </div>
       <div class="bill-layout">
         <div class="panel">
+          <h3>Select medicines</h3>
+          <div class="search-box"><input id="billSearch" placeholder="Search by medicine name..."></div>
+          <div class="med-pick" id="billMedList"></div>
+        </div>
+        <div class="panel">
           <h3>Customer details</h3>
           <div class="field cust-field" id="custField">
             <div class="cust-label-row">
@@ -947,11 +974,6 @@
           </div>
           <button class="primary" id="btnGenerateBill" style="width:100%;margin-top:14px;">Generate bill</button>
           <button class="ghost" id="btnSaveTempBill" type="button" style="width:100%;margin-top:8px;">Save as Temp Bill</button>
-        </div>
-        <div class="panel">
-          <h3>Select medicines</h3>
-          <div class="search-box"><input id="billSearch" placeholder="Search by medicine name..."></div>
-          <div class="med-pick" id="billMedList"></div>
         </div>
       </div>
     </div>
@@ -2278,6 +2300,7 @@ function renderMobileNav(){
   const titleEl = document.getElementById('mobileNavTitle');
   const currentNode = mobileNavPath.length ? mobileNavPath[mobileNavPath.length-1] : null;
   backBtn.classList.toggle('hidden', mobileNavPath.length===0);
+  document.getElementById('btnTopLedger').classList.toggle('active', !!(currentNode && currentNode.dynamic==='ledgerParties'));
 
   /* Ledger is data-driven (list of parties), not a fixed menu — render it separately */
   if(currentNode && currentNode.dynamic==='ledgerParties'){
@@ -2392,8 +2415,28 @@ function openMobileNav(){
 function closeMobileNav(){
   document.getElementById('mobileNavOverlay').classList.remove('open');
   document.getElementById('mobileNavBackdrop').classList.remove('open');
+  document.getElementById('btnTopLedger').classList.toggle('active', document.getElementById('view-payments').classList.contains('active'));
 }
 document.getElementById('btnOpenMobileNav').addEventListener('click', openMobileNav);
+
+/* Top-bar shortcuts: jump straight to New Bill, History, or the Ledger dashboard. */
+document.getElementById('btnTopNewBill').addEventListener('click', ()=>{
+  closeMobileNav();
+  showView('newbill');
+});
+document.getElementById('btnTopHistory').addEventListener('click', ()=>{
+  closeMobileNav();
+  selectedPartyListParty = RECENT_KEY;
+  showView('partylist');
+});
+document.getElementById('btnTopLedger').addEventListener('click', ()=>{
+  const ledgerNode = MOBILE_MENU.find(n=>n.dynamic==='ledgerParties');
+  mobileNavPath = ledgerNode ? [ledgerNode] : [];
+  mobileLedgerSearch = '';
+  renderMobileNav();
+  document.getElementById('mobileNavOverlay').classList.add('open');
+  document.getElementById('mobileNavBackdrop').classList.add('open');
+});
 /* Tapping the MCLAINE logo/title (desktop sidebar or mobile top bar) always goes home:
    the Dashboard content loads, and the sidebar itself resets to the root section list
    (Billing/Ledger/Investment/List/Notes/Account) rather than staying drilled into a sub-menu. */
@@ -2507,6 +2550,9 @@ function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===name));
+  document.getElementById('btnTopNewBill').classList.toggle('active', name==='newbill');
+  document.getElementById('btnTopHistory').classList.toggle('active', name==='partylist');
+  document.getElementById('btnTopLedger').classList.toggle('active', name==='payments');
   openNavGroupForView(name);
   renderSidebarPartyList();
   setHistoryDrill(name==='partylist');
