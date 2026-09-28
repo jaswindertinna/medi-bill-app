@@ -1023,6 +1023,7 @@
             <div class="totals-line"><span>Subtotal</span><span id="tSubtotal">₹0.00</span></div>
             <div class="totals-line"><span>GST</span><span id="tGst">₹0.00</span></div>
             <div class="totals-line"><span>Discount</span><span id="tDiscount">−₹0.00</span></div>
+            <div class="totals-line" id="tCdRow" style="display:none;color:var(--primary-dark);font-weight:600;"><span>CD 3% extra discount</span><span id="tCd">−₹0.00</span></div>
             <div class="totals-line grand"><span>Total</span><span id="tGrand">₹0.00</span></div>
           </div>
           <div id="custDuesBox" style="display:none;font-size:12px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
@@ -2961,9 +2962,11 @@ window.deleteMedicine = function(id){
   saveMedicines(); renderInventory(); toast('Medicine deleted');
 };
 document.getElementById('btnCancelMed').addEventListener('click', ()=>showView('inventory'));
-/* Sale rate is derived from MRP: the default tier is MRP − 20%, and the New Bill screen can
-   switch an item to MRP − 60%. Kept in one place so both screens agree. */
-const MRP_DISCOUNT_TIERS = [20, 60];
+/* Sale rate is derived from MRP: the New Bill default tier is MRP − 17%, and the New Bill screen can
+   switch an item to MRP − 57%. Kept in one place so both screens agree. */
+const MRP_DISCOUNT_TIERS = [17, 57];
+/* Cash discount: optional extra 3% (of MRP) taken off at the END of the bill. It is never put into the rate — rates stay at MRP − 17% / MRP − 57%. */
+const CD_PCT = 3;
 function rateFromMrp(mrp, pct){
   const m = parseFloat(mrp);
   if(isNaN(m) || m<=0) return null;
@@ -3866,11 +3869,11 @@ window.addToCart = function(medId){
     existing.qty++;
   } else {
     if(m.stock<1){ toast('Out of stock'); return; }
-    /* When the medicine has an MRP, the bill rate starts at the default MRP − 20% tier and can
-       be switched to MRP − 60% per line; without an MRP we fall back to the stored sale rate. */
+    /* When the medicine has an MRP, the bill rate starts at the default MRP − 17% tier and can
+       be switched to MRP − 57% per line; without an MRP we fall back to the stored sale rate. */
     const mrp = (m.mrp!=null && m.mrp!=='') ? Number(m.mrp) : null;
-    const startRate = mrp!=null ? rateFromMrp(mrp, 20) : m.rate;
-    cart.push({medId:m.id, name:m.name, mrp, mrpPct: mrp!=null ? 20 : null, rate:startRate, gst:m.gst, unit:m.unit, qty:1, free:0, maxStock:m.stock, rateType: m.rateType||'incl', batch:m.batch||'', expiry:m.expiry||''});
+    const startRate = mrp!=null ? rateFromMrp(mrp, 17) : m.rate;
+    cart.push({medId:m.id, name:m.name, mrp, mrpPct: mrp!=null ? 17 : null, cd:false, rate:startRate, gst:m.gst, unit:m.unit, qty:1, free:0, maxStock:m.stock, rateType:'incl', batch:m.batch||'', expiry:m.expiry||''});
   }
   renderCart();
 };
@@ -3908,7 +3911,7 @@ window.updateCartRate = function(medId, rate){
   item.mrpPct = null; // typed by hand, so it no longer matches an MRP tier
   renderCart();
 };
-/* Switches a line between the MRP − 20% and MRP − 60% tiers */
+/* Switches a line between the MRP − 17% and MRP − 57% tiers (CD is separate and does not change the rate) */
 window.setCartMrpTier = function(medId, pct){
   const item = cart.find(c=>c.medId===medId); if(!item) return;
   const r = rateFromMrp(item.mrp, pct);
@@ -3917,9 +3920,10 @@ window.setCartMrpTier = function(medId, pct){
   item.rate = r;
   renderCart();
 };
-window.updateCartRateType = function(medId, rateType){
+/* Cash discount toggle: marks this line for the extra CD 3%, deducted at the end of the bill. The rate is NOT changed. */
+window.toggleCartCd = function(medId){
   const item = cart.find(c=>c.medId===medId); if(!item) return;
-  item.rateType = rateType;
+  item.cd = !item.cd;
   renderCart();
 };
 window.updateCartGst = function(medId, gst){
@@ -3934,14 +3938,11 @@ window.removeFromCart = function(medId){
   renderCart();
 };
 
+/* New Bill rates are always tax-inclusive: the rate typed/shown already contains the GST */
 function cartLineAmounts(c){
   const lineTotal = (parseFloat(c.rate)||0) * c.qty;
-  if(c.rateType==='incl'){
-    const base = c.gst>0 ? lineTotal/(1+c.gst/100) : lineTotal;
-    return { base, gstAmt: lineTotal-base, lineTotal };
-  }
-  const gstAmt = lineTotal * c.gst/100;
-  return { base: lineTotal, gstAmt, lineTotal: lineTotal+gstAmt };
+  const base = c.gst>0 ? lineTotal/(1+c.gst/100) : lineTotal;
+  return { base, gstAmt: lineTotal-base, lineTotal };
 }
 function renderCart(){
   const box = document.getElementById('cartList');
@@ -3951,16 +3952,19 @@ function renderCart(){
       const { lineTotal } = cartLineAmounts(c);
       const mrpNote = c.mrp!=null ? ` · MRP ${fmt(c.mrp)}${c.mrpPct? ' − '+c.mrpPct+'%':''}` : '';
       const freeNote = (Number(c.free)||0) > 0 ? ` <span style="color:var(--primary-dark);font-weight:600;">+ ${Number(c.free)} free</span>` : '';
-      const tierBtns = c.mrp!=null ? `
+      const tierBtns = `
         <div style="display:flex;flex-direction:column;align-items:center;">
-          <span style="font-size:9.5px;color:var(--muted);">MRP less</span>
+          <span style="font-size:9.5px;color:var(--muted);">${c.mrp!=null ? 'MRP less' : 'Discount'}</span>
           <div style="display:flex;gap:4px;">
-            ${MRP_DISCOUNT_TIERS.map(p=>`
+            ${c.mrp!=null ? MRP_DISCOUNT_TIERS.map(p=>`
               <button class="sm ${c.mrpPct===p?'primary':'ghost'}" style="padding:5px 8px;"
                 onclick="setCartMrpTier('${c.medId}', ${p})"
-                title="Set rate to MRP − ${p}%">${p}%</button>`).join('')}
+                title="Set rate to MRP − ${p}%">${p}%</button>`).join('') : ''}
+            <button class="sm ${c.cd?'primary':'ghost'}" style="padding:5px 8px;"
+              onclick="toggleCartCd('${c.medId}')"
+              title="Extra ${CD_PCT}% cash discount, deducted at the end of the bill (press again to undo)">CD ${CD_PCT}%</button>
           </div>
-        </div>` : '';
+        </div>`;
       return `
       <div class="cart-row" style="flex-wrap:wrap;">
         <div style="flex:1;min-width:140px;"><div style="font-weight:500;font-size:13.5px;">${c.name}</div><div style="font-size:11.5px;color:var(--muted);">${c.qty} × ${fmt(c.rate)} = ${fmt(lineTotal)} total${mrpNote}${freeNote}</div></div>
@@ -3972,13 +3976,6 @@ function renderCart(){
         <div style="display:flex;flex-direction:column;align-items:center;">
           <span style="font-size:9.5px;color:var(--muted);">Tax %</span>
           <input class="qtybox" style="width:56px" type="number" min="0" step="0.5" value="${c.gst}" title="Change tax slab for this bill only" onchange="updateCartGst('${c.medId}', this.value)">
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;">
-          <span style="font-size:9.5px;color:var(--muted);">Rate type</span>
-          <select style="font-size:12px;padding:6px;width:100px;" onchange="updateCartRateType('${c.medId}', this.value)">
-            <option value="incl" ${c.rateType==='incl'?'selected':''}>Incl. GST</option>
-            <option value="excl" ${c.rateType!=='incl'?'selected':''}>Excl. GST</option>
-          </select>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;">
           <span style="font-size:9.5px;color:var(--muted);">Qty</span>
@@ -3995,19 +3992,31 @@ function renderCart(){
   computeTotals();
 }
 let lastBillGrand = 0;
+/* Rupees of CD 3% on this cart line: 3% of MRP x qty (falls back to 3% of the line total when there is no MRP).
+   It is NOT inside the rate — it is deducted once at the end of the bill. */
+function cartCdSaving(c){
+  if(!c.cd) return 0;
+  const qty = Number(c.qty)||0;
+  const perUnit = (c.mrp!=null && !isNaN(Number(c.mrp))) ? Number(c.mrp)*CD_PCT/100
+    : (parseFloat(c.rate)||0)*CD_PCT/100;
+  return Math.max(0, perUnit) * qty;
+}
 function computeTotals(){
   const discountPct = parseFloat(document.getElementById('billDiscount').value)||0;
   let subtotal=0, gstTotal=0;
   cart.forEach(c=>{ const {base,gstAmt} = cartLineAmounts(c); subtotal+=base; gstTotal+=gstAmt; });
   const discountAmt = (subtotal+gstTotal) * discountPct/100;
-  const grand = subtotal + gstTotal - discountAmt;
+  const cdAmt = Math.round(cart.reduce((a,c)=>a+cartCdSaving(c),0)*100)/100;
+  const grand = Math.max(0, subtotal + gstTotal - discountAmt - cdAmt);
   document.getElementById('tSubtotal').textContent = fmt(subtotal);
   document.getElementById('tGst').textContent = fmt(gstTotal);
   document.getElementById('tDiscount').textContent = '−'+fmt(discountAmt);
+  document.getElementById('tCdRow').style.display = cdAmt>0 ? 'flex' : 'none';
+  document.getElementById('tCd').textContent = '−'+fmt(cdAmt);
   document.getElementById('tGrand').textContent = fmt(grand);
   lastBillGrand = grand;
   updateCustDuesBox();
-  return {subtotal, gstTotal, discountAmt, grand};
+  return {subtotal, gstTotal, discountAmt, grand, cdAmt};
 }
 document.getElementById('billDiscount').addEventListener('input', computeTotals);
 
@@ -4037,7 +4046,7 @@ document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
     if(!canon){ toast('Bills can only be made to Dr List or Chemist List — use + Add doctor / + Add chemist first'); return; }
     customerName = canon.name;
   }
-  const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:c.rateType||'excl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal, batch:c.batch||'', expiry:c.expiry||''}));
+  const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:'incl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal, batch:c.batch||'', expiry:c.expiry||'', cd:!!c.cd}));
 
   if(editingBillId){
     const idx = bills.findIndex(b=>b.id===editingBillId);
@@ -4057,7 +4066,7 @@ document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
       ...original,
       customerName, customerPhone, items: newItems,
       date: editDateVal ? new Date(editDateVal+'T12:00:00').toISOString() : original.date,
-      subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand
+      subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true
     };
     await saveMedicines(); await saveBills();
     toast('Bill updated: '+original.billNo);
@@ -4073,7 +4082,7 @@ document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
     id: uid(), billNo, date: billDateVal ? new Date(billDateVal+'T12:00:00').toISOString() : new Date().toISOString(),
     customerName, customerPhone,
     items: newItems,
-    subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand
+    subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true
   };
   cart.forEach(c=>{
     const m = medicines.find(x=>x.id===c.medId);
@@ -4104,7 +4113,7 @@ document.getElementById('btnSaveTempBill').addEventListener('click', async ()=>{
   const canon = getCustPickerRows().find(r=> r.name.toLowerCase()===customerName.toLowerCase());
   if(!canon){ toast('Bills can only be made to Dr List or Chemist List — use + Add doctor / + Add chemist first'); return; }
   customerName = canon.name;
-  const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:c.rateType||'excl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal, batch:c.batch||'', expiry:c.expiry||''}));
+  const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:'incl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal, batch:c.batch||'', expiry:c.expiry||'', cd:!!c.cd}));
 
   if(editingBillId){ toast('Cannot save an edit as a temp bill — update or cancel the edit first'); return; }
 
@@ -4113,7 +4122,7 @@ document.getElementById('btnSaveTempBill').addEventListener('click', async ()=>{
     id: uid(), date: tempDateVal ? new Date(tempDateVal+'T12:00:00').toISOString() : new Date().toISOString(),
     customerName, customerPhone,
     items: newItems,
-    subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand
+    subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true
   };
   cart.forEach(c=>{
     const m = medicines.find(x=>x.id===c.medId);
@@ -4154,7 +4163,7 @@ window.confirmTempBill = async function(id){
     id: uid(), billNo, date: temp.date,
     customerName: temp.customerName, customerPhone: temp.customerPhone,
     items: temp.items,
-    subtotal: temp.subtotal, gstTotal: temp.gstTotal, discountAmt: temp.discountAmt, grandTotal: temp.grandTotal
+    subtotal: temp.subtotal, gstTotal: temp.gstTotal, discountAmt: temp.discountAmt, grandTotal: temp.grandTotal, cdAmt: temp.cdAmt, cdAtEnd: temp.cdAtEnd
   };
   bills.push(bill);
   settings.nextNo = (settings.nextNo||1)+1;
@@ -4216,11 +4225,26 @@ window.editBillById = function(id, returnView){
   editingBillOriginalCustomerName = b.customerName||'';
   cart = b.items.map(it=>{
     const m = medicines.find(x=>x.name===it.name);
+    /* older bills may hold a tax-exclusive rate — convert it so the line total stays the same */
+    let rate = (it.rateType==='incl') ? it.rate : Math.round((parseFloat(it.rate)||0)*(1+(parseFloat(it.gst)||0)/100)*100)/100;
+    const mrpVal = (m && m.mrp!=null && m.mrp!=='' && !isNaN(Number(m.mrp)) && Number(m.mrp)>0) ? Number(m.mrp) : null;
+    let cdFlag = !!it.cd;
+    /* Bills saved before CD moved to the end of the bill had CD baked into the rate (MRP − tier − 3%).
+       Put the rate back to the plain tier rate and keep CD as the end-of-bill deduction. */
+    if(!b.cdAtEnd && cdFlag && mrpVal!=null){
+      const hit = MRP_DISCOUNT_TIERS.find(t=>{ const r = rateFromMrp(mrpVal, t+CD_PCT); return r!=null && Math.abs(r-(parseFloat(rate)||0))<0.02; });
+      if(hit!=null) rate = rateFromMrp(mrpVal, hit);
+    }
+    const tierHit = mrpVal!=null ? MRP_DISCOUNT_TIERS.find(t=>{ const r = rateFromMrp(mrpVal, t); return r!=null && Math.abs(r-(parseFloat(rate)||0))<0.02; }) : undefined;
     return {
       medId: m ? m.id : null,
-      name: it.name, unit: it.unit, rate: it.rate, gst: it.gst,
-      rateType: it.rateType||'excl', qty: it.qty, free: Number(it.free)||0,
+      name: it.name, unit: it.unit,
+      mrp: mrpVal, mrpPct: tierHit!=null ? tierHit : null,
+      rate,
+      gst: it.gst,
+      rateType: 'incl', qty: it.qty, free: Number(it.free)||0,
       batch: it.batch || (m ? m.batch : '') || '', expiry: it.expiry || (m ? m.expiry : '') || '',
+      cd: cdFlag,
       // original qty + free is still "available" to this bill until saved
       maxStock: m ? (Number(m.stock) + Number(it.qty) + (Number(it.free)||0)) : (Number(it.qty) + (Number(it.free)||0))
     };
@@ -6636,6 +6660,16 @@ function buildInvoiceHtml(bill){
     const discRate = baseRate * dFactor;          // rate after discount, before GST
     const finalRate = discRate * (1+gst/100);     // what the party actually pays per unit (used for amount, not shown separately)
     const amount = finalRate * (Number(it.qty)||0);
+    /* CD flag is stored on new bills. Older bills predate it, so work it out from the medicine's MRP:
+       a rate equal to MRP − (17% or 57%) − CD 3% means CD was applied. */
+    let cdApplied = !!it.cd;
+    if(it.cd===undefined && it.rateType==='incl'){
+      const mrpRec = medicines.find(m=>(m.name||'').trim().toLowerCase()===(it.name||'').trim().toLowerCase());
+      const mrpVal = mrpRec ? parseFloat(mrpRec.mrp) : NaN;
+      if(!isNaN(mrpVal) && mrpVal>0){
+        cdApplied = MRP_DISCOUNT_TIERS.some(t=>{ const r = rateFromMrp(mrpVal, t+CD_PCT); return r!=null && Math.abs(r-rate)<0.02; });
+      }
+    }
     const expLabel = /^\d{4}-\d{2}$/.test(itExpiry) ? (itExpiry.slice(5,7)+'/'+itExpiry.slice(2,4)) : (itExpiry||'—');
     return `
     <tr><td>${it.name}</td><td class="num">${itBatch||'—'}</td><td class="num">${expLabel}</td><td class="num">${it.qty} ${it.unit}</td><td class="num">${(Number(it.free)||0) ? (Number(it.free)+' '+it.unit) : '—'}</td><td class="num">₹${discRate.toFixed(2)}</td><td class="num">${gst}%</td><td class="num">${fmt(amount)}</td></tr>
@@ -6686,8 +6720,10 @@ function buildInvoiceHtml(bill){
       ${discPct>0 ? `
       <div class="totals-line"><span>Gross (before discount)</span><span>${fmt(preDisc)}</span></div>
       <div class="totals-line"><span>Discount @ ${(Math.round(discPct*100)/100)}%</span><span>−${fmt(bill.discountAmt)}</span></div>` : ''}
+      ${(!bill.cdAtEnd && (Number(bill.cdAmt)||0)>0) ? `<div class="totals-line"><span>CD ${CD_PCT}% discount (included in rates)</span><span>${fmt(bill.cdAmt)}</span></div>` : ''}
       <div class="totals-line"><span>Taxable value</span><span>${fmt((Number(bill.subtotal)||0)*dFactor)}</span></div>
       <div class="totals-line"><span>GST</span><span>${fmt((Number(bill.gstTotal)||0)*dFactor)}</span></div>
+      ${(bill.cdAtEnd && (Number(bill.cdAmt)||0)>0) ? `<div class="totals-line"><span>CD ${CD_PCT}% extra discount</span><span>−${fmt(bill.cdAmt)}</span></div>` : ''}
       <div class="totals-line grand"><span>Total</span><span>${fmt(bill.grandTotal)}</span></div>
     </div>
     ${bill.customerName ? (()=>{ const t = computePartyTotals(bill.customerName); return `
