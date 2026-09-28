@@ -399,7 +399,7 @@
   .metric-card.sm .value{font-size:13px;}
   .compact-metrics{gap:6px;}
   /* From / To / Reset row — labels above inputs, equal-height controls, never overflows on tablet or phone */
-  .date-filter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:end;margin:10px 0 6px;min-width:0;}
+  .date-filter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:end;margin:10px 0 6px;min-width:0;}
   .date-filter .df-cell{min-width:0;display:flex;flex-direction:column;gap:3px;}
   .date-filter .df-cell label{font-size:10px;font-weight:600;color:var(--muted);margin:0;}
   .date-filter input[type="date"]{display:block;width:100%;min-width:0;max-width:100%;height:36px;padding:0 8px;margin:0;box-sizing:border-box;}
@@ -1569,10 +1569,10 @@
         <div class="field"><label>Description</label><input id="acctDesc" placeholder="e.g. Owner investment, bank withdrawal, loan repaid"></div>
         <button class="primary" id="btnAddAccountEntry">+ Add manual entry</button>
       </div>
-      <div class="grid range-metrics compact-metrics" style="margin-top:14px;margin-bottom:10px;">
-        <div class="metric-card sm"><div class="label">From (optional)</div><input type="date" id="acctFrom"></div>
-        <div class="metric-card sm"><div class="label">To (optional)</div><input type="date" id="acctTo"></div>
-        <div class="metric-card sm" style="display:flex;align-items:flex-end;"><button class="sm ghost" id="btnAcctReset" style="width:100%;">Reset</button></div>
+      <div class="date-filter" style="margin-top:14px;margin-bottom:10px;">
+        <div class="df-cell"><label for="acctFrom">From (optional)</label><input type="date" id="acctFrom"></div>
+        <div class="df-cell"><label for="acctTo">To (optional)</label><input type="date" id="acctTo"></div>
+        <div class="df-cell df-reset"><button class="sm ghost" id="btnAcctReset">Reset</button></div>
       </div>
       <div class="grid range-metrics">
         <div class="metric-card"><div class="label">Total credit</div><div class="value" id="acctTotalCredit">₹0</div></div>
