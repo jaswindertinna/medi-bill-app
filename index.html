@@ -1106,12 +1106,7 @@
           <div class="sub">Received amount</div><div class="value" id="ledWeekReceived">₹0</div>
           <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);" id="ledWeekPending">₹0</div>
         </div>
-        <div class="ledger-dash-cell">
-          <div class="label">Today</div>
-          <div class="sub">Total amount</div><div class="value" id="ledTodayAmount">₹0</div>
-          <div class="sub">Received amount</div><div class="value" id="ledTodayReceived">₹0</div>
-          <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);" id="ledTodayPending">₹0</div>
-        </div>
+        <div class="ledger-dash-cell" id="ledPartyCell"></div>
       </div>
 
       <div id="ledgerSplit">
@@ -1371,25 +1366,24 @@
       <div class="page-head"><div><h2>History</h2><p>Recent shows every bill from the last 30 days. Or pick a party from the list to see their details — everyone billed at least once appears here automatically.</p></div></div>
       <div class="ledger-dash-box" id="historyOverviewCards">
         <div class="ledger-dash-cell">
-          <div class="label">Today</div>
-          <div class="sub">Bills</div><div class="value" id="hisTodayCount">0</div>
-          <div class="sub">Total billed</div><div class="value" id="hisTodayTotal">₹0</div>
-        </div>
-        <div class="ledger-dash-cell">
-          <div class="label">This week</div>
-          <div class="sub">Bills</div><div class="value" id="hisWeekCount">0</div>
-          <div class="sub">Total billed</div><div class="value" id="hisWeekTotal">₹0</div>
+          <div class="label">Total (all time)</div>
+          <div class="sub">Total amount</div><div class="value" id="hisTotalAmount">₹0</div>
+          <div class="sub">Received amount</div><div class="value" id="hisTotalReceived">₹0</div>
+          <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);" id="hisTotalPending">₹0</div>
         </div>
         <div class="ledger-dash-cell">
           <div class="label">This month</div>
-          <div class="sub">Bills</div><div class="value" id="hisMonthCount">0</div>
-          <div class="sub">Total billed</div><div class="value" id="hisMonthTotal">₹0</div>
+          <div class="sub">Total amount</div><div class="value" id="hisMonthAmount">₹0</div>
+          <div class="sub">Received amount</div><div class="value" id="hisMonthReceived">₹0</div>
+          <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);" id="hisMonthPending">₹0</div>
         </div>
         <div class="ledger-dash-cell">
-          <div class="label">All time</div>
-          <div class="sub">Bills</div><div class="value" id="hisAllCount">0</div>
-          <div class="sub">Total billed</div><div class="value" id="hisAllTotal">₹0</div>
+          <div class="label">This week</div>
+          <div class="sub">Total amount</div><div class="value" id="hisWeekAmount">₹0</div>
+          <div class="sub">Received amount</div><div class="value" id="hisWeekReceived">₹0</div>
+          <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);" id="hisWeekPending">₹0</div>
         </div>
+        <div class="ledger-dash-cell" id="hisPartyCell"></div>
       </div>
 
       <div id="historySplit">
@@ -1405,7 +1399,6 @@
         <div class="grid range-metrics compact-metrics" style="margin-bottom:8px;">
           <div class="metric-card sm"><div class="label">Bills (last 30 days)</div><div class="value" id="plrCount">0</div></div>
           <div class="metric-card sm"><div class="label">Total billed</div><div class="value" id="plrTotal">₹0.00</div></div>
-          <div class="metric-card sm"><div class="label">Party</div><select id="plrPartyFilter"><option value="">All parties</option></select></div>
         </div>
         <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Bills from the last 30 days, newest first.</p>
         <div class="panel" style="padding:0;overflow-x:auto;">
@@ -2580,9 +2573,20 @@ document.getElementById('btnTopNewBill').addEventListener('click', ()=>{
   showView('newbill');
 });
 document.getElementById('btnTopHistory').addEventListener('click', ()=>{
-  closeMobileNav();
-  selectedPartyListParty = RECENT_KEY;
-  showView('partylist');
+  if(isWideScreen()){
+    closeMobileNav();
+    selectedPartyListParty = RECENT_KEY;
+    showView('partylist');
+    return;
+  }
+  /* phone: open the slide bar with the searchable party list (Recent pinned at the top) */
+  const histNode = { label:'History', dynamic:'partyListParties' };
+  mobileProductPickMode = false;
+  mobileNavPath = [histNode];
+  mobilePartyListSearch = '';
+  renderMobileNav();
+  document.getElementById('mobileNavOverlay').classList.add('open');
+  document.getElementById('mobileNavBackdrop').classList.add('open');
 });
 document.getElementById('btnTopLedger').addEventListener('click', ()=>{
   if(isWideScreen()){ closeMobileNav(); showView('payments'); return; }
@@ -4629,20 +4633,40 @@ function renderHistoryPane(){
 }
 document.getElementById('historyPaneSearch').addEventListener('input', renderHistoryPane);
 function renderHistoryOverview(){
-  const sum = list => list.reduce((t,b)=> t + (Number(b.grandTotal)||0), 0);
-  const dayStart = new Date(); dayStart.setHours(0,0,0,0);
-  const weekStart = new Date(dayStart); weekStart.setDate(weekStart.getDate()-6);
-  const now = new Date();
-  const sets = {
-    Today: bills.filter(b=> new Date(b.date) >= dayStart),
-    Week:  bills.filter(b=> new Date(b.date) >= weekStart),
-    Month: bills.filter(b=>{ const d=new Date(b.date); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }),
-    All:   bills
+  /* first three cards: same figures as the Ledger dashboard */
+  const sum = (arr,f)=> arr.reduce((t,x)=> t + (Number(f(x))||0), 0);
+  const set = (k,amt,rec,pend)=>{
+    document.getElementById('his'+k+'Amount').textContent = fmt(amt);
+    document.getElementById('his'+k+'Received').textContent = fmt(rec);
+    document.getElementById('his'+k+'Pending').textContent = fmt(pend);
   };
-  Object.keys(sets).forEach(k=>{
-    document.getElementById('his'+k+'Count').textContent = sets[k].length;
-    document.getElementById('his'+k+'Total').textContent = fmt(sum(sets[k]));
-  });
+  const totalAmt = sum(bills,b=>b.grandTotal), totalRec = sum(payments,p=>p.amount);
+  let totalPend = 0;
+  getAllPartyNames().forEach(n=>{ totalPend += Math.max(0, computePartyTotals(n).pending); });
+  set('Total', totalAmt, totalRec, totalPend);
+
+  const now = new Date();
+  const inMonth = d=>{ d=new Date(d); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); };
+  const mAmt = sum(bills.filter(b=>inMonth(b.date)),b=>b.grandTotal), mRec = sum(payments.filter(p=>inMonth(p.date)),p=>p.amount);
+  set('Month', mAmt, mRec, Math.max(0, mAmt-mRec));
+
+  const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate()-6);
+  const wAmt = sum(bills.filter(b=>new Date(b.date)>=weekStart),b=>b.grandTotal), wRec = sum(payments.filter(p=>new Date(p.date)>=weekStart),p=>p.amount);
+  set('Week', wAmt, wRec, Math.max(0, wAmt-wRec));
+
+  /* fourth card: details of the selected party */
+  const cell = document.getElementById('hisPartyCell');
+  const esc = t=> String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  const r = (selectedPartyListParty && selectedPartyListParty!==RECENT_KEY) ? getPartyListRows().find(x=>x.name===selectedPartyListParty) : null;
+  if(!r){
+    cell.innerHTML = '<div class="label">Party details</div><div style="font-size:11.5px;color:var(--muted);line-height:1.5;">No party selected.<br>Pick a party from the list to see their details.</div>';
+    return;
+  }
+  cell.innerHTML = `<div class="label">Party details</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px;word-break:break-word;">${esc(r.name)}</div>
+    <div class="sub">Phone</div><div style="font-size:12px;font-weight:600;">${esc(r.phone)||'—'}</div>
+    <div class="sub">City · Location</div><div style="font-size:12px;font-weight:600;">${esc(r.city)||'—'} · ${esc(r.location)||'—'}</div>
+    <div class="sub">Pending</div><div class="value" style="color:var(--danger);">${fmt(r.pending)}</div>`;
 }
 function renderSidebarPartyListForList(){
   renderHistoryPane();
@@ -4677,18 +4701,6 @@ window.goToPartyListParty = function(name){
   renderPartyListDetail();
   showView('partylist');
 };
-/* "Party" card on History → Recent: pick one party to see only their recent bills */
-var recentPartyFilter = '';
-function fillRecentPartyFilter(){
-  const sel = document.getElementById('plrPartyFilter');
-  if(!sel) return;
-  const esc = t=> String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  const names = [...new Set(getRecentBills().map(b=>(b.customerName||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  if(recentPartyFilter && !names.includes(recentPartyFilter)) recentPartyFilter = '';
-  sel.innerHTML = '<option value="">All parties</option>' + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  sel.value = recentPartyFilter;
-}
-document.getElementById('plrPartyFilter').addEventListener('change', e=>{ recentPartyFilter = e.target.value; renderPartyListBills(); });
 function renderPartyListDetail(){
   const emptyEl = document.getElementById('partyListEmptyState');
   const contentEl = document.getElementById('partyListDetailContent');
@@ -4701,7 +4713,6 @@ function renderPartyListDetail(){
   if(selectedPartyListParty===RECENT_KEY){
     contentEl.style.display = 'none';
     recentEl.style.display = 'block';
-    fillRecentPartyFilter();
     renderPartyListBills();
     return;
   }
@@ -4720,7 +4731,7 @@ function renderPartyListDetail(){
 function renderPartyListBills(){
   if(!selectedPartyListParty) return;
   if(selectedPartyListParty===RECENT_KEY){
-    const list = getRecentBills().filter(b=> !recentPartyFilter || (b.customerName||'').trim()===recentPartyFilter);
+    const list = getRecentBills();
     document.getElementById('plrCount').textContent = list.length;
     document.getElementById('plrTotal').textContent = fmt(list.reduce((t,b)=> t + (Number(b.grandTotal)||0), 0));
     document.getElementById('plrBillsEmpty').style.display = list.length ? 'none' : 'block';
@@ -4870,15 +4881,6 @@ function renderLedgerOverview(){
   document.getElementById('ledWeekReceived').textContent = fmt(weekReceived);
   document.getElementById('ledWeekPending').textContent = fmt(Math.max(0, weekAmount-weekReceived));
 
-  /* Today */
-  const dayStart = new Date(); dayStart.setHours(0,0,0,0);
-  const todayBills = bills.filter(b=> new Date(b.date) >= dayStart);
-  const todayPayments = payments.filter(p=> new Date(p.date) >= dayStart);
-  const todayAmount = todayBills.reduce((s,b)=>s+(Number(b.grandTotal)||0),0);
-  const todayReceived = todayPayments.reduce((s,p)=>s+(Number(p.amount)||0),0);
-  document.getElementById('ledTodayAmount').textContent = fmt(todayAmount);
-  document.getElementById('ledTodayReceived').textContent = fmt(todayReceived);
-  document.getElementById('ledTodayPending').textContent = fmt(Math.max(0, todayAmount-todayReceived));
 }
 window.selectLedgerParty = function(party){
   selectedLedgerParty = party || null;
@@ -4945,7 +4947,28 @@ window.goToLedgerParty = function(party){
   selectLedgerParty(party);
   showView('payments');
 };
+function renderLedgerPartyCard(){
+  const cell = document.getElementById('ledPartyCell');
+  if(!cell) return;
+  const esc = t=> String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  if(!selectedLedgerParty){
+    cell.innerHTML = '<div class="label">Party details</div><div style="font-size:11.5px;color:var(--muted);line-height:1.5;">No party selected.<br>Pick a party from the list to see their details.</div>';
+    return;
+  }
+  const rec = findPartyRecord(selectedLedgerParty) || {};
+  const d = (typeof findDrListEntry==='function' && findDrListEntry(selectedLedgerParty)) || null;
+  const phone = (d && d.phone) || rec.phone || '';
+  const city = (d && d.city) || rec.city || '';
+  const loc = (d && d.location) || rec.location || '';
+  const pending = computePartyTotals(selectedLedgerParty).pending;
+  cell.innerHTML = `<div class="label">Party details</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px;word-break:break-word;">${esc(selectedLedgerParty)}</div>
+    <div class="sub">Phone</div><div style="font-size:12px;font-weight:600;">${esc(phone)||'—'}</div>
+    <div class="sub">City · Location</div><div style="font-size:12px;font-weight:600;">${esc(city)||'—'} · ${esc(loc)||'—'}</div>
+    <div class="sub">Pending</div><div class="value" style="color:var(--danger);">${fmt(pending)}</div>`;
+}
 function renderLedgerDetail(){
+  renderLedgerPartyCard();
   const emptyEl = document.getElementById('ledgerRecentContent');
   const contentEl = document.getElementById('ledgerDetailContent');
   const overviewEl = document.getElementById('ledgerOverviewCards');
