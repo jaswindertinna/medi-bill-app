@@ -383,6 +383,12 @@
     .ledger-dash-cell:nth-child(3){border-left:none;}
     .ledger-dash-cell:nth-child(n+3){border-top:1px solid var(--border);}
     .ledger-dash-box.hide-on-mobile{display:none;}
+    /* party open on a phone: show only the party card (name, phone, amounts) */
+    .ledger-dash-box.party-only{grid-template-columns:1fr;}
+    .ledger-dash-box.party-only .ledger-dash-cell:not(:last-child){display:none;}
+    .ledger-dash-box.party-only .ledger-dash-cell:last-child{border-left:none;border-top:none;}
+    .date-filter{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .date-filter .df-reset{grid-column:1 / -1;}
   }
   /* Profit is hidden until approved in Settings */
   body.hide-profit .profit-sec,body.hide-profit .profit-col{display:none !important;}
@@ -392,6 +398,12 @@
   .metric-card.sm .label{font-size:9px;margin-bottom:2px;}
   .metric-card.sm .value{font-size:13px;}
   .compact-metrics{gap:6px;}
+  /* From / To / Reset row — labels above inputs, equal-height controls, never overflows on tablet or phone */
+  .date-filter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:end;margin:10px 0 6px;min-width:0;}
+  .date-filter .df-cell{min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .date-filter .df-cell label{font-size:10px;font-weight:600;color:var(--muted);margin:0;}
+  .date-filter input[type="date"]{display:block;width:100%;min-width:0;max-width:100%;height:36px;padding:0 8px;margin:0;box-sizing:border-box;}
+  .date-filter button{width:100%;height:36px;margin:0;}
   #view-payments .page-head{margin-bottom:8px;}
   #view-payments .panel{padding:10px 11px;margin-bottom:10px;}
   #view-payments .panel h3{font-size:11px;margin-bottom:6px;}
@@ -1129,14 +1141,6 @@
           </div>
 
           <div id="ledgerDetailContent" style="display:none;">
-            <h2 id="ledgerPartyName" style="margin-bottom:6px;"></h2>
-
-            <div class="grid range-metrics compact-metrics" style="margin-bottom:8px;">
-              <div class="metric-card sm"><div class="label">Total billed</div><div class="value" id="pLedgerBilled">₹0</div></div>
-              <div class="metric-card sm"><div class="label">Total received</div><div class="value" id="pLedgerReceived">₹0</div></div>
-              <div class="metric-card danger sm"><div class="label">Pending</div><div class="value" id="pLedgerPending">₹0</div></div>
-            </div>
-
             <div class="panel">
               <h3>Record a payment received</h3>
               <div class="row c3" style="align-items:end;">
@@ -1147,10 +1151,10 @@
               <button class="primary" id="btnAddPayment">Add payment received</button>
             </div>
 
-            <div class="grid range-metrics compact-metrics" style="margin-top:14px;margin-bottom:6px;">
-              <div class="metric-card sm"><div class="label">From (optional)</div><input type="date" id="payFrom"></div>
-              <div class="metric-card sm"><div class="label">To (optional)</div><input type="date" id="payTo"></div>
-              <div class="metric-card sm" style="display:flex;align-items:flex-end;"><button class="sm ghost" id="btnPayReset" style="width:100%;">Reset</button></div>
+            <div class="date-filter" style="margin-top:14px;">
+              <div class="df-cell"><label for="payFrom">From (optional)</label><input type="date" id="payFrom"></div>
+              <div class="df-cell"><label for="payTo">To (optional)</label><input type="date" id="payTo"></div>
+              <div class="df-cell df-reset"><button class="sm ghost" id="btnPayReset">Reset</button></div>
             </div>
             <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Leave both blank to share the last 12 months. Set dates above to share a specific period instead.</p>
             <div class="top-actions" style="margin-bottom:14px;">
@@ -1410,23 +1414,13 @@
         </div>
       </div>
       <div id="partyListDetailContent" style="display:none;">
-        <div class="page-head" style="margin-bottom:8px;">
-          <h2 id="partyListDetailName" style="margin:0;"></h2>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:4px;">
           <button class="sm ghost" id="btnEditPartyListParty">Edit party</button>
         </div>
-        <div class="grid range-metrics compact-metrics" style="margin-bottom:8px;">
-          <div class="metric-card sm"><div class="label">Phone</div><div class="value" style="font-size:14px;" id="pldPhone">—</div></div>
-          <div class="metric-card sm"><div class="label">City</div><div class="value" style="font-size:14px;" id="pldCity">—</div></div>
-          <div class="metric-card sm"><div class="label">Location</div><div class="value" style="font-size:14px;" id="pldLocation">—</div></div>
-          <div class="metric-card danger sm"><div class="label">Pending</div><div class="value" id="pldPending">₹0</div></div>
-          <div class="metric-card sm profit-sec"><div class="label">Total cost</div><div class="value" id="pldCost">₹0</div></div>
-          <div class="metric-card sm profit-sec"><div class="label">Profit</div><div class="value" style="color:var(--primary-dark);" id="pldProfit">₹0</div></div>
-        </div>
-
-        <div class="grid range-metrics compact-metrics" style="margin-top:14px;margin-bottom:6px;">
-          <div class="metric-card sm"><div class="label">From (optional)</div><input type="date" id="pldFrom"></div>
-          <div class="metric-card sm"><div class="label">To (optional)</div><input type="date" id="pldTo"></div>
-          <div class="metric-card sm" style="display:flex;align-items:flex-end;"><button class="sm ghost" id="btnPldReset" style="width:100%;">Reset</button></div>
+        <div class="date-filter">
+          <div class="df-cell"><label for="pldFrom">From (optional)</label><input type="date" id="pldFrom"></div>
+          <div class="df-cell"><label for="pldTo">To (optional)</label><input type="date" id="pldTo"></div>
+          <div class="df-cell df-reset"><button class="sm ghost" id="btnPldReset">Reset</button></div>
         </div>
         <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Leave both blank to see this party's full bill history.</p>
         <div class="panel" style="padding:0;overflow-x:auto;">
@@ -4662,11 +4656,13 @@ function renderHistoryOverview(){
     cell.innerHTML = '<div class="label">Party details</div><div style="font-size:11.5px;color:var(--muted);line-height:1.5;">No party selected.<br>Pick a party from the list to see their details.</div>';
     return;
   }
+  const t = computePartyTotals(r.name);
   cell.innerHTML = `<div class="label">Party details</div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:4px;word-break:break-word;">${esc(r.name)}</div>
-    <div class="sub">Phone</div><div style="font-size:12px;font-weight:600;">${esc(r.phone)||'—'}</div>
-    <div class="sub">City · Location</div><div style="font-size:12px;font-weight:600;">${esc(r.city)||'—'} · ${esc(r.location)||'—'}</div>
-    <div class="sub">Pending</div><div class="value" style="color:var(--danger);">${fmt(r.pending)}</div>`;
+    <div style="font-size:13px;font-weight:700;word-break:break-word;">${esc(r.name)}</div>
+    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">${esc(r.phone)||'—'}</div>
+    <div class="sub">Total amount</div><div class="value">${fmt(t.totalBilled)}</div>
+    <div class="sub">Received amount</div><div class="value">${fmt(t.totalReceived)}</div>
+    <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);">${fmt(t.pending)}</div>`;
 }
 function renderSidebarPartyListForList(){
   renderHistoryPane();
@@ -4709,7 +4705,7 @@ function renderPartyListDetail(){
   /* Default (and fallback if the picked party disappears) is Recent */
   if(!selectedPartyListParty || (selectedPartyListParty!==RECENT_KEY && !rows.some(r=>r.name===selectedPartyListParty))) selectedPartyListParty = RECENT_KEY;
   emptyEl.style.display = 'none';
-  document.getElementById('historyOverviewCards').classList.toggle('hide-on-mobile', selectedPartyListParty!==RECENT_KEY);
+  document.getElementById('historyOverviewCards').classList.toggle('party-only', selectedPartyListParty!==RECENT_KEY);
   if(selectedPartyListParty===RECENT_KEY){
     contentEl.style.display = 'none';
     recentEl.style.display = 'block';
@@ -4718,12 +4714,6 @@ function renderPartyListDetail(){
   }
   recentEl.style.display = 'none';
   contentEl.style.display = 'block';
-  const r = rows.find(r=>r.name===selectedPartyListParty);
-  document.getElementById('partyListDetailName').textContent = r.name;
-  document.getElementById('pldPhone').textContent = r.phone || '—';
-  document.getElementById('pldCity').textContent = r.city || '—';
-  document.getElementById('pldLocation').textContent = r.location || '—';
-  document.getElementById('pldPending').textContent = fmt(r.pending);
   renderPartyListBills();
 }
 /* This party's bill history, date-filtered — same columns and same per-bill actions
@@ -4762,10 +4752,6 @@ function renderPartyListBills(){
   if(fromV) list = list.filter(b=> new Date(b.date) >= new Date(fromV+'T00:00:00'));
   if(toV) list = list.filter(b=> new Date(b.date) <= new Date(toV+'T23:59:59'));
   list.sort((a,b)=> new Date(b.date)-new Date(a.date));
-  const partyProfit = list.reduce((s,b)=> s + computeProfit(b).inclGst, 0);
-  const partyCost = list.reduce((s,b)=> s + computeProfit(b).cost, 0);
-  document.getElementById('pldProfit').textContent = fmt(partyProfit);
-  document.getElementById('pldCost').textContent = fmt(partyCost);
   document.getElementById('pldBillsEmpty').style.display = list.length ? 'none' : 'block';
   document.getElementById('pldBillsTableBody').innerHTML = list.map(b=>`
     <tr>
@@ -4958,14 +4944,13 @@ function renderLedgerPartyCard(){
   const rec = findPartyRecord(selectedLedgerParty) || {};
   const d = (typeof findDrListEntry==='function' && findDrListEntry(selectedLedgerParty)) || null;
   const phone = (d && d.phone) || rec.phone || '';
-  const city = (d && d.city) || rec.city || '';
-  const loc = (d && d.location) || rec.location || '';
-  const pending = computePartyTotals(selectedLedgerParty).pending;
+  const t = computePartyTotals(selectedLedgerParty);
   cell.innerHTML = `<div class="label">Party details</div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:4px;word-break:break-word;">${esc(selectedLedgerParty)}</div>
-    <div class="sub">Phone</div><div style="font-size:12px;font-weight:600;">${esc(phone)||'—'}</div>
-    <div class="sub">City · Location</div><div style="font-size:12px;font-weight:600;">${esc(city)||'—'} · ${esc(loc)||'—'}</div>
-    <div class="sub">Pending</div><div class="value" style="color:var(--danger);">${fmt(pending)}</div>`;
+    <div style="font-size:13px;font-weight:700;word-break:break-word;">${esc(selectedLedgerParty)}</div>
+    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">${esc(phone)||'—'}</div>
+    <div class="sub">Total amount</div><div class="value">${fmt(t.totalBilled)}</div>
+    <div class="sub">Received amount</div><div class="value">${fmt(t.totalReceived)}</div>
+    <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);">${fmt(t.pending)}</div>`;
 }
 function renderLedgerDetail(){
   renderLedgerPartyCard();
@@ -4975,20 +4960,14 @@ function renderLedgerDetail(){
   if(!selectedLedgerParty){
     emptyEl.style.display='block';
     contentEl.style.display='none';
-    overviewEl.classList.remove('hide-on-mobile');
+    overviewEl.classList.remove('party-only');
     renderLedgerRecent();
     return;
   }
   /* on phones the summary box is hidden once a party is open, to save space */
-  overviewEl.classList.add('hide-on-mobile');
+  overviewEl.classList.add('party-only');
   emptyEl.style.display='none';
   contentEl.style.display='block';
-  document.getElementById('ledgerPartyName').textContent = selectedLedgerParty;
-
-  const totals = computePartyTotals(selectedLedgerParty);
-  document.getElementById('pLedgerBilled').textContent = fmt(totals.totalBilled);
-  document.getElementById('pLedgerReceived').textContent = fmt(totals.totalReceived);
-  document.getElementById('pLedgerPending').textContent = fmt(totals.pending);
 
   const fromVal = document.getElementById('payFrom').value;
   const toVal = document.getElementById('payTo').value;
