@@ -4305,8 +4305,18 @@ document.getElementById('btnBackToSale').addEventListener('click', ()=>{
 
 /* ---------- Party-wise sale ---------- */
 /* Party options now come from Bill History (customer names on past bills), not Purchase History (suppliers). */
+/* Same name in different capitals ("Dr Nirmal Kamboj" / "DR NIRMAL KAMBOJ") = one party.
+   Keeps the spelling saved on the party record if there is one, otherwise the first one seen. */
+function dedupeNamesCI(list){
+  const map = new Map();
+  list.forEach(n=>{ const t=String(n||'').trim(); if(!t) return; const k=t.toLowerCase(); if(!map.has(k)) map.set(k,t); });
+  (typeof parties!=='undefined' && Array.isArray(parties) ? parties : []).forEach(p=>{
+    const t=String((p&&p.name)||'').trim(); if(t && map.has(t.toLowerCase())) map.set(t.toLowerCase(),t);
+  });
+  return [...map.values()].sort((a,b)=>a.localeCompare(b));
+}
 function getBillPartyNames(){
-  return [...new Set(bills.map(b=>(b.customerName||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  return dedupeNamesCI(bills.map(b=>b.customerName));
 }
 /* ---------- New Bill customer picker ----------
    Tapping the Customer name box slides open the Dr List / Chemist List right under the box.
@@ -4404,7 +4414,7 @@ function populateSelectWithParties(selId, placeholder){
   const current = sel.value;
   const names = new Set(getBillPartyNames());
   parties.forEach(p=>{ if(p.name && p.name.trim()) names.add(p.name.trim()); });
-  const list = [...names].sort((a,b)=>a.localeCompare(b));
+  const list = dedupeNamesCI([...names]);
   sel.innerHTML = `<option value="">${placeholder||'Select party'}</option>` + list.map(p=>`<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
   if(list.includes(current)) sel.value = current;
 }
@@ -4412,7 +4422,7 @@ const ALL_PARTIES_VALUE = '__ALL_PARTIES__';
 function getPartyNameList(){
   const names = new Set(getBillPartyNames());
   parties.forEach(p=>{ if(p.name && p.name.trim()) names.add(p.name.trim()); });
-  return [...names].sort((a,b)=>a.localeCompare(b));
+  return dedupeNamesCI([...names]);
 }
 function populatePartyOptions(){
   const sel = document.getElementById('pwParty');
@@ -4448,7 +4458,7 @@ function isTaggedPartyName(name){
 function getAllPartyRows(){
   const names = new Set(getAllPartyNames());
   parties.forEach(p=>{ if(p.name && p.name.trim()) names.add(p.name.trim()); });
-  return [...names].sort((a,b)=>a.localeCompare(b)).map(name=>{
+  return dedupeNamesCI([...names]).map(name=>{
     const rec = findPartyRecord(name);
     return {
       name,
@@ -4833,7 +4843,7 @@ document.getElementById('btnEditPartyListParty').addEventListener('click', ()=>{
 function getAllPartyNames(){
   const names = new Set(getBillPartyNames());
   payments.forEach(p=>{ const n=(p.party||'').trim(); if(n) names.add(n); });
-  return [...names].sort((a,b)=>a.localeCompare(b));
+  return dedupeNamesCI([...names]);
 }
 /* Every chemist name linked to at least one Dr Investment entry (case-insensitive) —
    drives the auto-ticked "Under Inv" column on the Chemist List. */
@@ -5822,7 +5832,7 @@ function invDoctorSummaries(){
 function invChemistNameList(){
   const names = new Set(getBillPartyNames());
   parties.forEach(p=>{ if((p.type||'')==='Medical Store' && p.name && p.name.trim()) names.add(p.name.trim()); });
-  return [...names].sort((a,b)=>a.localeCompare(b));
+  return dedupeNamesCI([...names]);
 }
 function invProductNameList(){
   return [...new Set(medicines.map(m=>(m.name||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
