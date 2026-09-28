@@ -376,6 +376,43 @@
   .lp-item .pnd{font-size:10.5px;color:var(--danger);flex-shrink:0;font-weight:600;}
   .lp-item.recent{font-weight:700;color:var(--primary-dark);border-bottom:1px solid var(--border);border-radius:6px 6px 0 0;margin-bottom:4px;}
   #ledgerRightPane,#historyRightPane{min-width:0;}
+  .bl-row{cursor:pointer;} .bl-row:hover{background:rgba(0,0,0,.03);}
+  .bl-actions td{background:rgba(0,0,0,.04);padding:6px 8px;}
+  .bl-actions .acts{display:flex;gap:6px;flex-wrap:wrap;}
+  #blPayPanel{display:none;} #blPayPanel.open{display:block;}
+  #blFilterBox{display:none;} #blFilterBox.open{display:block;}
+  .bl-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;}
+  /* Compact summary cards: 3 small cards in one row (Total / This month / Party) */
+  #ledgerOverviewCards{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:8px;}
+  #ledgerOverviewCards .ledger-dash-cell{padding:6px 8px;border-top:none !important;}
+  #ledgerOverviewCards .ledger-dash-cell:not(:first-child){border-left:1px solid var(--border) !important;}
+  #ledgerOverviewCards .label{font-size:9px;margin-bottom:2px;letter-spacing:.2px;}
+  #ledgerOverviewCards .sub{font-size:9px;margin-top:3px;padding-top:2px;}
+  #ledgerOverviewCards .value{font-size:11.5px;line-height:1.25;word-break:break-word;}
+  #ledgerOverviewCards.party-only{grid-template-columns:1fr;}
+  #ledgerOverviewCards.party-only .ledger-dash-cell:not(:last-child){display:none;}
+  #ledgerOverviewCards.party-only .ledger-dash-cell{border-left:none !important;padding:6px 10px;}
+  .pc-name{font-size:13px;font-weight:700;word-break:break-word;}
+  .pc-phone{margin-left:0 !important;margin-top:2px;}
+  .pc-top{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:28px;row-gap:2px;}
+  .pc-addr{font-size:11px;color:var(--muted);line-height:1.35;word-break:break-word;}
+  .pc-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;align-items:stretch;}
+  .pc-info{padding:2px 10px 2px 0;min-width:0;display:flex;flex-direction:column;justify-content:center;}
+  .pc-stat{padding:2px 12px;border-left:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;}
+  .pc-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;}
+  .pc-val{font-size:15px;font-weight:700;margin-top:2px;}
+  @media (max-width:700px){
+    .pc-grid{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:6px;}
+    .pc-info{grid-column:1 / -1;}
+    .pc-stat:nth-child(2){border-left:none;padding-left:0;}
+    .pc-val{font-size:13px;}
+  }
+  .pc-phone{font-size:11px;font-weight:600;color:var(--muted);margin-left:6px;white-space:nowrap;}
+  .pc-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:3px;font-size:9.5px;color:var(--muted);}
+  .pc-row span{display:flex;flex-direction:column;}
+  .pc-row b{font-size:12px;color:var(--text,inherit);}
+  .bl-cp{display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:6px;font-weight:600;}
+  .bl-cp .eye{background:none;border:1px solid var(--border);border-radius:6px;padding:1px 7px;cursor:pointer;font-size:14px;}
   @media (max-width:700px){
     #ledgerSplit,#historySplit{grid-template-columns:1fr;}
     #ledgerPartyPane,#historyPartyPane{display:none;}
@@ -588,8 +625,7 @@
     </div>
     <div class="topbar-shortcuts">
       <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill">New Bill</button>
-      <button type="button" class="topbar-shortcut-btn" id="btnTopHistory">History</button>
-      <button type="button" class="topbar-shortcut-btn" id="btnTopLedger">Ledger</button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopLedger">Bill Ledger</button>
     </div>
   </div>
 
@@ -619,7 +655,7 @@
   <div id="sidebar">
     <div class="nav-toggle-row">
       <div class="nav-toggle open" data-toggle="billing">BILLING</div>
-      <div class="nav-toggle" data-toggle="ledger">LEDGER</div>
+      <div class="nav-toggle" data-toggle="ledger">BILL LEDGER</div>
       <div class="nav-toggle" data-toggle="investment">INVESTMENT</div>
       <div class="nav-toggle" data-toggle="list">LIST</div>
       <div class="nav-toggle" data-toggle="notes">NOTES</div>
@@ -642,12 +678,6 @@
       <div class="nav-subsubmenu" id="subsubmenu-sale">
         <div class="nav-item" data-view="newbill"><span class="nav-dot"></span>New Bill</div>
         <div class="nav-item" data-view="tempbills"><span class="nav-dot"></span>Temp Bill</div>
-        <div class="nav-item" data-view="partylist" id="navItemPartyList"><span class="nav-dot"></span>History</div>
-        <div id="partyListSidebarSection" style="display:none;">
-          <div id="sidebarPartyListRecent"></div>
-          <input class="nav-submenu-search" id="partyListSearch" placeholder="Search party…">
-          <div id="sidebarPartyListForList"></div>
-        </div>
       </div>
       <div class="nav-subsubmenu" id="subsubmenu-purchase">
         <div class="nav-item" data-view="purchaseorder"><span class="nav-dot"></span>Purchase Order</div>
@@ -663,8 +693,8 @@
       </div>
     </div>
     <div class="nav-submenu" id="submenu-ledger">
-      <div class="sec-heading">Ledger</div>
-      <button class="ledger-dash-btn" id="btnLedgerDashboard" onclick="showView('payments')">📊 Ledger Dashboard</button>
+      <div class="sec-heading">Bill Ledger</div>
+      <button class="ledger-dash-btn" id="btnLedgerDashboard" onclick="showView('payments')">📊 Bill Ledger</button>
       <input class="nav-submenu-search" id="sidebarLedgerSearch" placeholder="Search party…">
       <div id="sidebarPartyList"></div>
     </div>
@@ -1098,7 +1128,7 @@
 
     <!-- PAYMENTS / PARTY LEDGER -->
     <div class="view" id="view-payments">
-      <div class="page-head"><div><h2>Ledger</h2><p>All party dues and payments received (sale side only) — pick a party from the list.</p></div></div>
+      <div class="page-head"><div><h2>Bill Ledger</h2><p>Bills, payments and dues of every party — pick a party from the list.</p></div></div>
 
       <div class="ledger-dash-box" id="ledgerOverviewCards">
         <div class="ledger-dash-cell">
@@ -1113,12 +1143,6 @@
           <div class="sub">Received amount</div><div class="value" id="ledMonthReceived">₹0</div>
           <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);" id="ledMonthPending">₹0</div>
         </div>
-        <div class="ledger-dash-cell">
-          <div class="label">This week</div>
-          <div class="sub">Total amount</div><div class="value" id="ledWeekAmount">₹0</div>
-          <div class="sub">Received amount</div><div class="value" id="ledWeekReceived">₹0</div>
-          <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);" id="ledWeekPending">₹0</div>
-        </div>
         <div class="ledger-dash-cell" id="ledPartyCell"></div>
       </div>
 
@@ -1131,7 +1155,7 @@
       <div id="ledgerDetailCol">
           <div id="ledgerRecentContent">
             <h3 style="margin:0 0 6px;">Recent bills</h3>
-            <p style="font-size:11.5px;color:var(--muted);margin:0 0 8px;">Bills from the last 30 days, newest first. Pick a party on the left to see their ledger.</p>
+            <p style="font-size:11.5px;color:var(--muted);margin:0 0 8px;">Bills from the last 30 days, newest first. Pick a party to see their ledger.</p>
             <div class="panel" style="padding:0;overflow-x:auto;">
               <table>
                 <thead><tr><th>Bill no.</th><th>Party</th><th>Date</th><th class="num">Total ₹</th><th></th></tr></thead>
@@ -1142,7 +1166,15 @@
           </div>
 
           <div id="ledgerDetailContent" style="display:none;">
-            <div class="panel">
+            <div class="bl-toolbar">
+              <button class="primary sm" id="btnBlPayToggle">+ Payment</button>
+              <button class="sm ghost" id="btnBlFilterToggle">Filter</button>
+              <button class="sm ghost" id="btnBlEditParty">Edit party</button>
+              <button class="sm ghost" id="btnShareLedgerWhatsApp">WhatsApp</button>
+              <button class="sm ghost" id="btnShareLedgerView">View</button>
+              <button class="sm ghost" id="btnShareLedgerPdf">PDF</button>
+            </div>
+            <div class="panel" id="blPayPanel">
               <h3>Record a payment received</h3>
               <div class="row c3" style="align-items:end;">
                 <div class="field"><label>Date</label><input type="date" id="payDate"></div>
@@ -1152,21 +1184,16 @@
               <button class="primary" id="btnAddPayment">Add payment received</button>
             </div>
 
-            <div class="date-filter" style="margin-top:14px;">
+            <div id="blFilterBox"><div class="date-filter" style="margin-top:4px;">
               <div class="df-cell"><label for="payFrom">From (optional)</label><input type="date" id="payFrom"></div>
               <div class="df-cell"><label for="payTo">To (optional)</label><input type="date" id="payTo"></div>
               <div class="df-cell df-reset"><button class="sm ghost" id="btnPayReset">Reset</button></div>
             </div>
-            <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Leave both blank to share the last 12 months. Set dates above to share a specific period instead.</p>
-            <div class="top-actions" style="margin-bottom:14px;">
-              <button class="sm ghost" id="btnShareLedgerWhatsApp">WhatsApp</button>
-              <button class="sm ghost" id="btnShareLedgerView">View</button>
-              <button class="sm ghost" id="btnShareLedgerPdf">PDF</button>
-            </div>
+            <p style="font-size:11.5px;color:var(--muted);margin:-2px 0 10px;">Leave both blank to share the last 12 months. Set dates above to share a specific period instead.</p></div>
 
             <div class="panel" style="padding:0;overflow-x:auto;">
               <table>
-                <thead><tr><th>Date</th><th>Particulars</th><th class="num">Debit (billed) ₹</th><th class="num">Credit (received) ₹</th><th class="num">Balance ₹</th><th></th></tr></thead>
+                <thead><tr><th>Date</th><th>Bill no.</th><th class="num">Debit ₹</th><th class="num">Credit ₹</th></tr></thead>
                 <tbody id="payLedgerBody"></tbody>
               </table>
               <div class="empty" id="payLedgerEmpty" style="display:none;"><h3>No entries</h3><p>No bills or payments for this party in the selected date range.</p></div>
@@ -2343,7 +2370,6 @@ const MOBILE_MENU = [
       { label:'Bill', children:[
           { label:'New Bill', view:'newbill' },
           { label:'Temp Bill', view:'tempbills' },
-          { label:'History', dynamic:'partyListParties' },
       ]},
       { label:'Purchase', children:[
           { label:'Purchase Order', view:'purchaseorder' },
@@ -2358,7 +2384,7 @@ const MOBILE_MENU = [
           { label:'Expenses', view:'expenses' },
       ]},
   ]},
-  { label:'Ledger', dynamic:'ledgerParties' },
+  { label:'Bill Ledger', dynamic:'ledgerParties' },
   { label:'Investment', children:[
       { label:'Dr Investment', view:'investment' },
       { label:'Report', view:'drreport' },
@@ -2403,7 +2429,7 @@ function renderMobileNav(){
 
   /* Ledger is data-driven (list of parties), not a fixed menu — render it separately */
   if(currentNode && currentNode.dynamic==='ledgerParties'){
-    titleEl.textContent = 'Ledger';
+    titleEl.textContent = 'Bill Ledger';
     renderMobileLedgerPartyList(list);
     return;
   }
@@ -2449,6 +2475,7 @@ function renderMobileLedgerPartyList(list){
   list.innerHTML = `
     <input class="mnav-search" id="mobileLedgerSearch" placeholder="Search party…" value="${mobileLedgerSearch.replace(/"/g,'&quot;')}">
     <div id="mobileLedgerPartyResults">
+      <div class="mnav-item party" data-party="" style="font-weight:700;"><span>Recent bills</span><span class="mnav-pending" style="color:var(--muted);">${getRecentBills().length}</span></div>
       ${rows.length ? rows.map(r=>`
         <div class="mnav-item party" data-party="${r.party.replace(/"/g,'&quot;')}">
           <span>${r.party}</span>
@@ -2466,7 +2493,7 @@ function renderMobileLedgerPartyList(list){
   });
   list.querySelectorAll('.mnav-item.party').forEach(el=>{
     el.addEventListener('click', ()=>{
-      goToLedgerParty(el.dataset.party);
+      if(el.dataset.party){ goToLedgerParty(el.dataset.party); } else { selectedLedgerParty=null; showView('payments'); }
       closeMobileNav();
     });
   });
@@ -2566,22 +2593,6 @@ document.getElementById('btnMobileAddProduct').addEventListener('click', ()=>{
 document.getElementById('btnTopNewBill').addEventListener('click', ()=>{
   closeMobileNav();
   showView('newbill');
-});
-document.getElementById('btnTopHistory').addEventListener('click', ()=>{
-  if(isWideScreen()){
-    closeMobileNav();
-    selectedPartyListParty = RECENT_KEY;
-    showView('partylist');
-    return;
-  }
-  /* phone: open the slide bar with the searchable party list (Recent pinned at the top) */
-  const histNode = { label:'History', dynamic:'partyListParties' };
-  mobileProductPickMode = false;
-  mobileNavPath = [histNode];
-  mobilePartyListSearch = '';
-  renderMobileNav();
-  document.getElementById('mobileNavOverlay').classList.add('open');
-  document.getElementById('mobileNavBackdrop').classList.add('open');
 });
 document.getElementById('btnTopLedger').addEventListener('click', ()=>{
   if(isWideScreen()){ closeMobileNav(); showView('payments'); return; }
@@ -2702,12 +2713,12 @@ function openNavGroupForView(name){
   }
 }
 function showView(name){
+  if(name==='partylist') name='payments';   /* History is now part of Bill Ledger */
   applyProfitVisibility();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===name));
   document.getElementById('btnTopNewBill').classList.toggle('active', name==='newbill');
-  document.getElementById('btnTopHistory').classList.toggle('active', name==='partylist');
   document.getElementById('btnTopLedger').classList.toggle('active', name==='payments');
   openNavGroupForView(name);
   renderSidebarPartyList();
@@ -4191,7 +4202,7 @@ window.deleteBill = function(id){
   if(!confirm('Delete this bill? This will not restore stock.')) return;
   bills = bills.filter(b=>b.id!==id);
   saveBills();
-  if(selectedPartyListParty){ renderPartyListBills(); renderSidebarPartyListForList(); }
+  if(document.getElementById('view-payments').classList.contains('active')) renderPayments();
   toast('Bill deleted');
 };
 /* View: opens the invoice preview only (no auto-print) */
@@ -4216,11 +4227,11 @@ window.sendBillWhatsAppById = function(id){
 /* ---------- Edit an existing bill ---------- */
 let editingBillId = null;
 let editingBillOriginalCustomerName = null;
-let billEditReturnView = 'partylist';
+let billEditReturnView = 'payments';
 window.editBillById = function(id, returnView){
   const b = bills.find(x=>x.id===id);
   if(!b){ toast('Bill not found'); return; }
-  billEditReturnView = returnView || 'partylist';
+  billEditReturnView = returnView || 'payments';
   editingBillId = id;
   editingBillOriginalCustomerName = b.customerName||'';
   cart = b.items.map(it=>{
@@ -4280,7 +4291,7 @@ document.getElementById('btnCancelEditBill').addEventListener('click', ()=>{
 });
 document.getElementById('btnBackToSale').addEventListener('click', ()=>{
   if(cart.length && !confirm('Leave without saving this bill? Items in the cart will be lost.')) return;
-  const back = editingBillId ? billEditReturnView : 'partylist';
+  const back = editingBillId ? billEditReturnView : 'payments';
   if(!editingBillId) selectedPartyListParty = RECENT_KEY;
   if(editingBillId) exitEditMode();
   showView(back);
@@ -4521,9 +4532,9 @@ function populatePartyCityOptions(){
 }
 
 let editingPartyOriginalName = null;
-let partyFormReturnView = 'partylist';
+let partyFormReturnView = 'payments';
 window.openPartyForm = function(name, returnView, presetType){
-  partyFormReturnView = returnView || 'partylist';
+  partyFormReturnView = returnView || 'payments';
   editingPartyOriginalName = name || null;
   const rec = name ? findPartyRecord(name) : null;
   document.getElementById('partyFormTitle').textContent = name ? 'Edit party' : 'Add party';
@@ -4802,7 +4813,7 @@ document.getElementById('btnPldReset').addEventListener('click', ()=>{
   document.getElementById('pldTo').value = '';
   renderPartyListBills();
 });
-document.getElementById('partyListSearch').addEventListener('input', renderSidebarPartyListForList);
+{ const _pls=document.getElementById('partyListSearch'); if(_pls) _pls.addEventListener('input', renderSidebarPartyListForList); }
 document.getElementById('btnEditPartyListParty').addEventListener('click', ()=>{
   if(!selectedPartyListParty || selectedPartyListParty===RECENT_KEY) return;
   /* doctors that live only on the main Dr List are edited there */
@@ -4881,19 +4892,11 @@ function renderLedgerOverview(){
   document.getElementById('ledMonthReceived').textContent = fmt(monthReceived);
   document.getElementById('ledMonthPending').textContent = fmt(Math.max(0, monthAmount-monthReceived));
 
-  /* This week (rolling last 7 days) */
-  const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate()-6);
-  const weekBills = bills.filter(b=> new Date(b.date) >= weekStart);
-  const weekPayments = payments.filter(p=> new Date(p.date) >= weekStart);
-  const weekAmount = weekBills.reduce((s,b)=>s+(Number(b.grandTotal)||0),0);
-  const weekReceived = weekPayments.reduce((s,p)=>s+(Number(p.amount)||0),0);
-  document.getElementById('ledWeekAmount').textContent = fmt(weekAmount);
-  document.getElementById('ledWeekReceived').textContent = fmt(weekReceived);
-  document.getElementById('ledWeekPending').textContent = fmt(Math.max(0, weekAmount-weekReceived));
 
 }
 window.selectLedgerParty = function(party){
   selectedLedgerParty = party || null;
+  renderLedgerOverview();
   renderSidebarPartyList();
   renderLedgerDetail();
 };
@@ -4969,12 +4972,18 @@ function renderLedgerPartyCard(){
   const d = (typeof findDrListEntry==='function' && findDrListEntry(selectedLedgerParty)) || null;
   const phone = (d && d.phone) || rec.phone || '';
   const t = computePartyTotals(selectedLedgerParty);
-  cell.innerHTML = `<div class="label">Party details</div>
-    <div style="font-size:13px;font-weight:700;word-break:break-word;">${esc(selectedLedgerParty)}</div>
-    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">${esc(phone)||'—'}</div>
-    <div class="sub">Total amount</div><div class="value">${fmt(t.totalBilled)}</div>
-    <div class="sub">Received amount</div><div class="value">${fmt(t.totalReceived)}</div>
-    <div class="sub">Pending amount</div><div class="value" style="color:var(--danger);">${fmt(t.pending)}</div>`;
+  const addrParts = [];
+  [rec.address, (d&&d.location)||rec.location, (d&&d.city)||rec.city].forEach(v=>{
+    v = String(v||'').trim();
+    if(v && !addrParts.some(x=>x.toLowerCase()===v.toLowerCase())) addrParts.push(v);
+  });
+  const addr = addrParts.join(', ');
+  cell.innerHTML = `<div class="pc-grid">
+      <div class="pc-info"><div class="pc-top"><div class="pc-name">${esc(selectedLedgerParty)}</div>${addr?`<div class="pc-addr">📍 ${esc(addr)}</div>`:''}</div>${phone?`<div class="pc-phone">📞 ${esc(phone)}</div>`:''}</div>
+      <div class="pc-stat"><div class="pc-lbl">Total</div><div class="pc-val">${fmt(t.totalBilled)}</div></div>
+      <div class="pc-stat"><div class="pc-lbl">Received</div><div class="pc-val">${fmt(t.totalReceived)}</div></div>
+      <div class="pc-stat"><div class="pc-lbl">Pending</div><div class="pc-val" style="color:var(--danger);">${fmt(t.pending)}</div></div>
+    </div>`;
 }
 function renderLedgerDetail(){
   renderLedgerPartyCard();
@@ -5007,18 +5016,40 @@ function renderLedgerDetail(){
   });
   const body = document.getElementById('payLedgerBody');
   document.getElementById('payLedgerEmpty').style.display = filtered.length? 'none':'block';
-  body.innerHTML = filtered.map(e=>`
-    <tr>
-      <td>${new Date(e.date).toLocaleDateString('en-IN')}</td>
-      <td>${e.type==='bill' ? 'Bill '+e.ref : (e.ref||'Payment received')}</td>
+  const q1 = t=> String(t||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  body.innerHTML = filtered.map((e,i)=>{
+    const b = e.type==='bill' ? bills.find(x=>x.billNo===e.ref) : null;
+    const acts = e.type==='payment'
+      ? `<button class="sm ghost" onclick="sendPaymentWhatsAppById('${e.id}')">WhatsApp</button> <button class="sm danger" onclick="deletePayment('${e.id}')">Delete</button>`
+      : (b ? `<button class="sm ghost" onclick='viewBillById("${b.id}")'>View</button>
+          <button class="sm ghost" onclick='editBillById("${b.id}","payments")'>Edit</button>
+          <button class="sm ghost" onclick='printBillById("${b.id}")'>Print</button>
+          <button class="sm ghost" onclick='shareBillPdfById("${b.id}")'>Share PDF</button>
+          <button class="sm ghost" onclick='sendBillWhatsAppById("${b.id}")'>WhatsApp</button>
+          <button class="sm danger" onclick='deleteBill("${b.id}")'>Delete</button>` : '');
+    const pr = b ? computeProfit(b) : null;
+    const cp = pr ? `<div class="bl-cp profit-sec masked"><span>Cost: <span class="v" data-v="${fmt(pr.cost)}">••••</span></span><span>Profit: <span class="v" data-v="${fmt(pr.inclGst)}" style="color:var(--primary-dark);">••••</span></span><button type="button" class="eye" title="Show / hide" onclick="event.stopPropagation();blToggleCP(this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>` : '';
+    return `<tr class="bl-row" data-i="${i}">
+      <td>${new Date(e.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</td>
+      <td>${e.type==='bill' ? '<b>'+e.ref+'</b>' : (e.ref||'Payment')}</td>
       <td class="num">${e.debit? fmt(e.debit):'—'}</td>
       <td class="num">${e.credit? fmt(e.credit):'—'}</td>
-      <td class="num" style="font-weight:600;">${fmt(e.balance)}</td>
-      <td>${e.type==='payment'
-        ? `<button class="sm ghost icon-btn" title="Send WhatsApp message" onclick="sendPaymentWhatsAppById('${e.id}')">${WHATSAPP_ICON_SVG}</button> <button class="sm danger" onclick="deletePayment('${e.id}')">Delete</button>`
-        : `<button class="sm ghost icon-btn" title="Send WhatsApp message" onclick="sendBillWhatsAppByRef('${(e.ref||'').replace(/'/g,"\\'")}')">${WHATSAPP_ICON_SVG}</button>`}</td>
-    </tr>`).join('');
+    </tr>
+    <tr class="bl-actions" style="display:none;"><td colspan="4">${cp}<div class="acts">${acts}</div></td></tr>`;
+  }).join('');
+  body.querySelectorAll('.bl-row').forEach(r=> r.addEventListener('click', ()=>{
+    const a = r.nextElementSibling; const open = a.style.display==='none';
+    body.querySelectorAll('.bl-actions').forEach(x=> x.style.display='none');
+    if(open) a.style.display='';
+  }));
 }
+const BL_EYE_OPEN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>', BL_EYE_SHUT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+window.blToggleCP = function(btn){
+  const w = btn.closest('.bl-cp'); const hide = !w.classList.contains('masked');
+  w.classList.toggle('masked', hide);
+  w.querySelectorAll('.v').forEach(v=> v.textContent = hide ? '••••' : v.dataset.v);
+  btn.innerHTML = hide ? BL_EYE_SHUT : BL_EYE_OPEN;
+};
 /* Manual resend for a payment row in the ledger */
 window.sendPaymentWhatsAppById = function(id){
   const p = payments.find(x=>x.id===id); if(!p) return;
@@ -5038,6 +5069,14 @@ window.deletePayment = function(id){
   renderPayments();
   toast('Payment deleted');
 };
+document.getElementById('btnBlPayToggle').addEventListener('click', ()=> document.getElementById('blPayPanel').classList.toggle('open'));
+document.getElementById('btnBlFilterToggle').addEventListener('click', ()=> document.getElementById('blFilterBox').classList.toggle('open'));
+document.getElementById('btnBlEditParty').addEventListener('click', ()=>{
+  if(!selectedLedgerParty) return;
+  const d = findDrListEntry(selectedLedgerParty);
+  if(d){ showView('drlist'); editDr(d.id); return; }
+  openPartyForm(selectedLedgerParty, 'payments');
+});
 document.getElementById('payFrom').addEventListener('change', renderLedgerDetail);
 document.getElementById('payTo').addEventListener('change', renderLedgerDetail);
 document.getElementById('btnPayReset').addEventListener('click', ()=>{
