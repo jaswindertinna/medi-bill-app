@@ -396,13 +396,19 @@
   .pc-phone{margin-left:0 !important;margin-top:2px;}
   .pc-top{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:28px;row-gap:2px;}
   .pc-addr{font-size:11px;color:var(--muted);line-height:1.35;word-break:break-word;}
-  .pc-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;align-items:stretch;}
+  .pc-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1.9fr;align-items:stretch;}
+  body.hide-profit .pc-grid{grid-template-columns:1.3fr 1fr 1fr 1fr;}
+  .pc-cpbox{margin:0 !important;display:block !important;font-size:inherit;font-weight:inherit;}
+  .pc-cpbox .pc-cpwrap{display:flex;align-items:center;gap:18px;border:1px solid var(--border);border-radius:8px;padding:4px 10px;background:rgba(0,0,0,.02);}
+  .pc-cpbox .pc-cpcol{flex:1;min-width:0;}
+  .pc-cpbox .eye{flex-shrink:0;background:none;border:1px solid var(--border);border-radius:6px;padding:2px 7px;cursor:pointer;line-height:1;}
   .pc-info{padding:2px 10px 2px 0;min-width:0;display:flex;flex-direction:column;justify-content:center;}
   .pc-stat{padding:2px 12px;border-left:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;}
   .pc-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;}
   .pc-val{font-size:15px;font-weight:700;margin-top:2px;}
   @media (max-width:700px){
-    .pc-grid{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:6px;}
+    .pc-grid,body.hide-profit .pc-grid{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:6px;}
+    .pc-cpbox{grid-column:1 / -1;border-left:none !important;padding-left:0 !important;}
     .pc-info{grid-column:1 / -1;}
     .pc-stat:nth-child(2){border-left:none;padding-left:0;}
     .pc-val{font-size:13px;}
@@ -4972,6 +4978,13 @@ function renderLedgerPartyCard(){
   const d = (typeof findDrListEntry==='function' && findDrListEntry(selectedLedgerParty)) || null;
   const phone = (d && d.phone) || rec.phone || '';
   const t = computePartyTotals(selectedLedgerParty);
+  let pCost=0, pProfit=0;
+  const pKey = selectedLedgerParty.trim().toLowerCase();
+  bills.forEach(b=>{
+    if((b.customerName||'').trim().toLowerCase()===pKey){
+      const pr = computeProfit(b); pCost += pr.cost; pProfit += pr.inclGst;
+    }
+  });
   const addrParts = [];
   [rec.address, (d&&d.location)||rec.location, (d&&d.city)||rec.city].forEach(v=>{
     v = String(v||'').trim();
@@ -4983,6 +4996,13 @@ function renderLedgerPartyCard(){
       <div class="pc-stat"><div class="pc-lbl">Total</div><div class="pc-val">${fmt(t.totalBilled)}</div></div>
       <div class="pc-stat"><div class="pc-lbl">Received</div><div class="pc-val">${fmt(t.totalReceived)}</div></div>
       <div class="pc-stat"><div class="pc-lbl">Pending</div><div class="pc-val" style="color:var(--danger);">${fmt(t.pending)}</div></div>
+      <div class="pc-stat pc-cpbox profit-sec bl-cp masked">
+        <div class="pc-cpwrap">
+          <div class="pc-cpcol"><div class="pc-lbl">Cost</div><div class="pc-val"><span class="v" data-v="${fmt(pCost)}">••••</span></div></div>
+          <div class="pc-cpcol"><div class="pc-lbl">Profit</div><div class="pc-val"><span class="v" data-v="${fmt(pProfit)}" style="color:${pProfit<0?'var(--danger)':'var(--primary-dark)'};">••••</span></div></div>
+          <button type="button" class="eye" title="Show / hide cost &amp; profit" onclick="event.stopPropagation();blToggleCP(this)">${BL_EYE_SHUT}</button>
+        </div>
+      </div>
     </div>`;
 }
 function renderLedgerDetail(){
