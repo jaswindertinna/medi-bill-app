@@ -520,6 +520,10 @@
   #purchaseRowsTable td.sr{font-size:12px;color:var(--muted);text-align:center;}
   #purchaseRowsTable td.amt-cell{white-space:nowrap;}
   #purchaseRowsTable th.app-col{background:var(--primary-light);}
+  #retItemsTable input{width:100%;min-width:62px;}
+  #retItemsTable td{vertical-align:middle;}
+  #retItemsTable .ret-sub{font-size:10.5px;color:var(--muted);}
+  .ret-tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#b45309;background:#fef3c7;border-radius:4px;padding:1px 5px;margin-left:4px;}
   .inv-dates{display:flex;flex-wrap:wrap;gap:6px 24px;margin:0 0 10px;padding:8px 11px;background:var(--primary-light);border-radius:8px;}
   .inv-date .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
   .inv-date .val{font-size:12.5px;font-weight:600;color:var(--primary-dark);margin-top:1px;}
@@ -684,6 +688,7 @@
       <div class="nav-subsubmenu" id="subsubmenu-sale">
         <div class="nav-item" data-view="newbill"><span class="nav-dot"></span>New Bill</div>
         <div class="nav-item" data-view="tempbills"><span class="nav-dot"></span>Temp Bill</div>
+        <div class="nav-item" data-view="returns"><span class="nav-dot"></span>Return</div>
       </div>
       <div class="nav-subsubmenu" id="subsubmenu-purchase">
         <div class="nav-item" data-view="purchaseorder"><span class="nav-dot"></span>Purchase Order</div>
@@ -1083,6 +1088,47 @@
           <tbody id="tempBillsTableBody"></tbody>
         </table>
         <div class="empty" id="tempBillsEmpty" style="display:none;"><h3>No temp bills</h3><p>Bills saved as temp will appear here, newest first.</p></div>
+      </div>
+    </div>
+
+    <!-- RETURN (party returns goods: stock goes back, sale / profit / cost / ledger adjust) -->
+    <div class="view" id="view-returns">
+      <div class="page-head"><div><h2>Return</h2><p>Party returned goods? Pick the party and the bill, enter the quantity returned. Stock is added back, and sale, cost, profit and the party's ledger are all settled automatically.</p></div></div>
+      <div class="panel">
+        <div class="row c3">
+          <div class="field"><label>Party *</label><select id="retParty"></select></div>
+          <div class="field"><label>Against bill</label><select id="retBill"></select></div>
+          <div class="field"><label>Return date</label><input id="retDate" type="date"></div>
+        </div>
+      </div>
+      <div class="panel" style="padding:0;overflow-x:auto;">
+        <table id="retItemsTable">
+          <thead><tr>
+            <th style="min-width:180px;">Medicine</th><th class="num" style="min-width:96px;">Billed qty <span style="font-weight:400;">(+free)</span></th>
+            <th class="num" style="min-width:84px;">Rate ₹ <span style="font-weight:400;">(incl. GST)</span></th><th class="num" style="min-width:64px;">GST %</th>
+            <th class="num" style="min-width:84px;">Return qty</th><th class="num" style="min-width:84px;">Return free</th><th class="num" style="min-width:90px;">Credit ₹</th><th></th>
+          </tr></thead>
+          <tbody id="retItemsBody"></tbody>
+        </table>
+        <div style="padding:14px 22px;"><button class="ghost sm" id="btnRetAddRow" style="display:none;">+ Add another medicine</button></div>
+      </div>
+      <div class="panel" style="max-width:380px;margin-left:auto;">
+        <div class="field"><label>Note <span style="font-weight:400;">(optional)</span></label><input id="retNote" placeholder="e.g. expired / damaged / wrong item"></div>
+        <div class="totals-line"><span>Goods value (incl. GST)</span><span id="retGoods">₹0.00</span></div>
+        <div class="totals-line" id="retDiscRow" style="display:none;"><span>Less: bill discount share</span><span id="retDisc">₹0.00</span></div>
+        <div class="totals-line"><span>Stock added back</span><span id="retStockQty">0</span></div>
+        <div class="totals-line profit-sec"><span>Cost reversed</span><span id="retCost">₹0.00</span></div>
+        <div class="totals-line profit-sec"><span>Profit reversed</span><span id="retProfit">₹0.00</span></div>
+        <div class="totals-line grand"><span>Credit to party</span><span id="retCredit">₹0.00</span></div>
+        <button class="primary" id="btnSaveReturn" style="width:100%;margin-top:14px;">Save return &amp; add stock back</button>
+      </div>
+      <div class="page-head" style="margin-top:22px;"><div><h2 style="font-size:16px;">Return history</h2><p>Every return, newest first. Deleting one takes the stock out again and removes the party's credit.</p></div></div>
+      <div class="panel" style="padding:0;overflow-x:auto;">
+        <table>
+          <thead><tr><th>Return no.</th><th>Date</th><th>Party</th><th>Against</th><th>Items</th><th class="num">Credit ₹</th><th class="num profit-col">Profit ₹</th><th></th></tr></thead>
+          <tbody id="retHistoryBody"></tbody>
+        </table>
+        <div class="empty" id="retHistoryEmpty" style="display:none;"><h3>No returns yet</h3><p>Returns you record will appear here.</p></div>
       </div>
     </div>
 
@@ -1711,6 +1757,7 @@
 <script>
 let medicines = [];
 let bills = [];
+let returns = [];
 let tempBills = [];
 let purchases = [];
 let purchaseOrders = [];
@@ -1792,6 +1839,7 @@ async function loadAll(){
   try{ const v = localStorage.getItem(LS_PREFIX+'medicines'); medicines = v ? JSON.parse(v) : []; }catch(e){ medicines = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'bills'); bills = v ? JSON.parse(v) : []; }catch(e){ bills = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'tempbills'); tempBills = v ? JSON.parse(v) : []; }catch(e){ tempBills = []; }
+  try{ const v = localStorage.getItem(LS_PREFIX+'returns'); returns = v ? JSON.parse(v) : []; }catch(e){ returns = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'purchases'); purchases = v ? JSON.parse(v) : []; }catch(e){ purchases = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'purchaseorders'); purchaseOrders = v ? JSON.parse(v) : []; }catch(e){ purchaseOrders = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'expenses'); expenses = v ? JSON.parse(v) : []; }catch(e){ expenses = []; }
@@ -1807,6 +1855,7 @@ async function loadAll(){
 }
 async function saveMedicines(){ try{ localStorage.setItem(LS_PREFIX+'medicines', JSON.stringify(medicines)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveBills(){ try{ localStorage.setItem(LS_PREFIX+'bills', JSON.stringify(bills)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
+async function saveReturns(){ try{ localStorage.setItem(LS_PREFIX+'returns', JSON.stringify(returns)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveTempBills(){ try{ localStorage.setItem(LS_PREFIX+'tempbills', JSON.stringify(tempBills)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function savePurchases(){ try{ localStorage.setItem(LS_PREFIX+'purchases', JSON.stringify(purchases)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveExpenses(){ try{ localStorage.setItem(LS_PREFIX+'expenses', JSON.stringify(expenses)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
@@ -2157,6 +2206,7 @@ function listenToCloud(){
     medicines = data.medicines || [];
     bills = data.bills || [];
     tempBills = data.tempBills || [];
+    returns = data.returns || [];
     purchases = data.purchases || [];
     purchaseOrders = data.purchaseOrders || [];
     expenses = data.expenses || [];
@@ -2173,6 +2223,7 @@ function listenToCloud(){
       localStorage.setItem(LS_PREFIX+'medicines', JSON.stringify(medicines));
       localStorage.setItem(LS_PREFIX+'bills', JSON.stringify(bills));
       localStorage.setItem(LS_PREFIX+'tempbills', JSON.stringify(tempBills));
+      localStorage.setItem(LS_PREFIX+'returns', JSON.stringify(returns));
       localStorage.setItem(LS_PREFIX+'purchases', JSON.stringify(purchases));
       localStorage.setItem(LS_PREFIX+'purchaseorders', JSON.stringify(purchaseOrders));
       localStorage.setItem(LS_PREFIX+'expenses', JSON.stringify(expenses));
@@ -2201,7 +2252,7 @@ function pushToCloud(immediate){
   clearTimeout(syncPushTimer);
   const doPush = ()=>{
     syncDb.collection(SYNC_COLLECTION).doc(currentUid).set({
-      medicines, bills, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, schedule, businessPlan, settings,
+      medicines, bills, returns, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, schedule, businessPlan, settings,
       updatedAt: new Date().toISOString()
     }).then(()=> setSyncStatus('Synced — last update '+new Date().toLocaleTimeString('en-IN')))
       .catch(e=> setSyncStatus('Sync error: '+e.message));
@@ -2247,7 +2298,7 @@ document.getElementById('btnDisconnectSync').addEventListener('click', ()=>{
 
 /* ---------- Backup / Restore (safety net, since browser data can be cleared) ---------- */
 function downloadBackup(){
-  const data = { medicines, bills, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, schedule, businessPlan, settings, exportedAt: new Date().toISOString() };
+  const data = { medicines, bills, returns, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, schedule, businessPlan, settings, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2265,6 +2316,7 @@ function restoreBackup(file){
       medicines = data.medicines || [];
       bills = data.bills || [];
       tempBills = data.tempBills || [];
+      returns = data.returns || [];
       purchases = data.purchases || [];
       purchaseOrders = data.purchaseOrders || [];
       expenses = data.expenses || [];
@@ -2277,7 +2329,7 @@ function restoreBackup(file){
       schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
       businessPlan = data.businessPlan || { temp:[], actual:[] }; normBusinessPlan();
       settings = data.settings || settings;
-      await saveMedicines(); await saveBills(); await saveTempBills(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await saveAccountEntries(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveBusinessPlan(); await saveSettings();
+      await saveMedicines(); await saveBills(); await saveTempBills(); await saveReturns(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await saveAccountEntries(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveBusinessPlan(); await saveSettings();
       renderDashboard(); toast('Backup restored');
     }catch(e){ toast('Invalid backup file'); }
   };
@@ -2352,7 +2404,7 @@ document.querySelectorAll('.nav-toggle').forEach(el=>{
 });
 /* Second-level accordion inside Billing: Purchase / Sale / Report */
 const PURCHASE_GROUP_VIEWS = ['purchaseorder','newpurchase','purchases','inventory'];
-const SALE_GROUP_VIEWS = ['newbill','tempbills','partylist'];
+const SALE_GROUP_VIEWS = ['newbill','tempbills','returns','partylist'];
 const REPORT_GROUP_VIEWS = ['partysale','productsale','expenses'];
 /* Clicking a sub-slide (Bill / Purchase / Report) drills in exactly like clicking a main
    slide does: the button row it came from is replaced by its own items, full-panel —
@@ -2376,6 +2428,7 @@ const MOBILE_MENU = [
       { label:'Bill', children:[
           { label:'New Bill', view:'newbill' },
           { label:'Temp Bill', view:'tempbills' },
+          { label:'Return', view:'returns' },
       ]},
       { label:'Purchase', children:[
           { label:'Purchase Order', view:'purchaseorder' },
@@ -2736,6 +2789,7 @@ function showView(name){
   if(name==='purchases') renderPurchasesHistory();
   if(name==='newbill'){ if(!editingBillId && !document.getElementById('billDate').value) document.getElementById('billDate').value = new Date().toISOString().slice(0,10); renderBillMedList(); updateCustNameSuggestions(); updateCustDuesBox(); }
   if(name==='tempbills') renderTempBills();
+  if(name==='returns') retEnter();
   if(name==='payments') renderPayments();
   if(name==='salesprofit'){ renderSalesProfitView(); }
   if(name==='partysale'){ populatePartyOptions(); populatePartyCityOptions(); renderPartySaleReport(true); }
@@ -2812,6 +2866,35 @@ function computeProfit(bill){
   });
   return { inclGst, simple, cost };
 }
+
+/* ---------- Returns: figures used by every report ----------
+   A return reverses part of a sale: sale value and profit go down, cost goes down, stock goes up,
+   and the party's pending drops (credit). Profit/cost use the same method as bills (computeProfit). */
+function retItemFigures(it){
+  const m = findMedByName(it.name);
+  const { saleIncl } = itemSaleAmounts(it);
+  const p = itemProfit({ ...it, free:Number(it.free)||0 }, m);
+  return { saleIncl, inclGst:p.inclGst, simple:p.simple, cost:p.costIncl };
+}
+function computeReturnTotals(r){
+  let inclGst=0, simple=0, cost=0;
+  (r.items||[]).forEach(it=>{
+    const f = retItemFigures(it);
+    if(f.inclGst!=null) inclGst += f.inclGst;
+    if(f.simple!=null) simple += f.simple;
+    if(f.cost!=null) cost += f.cost;
+  });
+  return { value:Number(r.total)||0, inclGst, simple, cost };
+}
+function sumReturns(pred){
+  const t = { value:0, inclGst:0, simple:0, cost:0 };
+  (returns||[]).forEach(r=>{
+    if(pred && !pred(r)) return;
+    const x = computeReturnTotals(r);
+    t.value+=x.value; t.inclGst+=x.inclGst; t.simple+=x.simple; t.cost+=x.cost;
+  });
+  return t;
+}
 function renderDateRange(){
   const fromVal = document.getElementById('dashFrom').value;
   const toVal = document.getElementById('dashTo').value;
@@ -2819,9 +2902,10 @@ function renderDateRange(){
   const from = new Date(fromVal); from.setHours(0,0,0,0);
   const to = new Date(toVal); to.setHours(23,59,59,999);
   const list = bills.filter(b=>{ const d = new Date(b.date); return d>=from && d<=to; });
-  const sales = list.reduce((s,b)=>s+b.grandTotal,0);
+  let sales = list.reduce((s,b)=>s+b.grandTotal,0);
   let profitIncl=0, profitSimple=0;
   list.forEach(b=>{ const p = computeProfit(b); profitIncl+=p.inclGst; profitSimple+=p.simple; });
+  { const rt = sumReturns(r=>{ const d=new Date(r.date); return d>=from && d<=to; }); sales-=rt.value; profitIncl-=rt.inclGst; profitSimple-=rt.simple; }
   document.getElementById('mRangeSales').textContent = fmt(sales);
   document.getElementById('mRangeProfitIncl').textContent = fmt(profitIncl);
   document.getElementById('mRangeProfitSimple').textContent = fmt(profitSimple);
@@ -2847,9 +2931,10 @@ function renderSalesProfitView(){
 function periodStats(from, to){
   const inRange = (d)=> !from || !to || (d>=from && d<=to);
   const list = bills.filter(b=> inRange(new Date(b.date)));
-  const sale = list.reduce((s,b)=>s+b.grandTotal,0);
+  let sale = list.reduce((s,b)=>s+b.grandTotal,0);
   let profitInclGross=0, profitSimpleGross=0;
   list.forEach(b=>{ const p=computeProfit(b); profitInclGross+=p.inclGst; profitSimpleGross+=p.simple; });
+  { const rt = sumReturns(r=> inRange(new Date(r.date))); sale-=rt.value; profitInclGross-=rt.inclGst; profitSimpleGross-=rt.simple; }
   const expTotal = expenses.filter(e=> inRange(new Date(e.date))).reduce((s,e)=>s+(Number(e.amount)||0),0);
   const invTotal = investments.filter(i=> inRange(new Date(i.date))).reduce((s,i)=>s+(Number(i.amount)||0),0);
   return {
@@ -4211,6 +4296,211 @@ window.deleteBill = function(id){
   if(document.getElementById('view-payments').classList.contains('active')) renderPayments();
   toast('Bill deleted');
 };
+/* ---------- RETURN page (party returns goods) ---------- */
+const RET_MANUAL = '__manual__';
+let retLines = [];       // rows on the Return form
+let retFactor = 1;       // share of the bill's discount carried into the credit (grandTotal / gross)
+function retKey(n){ return (n||'').trim().toLowerCase(); }
+function retNextNo(){ return 'RET-' + String(settings.nextRetNo||1).padStart(4,'0'); }
+function retBlankManual(){ return { name:'', unit:'', rate:'', gst:0, rateType:'incl', batch:'', expiry:'', idx:null, billed:0, already:0, billedFree:0, alreadyFree:0, qty:'', free:'', manual:true }; }
+function retEnter(){
+  const d = document.getElementById('retDate');
+  if(!d.value) d.value = new Date().toISOString().slice(0,10);
+  retFillParties();
+  retFillBills();
+  retRenderHistory();
+}
+function retFillParties(){
+  const sel = document.getElementById('retParty');
+  const cur = sel.value;
+  const names = getBillPartyNames();
+  sel.innerHTML = '<option value="">Select party…</option>' + names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  if(names.includes(cur)) sel.value = cur;
+}
+function retPartyBills(party){
+  const k = retKey(party);
+  return bills.filter(b=>retKey(b.customerName)===k).sort((a,b)=> new Date(b.date)-new Date(a.date));
+}
+function retFillBills(){
+  const party = document.getElementById('retParty').value;
+  const sel = document.getElementById('retBill');
+  if(!party){ sel.innerHTML = '<option value="">Select a party first</option>'; retLoadLines(); return; }
+  const list = retPartyBills(party);
+  sel.innerHTML = list.map(b=>`<option value="${b.id}">${escapeHtml(b.billNo)} · ${new Date(b.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'})} · ${fmt(b.grandTotal)}</option>`).join('')
+    + `<option value="${RET_MANUAL}">No bill — add medicines manually</option>`;
+  retLoadLines();
+}
+function retAlready(billId, idx, name, field){
+  let q = 0;
+  returns.forEach(r=>{
+    if(r.billId!==billId) return;
+    (r.items||[]).forEach(it=>{ if(it.idx===idx && it.name===name) q += Number(it[field||'qty'])||0; });
+  });
+  return q;
+}
+function retLoadLines(){
+  const party = document.getElementById('retParty').value;
+  const billId = document.getElementById('retBill').value;
+  retLines = []; retFactor = 1;
+  if(party && billId && billId!==RET_MANUAL){
+    const b = bills.find(x=>x.id===billId);
+    if(b){
+      const gross = (Number(b.subtotal)||0) + (Number(b.gstTotal)||0);
+      if(gross>0) retFactor = Math.max(0, Math.min(1, (Number(b.grandTotal)||0)/gross));
+      (b.items||[]).forEach((it,i)=>{
+        retLines.push({ name:it.name, unit:it.unit||'', rate:it.rate, gst:it.gst, rateType:it.rateType, batch:it.batch||'', expiry:it.expiry||'',
+                        idx:i, billed:Number(it.qty)||0, already:retAlready(b.id,i,it.name),
+                        billedFree:Number(it.free)||0, alreadyFree:retAlready(b.id,i,it.name,'free'), qty:'', free:'', manual:false });
+      });
+    }
+  } else if(party && billId===RET_MANUAL){
+    retLines.push(retBlankManual());
+  }
+  retRenderLines();
+}
+function retLineFig(l){
+  const q = Number(l.qty)||0, fr = Number(l.free)||0;
+  if(q<=0 && fr<=0) return { saleIncl:0, credit:0, cost:0, profit:0, qty:0 };
+  const rate = parseFloat(l.rate)||0;
+  if(q>0 && !(rate>0)) return { saleIncl:0, credit:0, cost:0, profit:0, qty:q+fr };
+  const f = retItemFigures({ name:l.name, rate, gst:Number(l.gst)||0, rateType:l.rateType, qty:q, free:fr });
+  return { saleIncl:f.saleIncl, credit:f.saleIncl*retFactor, cost:f.cost||0, profit:f.inclGst||0, qty:q+fr };
+}
+function retRenderLines(){
+  const party = document.getElementById('retParty').value;
+  const manual = document.getElementById('retBill').value===RET_MANUAL;
+  const body = document.getElementById('retItemsBody');
+  document.getElementById('btnRetAddRow').style.display = (party && manual) ? '' : 'none';
+  if(!retLines.length){
+    body.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px;">${party ? 'This party has no bills yet — choose “No bill” to add medicines manually.' : 'Select a party to start a return.'}</td></tr>`;
+    retTotals(); return;
+  }
+  body.innerHTML = retLines.map((l,i)=>{
+    const fig = retLineFig(l);
+    if(l.manual){
+      return `<tr>
+        <td><input list="medNameSuggestions" value="${escapeHtml(l.name)}" placeholder="Medicine name" onchange="retPickMed(${i},this.value)"></td>
+        <td class="num">—</td>
+        <td class="num"><input type="number" min="0" step="0.01" value="${escapeHtml(l.rate)}" placeholder="0.00" oninput="retSet(${i},'rate',this.value)"></td>
+        <td class="num"><input type="number" min="0" step="0.5" value="${escapeHtml(l.gst)}" oninput="retSet(${i},'gst',this.value)"></td>
+        <td class="num"><input data-f="qty" type="number" min="0" step="1" value="${escapeHtml(l.qty)}" placeholder="0" oninput="retSet(${i},'qty',this.value)"></td>
+        <td class="num"><input data-f="free" type="number" min="0" step="1" value="${escapeHtml(l.free)}" placeholder="0" oninput="retSet(${i},'free',this.value)"></td>
+        <td class="num" id="retAmt${i}">${fmt(fig.credit)}</td>
+        <td><button class="sm danger" onclick="retRemoveRow(${i})">✕</button></td></tr>`;
+    }
+    const left = Math.max(0, l.billed - l.already);
+    const leftFree = Math.max(0, l.billedFree - l.alreadyFree);
+    return `<tr>
+      <td>${escapeHtml(l.name)}<div class="ret-sub">${l.batch?('Batch '+escapeHtml(l.batch)):''}</div></td>
+      <td class="num">${l.billed}${l.billedFree? ' <span class="ret-sub">+'+l.billedFree+' free</span>':''}${(l.already||l.alreadyFree)? `<div class="ret-sub">${l.already}${l.alreadyFree?' +'+l.alreadyFree+' free':''} already returned</div>`:''}</td>
+      <td class="num">${fmt(parseFloat(l.rate)||0)}</td>
+      <td class="num">${Number(l.gst)||0}%</td>
+      <td class="num"><input data-f="qty" type="number" min="0" max="${left}" step="1" value="${escapeHtml(l.qty)}" placeholder="0" ${left<=0?'disabled':''} oninput="retSet(${i},'qty',this.value)"></td>
+      <td class="num"><input data-f="free" type="number" min="0" max="${leftFree}" step="1" value="${escapeHtml(l.free)}" placeholder="0" ${leftFree<=0?'disabled':''} oninput="retSet(${i},'free',this.value)"></td>
+      <td class="num" id="retAmt${i}">${fmt(fig.credit)}</td><td></td></tr>`;
+  }).join('');
+  retTotals();
+}
+function retSet(i, field, val){
+  const l = retLines[i]; if(!l) return;
+  if((field==='qty' || field==='free') && !l.manual){
+    const left = field==='qty' ? Math.max(0, l.billed - l.already) : Math.max(0, l.billedFree - l.alreadyFree);
+    if(Number(val) > left){ val = left; toast('Only '+left+(field==='free'?' free':'')+' left to return on this bill'); const inp = document.querySelector('#retItemsBody tr:nth-child('+(i+1)+') input[data-f="'+field+'"]'); if(inp) inp.value = val; }
+  }
+  l[field] = val;
+  const c = document.getElementById('retAmt'+i); if(c) c.textContent = fmt(retLineFig(l).credit);
+  retTotals();
+}
+function retPickMed(i, name){
+  const l = retLines[i]; if(!l) return;
+  l.name = name.trim();
+  const m = findMedByName(l.name);
+  if(m){
+    l.name = m.name; l.unit = m.unit||''; l.batch = m.batch||''; l.expiry = m.expiry||'';
+    if(!l.rate) l.rate = m.rate;
+    l.gst = m.gst!=null ? m.gst : 0;
+  } else if(l.name){ toast('Pick a medicine that is in your stock list'); }
+  retRenderLines();
+}
+function retRemoveRow(i){ retLines.splice(i,1); if(!retLines.length) retLines.push(retBlankManual()); retRenderLines(); }
+document.getElementById('btnRetAddRow').addEventListener('click', ()=>{ retLines.push(retBlankManual()); retRenderLines(); });
+function retTotals(){
+  let goods=0, credit=0, cost=0, profit=0, qty=0;
+  retLines.forEach(l=>{ const f = retLineFig(l); goods+=f.saleIncl; credit+=f.credit; cost+=f.cost; profit+=f.profit; qty+=f.qty; });
+  credit = Math.round(credit*100)/100;
+  document.getElementById('retGoods').textContent = fmt(goods);
+  const disc = goods - credit;
+  document.getElementById('retDiscRow').style.display = disc>0.004 ? 'flex' : 'none';
+  document.getElementById('retDisc').textContent = '−'+fmt(disc);
+  document.getElementById('retStockQty').textContent = qty;
+  document.getElementById('retCost').textContent = fmt(cost);
+  document.getElementById('retProfit').textContent = fmt(profit);
+  document.getElementById('retCredit').textContent = fmt(credit);
+}
+document.getElementById('retParty').addEventListener('change', retFillBills);
+document.getElementById('retBill').addEventListener('change', retLoadLines);
+
+document.getElementById('btnSaveReturn').addEventListener('click', async ()=>{
+  const party = document.getElementById('retParty').value;
+  if(!party){ toast('Select a party'); return; }
+  const billId = document.getElementById('retBill').value;
+  const manual = billId===RET_MANUAL;
+  const picked = retLines.filter(l=> (Number(l.qty)||0) > 0 || (Number(l.free)||0) > 0);
+  if(!picked.length){ toast('Enter the quantity returned'); return; }
+  for(const l of picked){
+    if(!l.name || !findMedByName(l.name)){ toast('Pick each medicine from your stock list'); return; }
+    if((Number(l.qty)||0)>0 && !(parseFloat(l.rate)>0)){ toast('Enter the rate for '+l.name); return; }
+    if(!l.manual && (Number(l.qty)||0) > l.billed - l.already){ toast('Return qty for '+l.name+' is more than what is left on the bill'); return; }
+    if(!l.manual && (Number(l.free)||0) > l.billedFree - l.alreadyFree){ toast('Return free qty for '+l.name+' is more than what is left on the bill'); return; }
+  }
+  const bill = manual ? null : bills.find(b=>b.id===billId);
+  const items = picked.map(l=>({ name:l.name, unit:l.unit, rate:parseFloat(l.rate)||0, gst:Number(l.gst)||0, rateType:l.rateType, qty:Number(l.qty)||0, free:Number(l.free)||0, batch:l.batch, expiry:l.expiry, idx:l.idx }));
+  const total = Math.round(picked.reduce((a,l)=>a+retLineFig(l).credit,0)*100)/100;
+  const dateVal = document.getElementById('retDate').value;
+  const ret = {
+    id: uid(), retNo: retNextNo(),
+    date: dateVal ? new Date(dateVal+'T12:00:00').toISOString() : new Date().toISOString(),
+    party, billId: bill ? bill.id : '', billNo: bill ? bill.billNo : '',
+    factor: retFactor, items, total,
+    note: document.getElementById('retNote').value.trim()
+  };
+  items.forEach(it=>{ const m = findMedByName(it.name); if(m) m.stock = (Number(m.stock)||0) + it.qty + (Number(it.free)||0); });
+  returns.push(ret);
+  settings.nextRetNo = (settings.nextRetNo||1) + 1;
+  await saveMedicines(); await saveReturns(); await saveSettings();
+  toast('Return saved: '+ret.retNo+' · stock added back');
+  document.getElementById('retNote').value = '';
+  retLoadLines();
+  retRenderHistory();
+});
+function retRenderHistory(){
+  const body = document.getElementById('retHistoryBody');
+  const list = [...returns].sort((a,b)=> new Date(b.date)-new Date(a.date));
+  document.getElementById('retHistoryEmpty').style.display = list.length ? 'none' : 'block';
+  body.innerHTML = list.map(r=>{
+    const t = computeReturnTotals(r);
+    const itemsTxt = (r.items||[]).map(it=>escapeHtml(it.name)+' × '+it.qty+(it.free?' +'+it.free+' free':'')).join(', ');
+    return `<tr>
+      <td><b>${escapeHtml(r.retNo)}</b></td>
+      <td>${new Date(r.date).toLocaleDateString('en-IN')}</td>
+      <td>${escapeHtml(r.party)}</td>
+      <td>${r.billNo ? escapeHtml(r.billNo) : '<span style="color:var(--muted);">No bill</span>'}</td>
+      <td style="max-width:260px;">${itemsTxt}${r.note?`<div class="ret-sub" style="font-size:10.5px;color:var(--muted);">${escapeHtml(r.note)}</div>`:''}</td>
+      <td class="num">${fmt(r.total)}</td>
+      <td class="num profit-col">−${fmt(t.inclGst)}</td>
+      <td><button class="sm danger" onclick="deleteReturn('${r.id}')">Delete</button></td></tr>`;
+  }).join('');
+}
+window.deleteReturn = async function(id){
+  const r = returns.find(x=>x.id===id); if(!r) return;
+  if(!confirm('Delete return '+r.retNo+'? The stock it added back will be taken out again and the party\'s credit removed.')) return;
+  (r.items||[]).forEach(it=>{ const m = findMedByName(it.name); if(m) m.stock = Math.max(0, (Number(m.stock)||0) - (Number(it.qty)||0) - (Number(it.free)||0)); });
+  returns = returns.filter(x=>x.id!==id);
+  await saveMedicines(); await saveReturns();
+  if(document.getElementById('view-payments').classList.contains('active')) renderPayments();
+  if(document.getElementById('view-returns').classList.contains('active')){ retLoadLines(); retRenderHistory(); }
+  toast('Return deleted');
+};
 /* View: opens the invoice preview only (no auto-print) */
 window.viewBillById = function(id){
   const b = bills.find(x=>x.id===id); if(b) openPrintView(b);
@@ -4685,18 +4975,18 @@ function renderHistoryOverview(){
     document.getElementById('his'+k+'Received').textContent = fmt(rec);
     document.getElementById('his'+k+'Pending').textContent = fmt(pend);
   };
-  const totalAmt = sum(bills,b=>b.grandTotal), totalRec = sum(payments,p=>p.amount);
+  const totalAmt = sum(bills,b=>b.grandTotal) - sumReturns().value, totalRec = sum(payments,p=>p.amount);
   let totalPend = 0;
   getAllPartyNames().forEach(n=>{ totalPend += Math.max(0, computePartyTotals(n).pending); });
   set('Total', totalAmt, totalRec, totalPend);
 
   const now = new Date();
   const inMonth = d=>{ d=new Date(d); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); };
-  const mAmt = sum(bills.filter(b=>inMonth(b.date)),b=>b.grandTotal), mRec = sum(payments.filter(p=>inMonth(p.date)),p=>p.amount);
+  const mAmt = sum(bills.filter(b=>inMonth(b.date)),b=>b.grandTotal) - sumReturns(r=>inMonth(r.date)).value, mRec = sum(payments.filter(p=>inMonth(p.date)),p=>p.amount);
   set('Month', mAmt, mRec, Math.max(0, mAmt-mRec));
 
   const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate()-6);
-  const wAmt = sum(bills.filter(b=>new Date(b.date)>=weekStart),b=>b.grandTotal), wRec = sum(payments.filter(p=>new Date(p.date)>=weekStart),p=>p.amount);
+  const wAmt = sum(bills.filter(b=>new Date(b.date)>=weekStart),b=>b.grandTotal) - sumReturns(r=>new Date(r.date)>=weekStart).value, wRec = sum(payments.filter(p=>new Date(p.date)>=weekStart),p=>p.amount);
   set('Week', wAmt, wRec, Math.max(0, wAmt-wRec));
 
   /* fourth card: details of the selected party */
@@ -4856,8 +5146,11 @@ function computePartyTotals(party){
   const key = party.trim().toLowerCase();
   let totalBilled=0, totalReceived=0;
   bills.forEach(b=>{ if((b.customerName||'').trim().toLowerCase()===key) totalBilled+=Number(b.grandTotal)||0; });
+  /* goods returned by the party reduce what they owe (totalBilled is shown net of returns) */
+  const totalReturned = sumReturns(r=>(r.party||'').trim().toLowerCase()===key).value;
+  totalBilled -= totalReturned;
   payments.forEach(p=>{ if((p.party||'').trim().toLowerCase()===key) totalReceived+=Number(p.amount)||0; });
-  return { totalBilled, totalReceived, pending: totalBilled-totalReceived };
+  return { totalBilled, totalReceived, totalReturned, pending: totalBilled-totalReceived };
 }
 function getPartyLedgerEntries(party){
   const key = party.trim().toLowerCase();
@@ -4870,6 +5163,11 @@ function getPartyLedgerEntries(party){
   payments.forEach(p=>{
     if((p.party||'').trim().toLowerCase()===key){
       entries.push({ date:p.date, type:'payment', ref:p.note||'Payment received', debit:0, credit:Number(p.amount)||0, id:p.id });
+    }
+  });
+  returns.forEach(r=>{
+    if((r.party||'').trim().toLowerCase()===key){
+      entries.push({ date:r.date, type:'return', ref:'Return '+r.retNo, debit:0, credit:Number(r.total)||0, id:r.id });
     }
   });
   entries.sort((a,b)=> new Date(a.date)-new Date(b.date));
@@ -4890,7 +5188,7 @@ function renderLedgerOverview(){
   const parties = getAllPartyNames();
 
   /* All-time */
-  const totalAmount = bills.reduce((s,b)=>s+(Number(b.grandTotal)||0),0);
+  const totalAmount = bills.reduce((s,b)=>s+(Number(b.grandTotal)||0),0) - sumReturns().value;
   const totalReceived = payments.reduce((s,p)=>s+(Number(p.amount)||0),0);
   let totalPending=0;
   parties.forEach(p=>{ totalPending += Math.max(0, computePartyTotals(p).pending); });
@@ -4902,7 +5200,7 @@ function renderLedgerOverview(){
   const now = new Date();
   const monthBills = bills.filter(b=>{ const d=new Date(b.date); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
   const monthPayments = payments.filter(p=>{ const d=new Date(p.date); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
-  const monthAmount = monthBills.reduce((s,b)=>s+(Number(b.grandTotal)||0),0);
+  const monthAmount = monthBills.reduce((s,b)=>s+(Number(b.grandTotal)||0),0) - sumReturns(r=>{ const d=new Date(r.date); return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); }).value;
   const monthReceived = monthPayments.reduce((s,p)=>s+(Number(p.amount)||0),0);
   document.getElementById('ledMonthAmount').textContent = fmt(monthAmount);
   document.getElementById('ledMonthReceived').textContent = fmt(monthReceived);
@@ -4995,6 +5293,7 @@ function renderLedgerPartyCard(){
       const pr = computeProfit(b); pCost += pr.cost; pProfit += pr.inclGst;
     }
   });
+  { const rt = sumReturns(r=>(r.party||'').trim().toLowerCase()===pKey); pCost -= rt.cost; pProfit -= rt.inclGst; }
   const addrParts = [];
   [rec.address, (d&&d.location)||rec.location, (d&&d.city)||rec.city].forEach(v=>{
     v = String(v||'').trim();
@@ -5049,19 +5348,21 @@ function renderLedgerDetail(){
   const q1 = t=> String(t||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   body.innerHTML = filtered.map((e,i)=>{
     const b = e.type==='bill' ? bills.find(x=>x.billNo===e.ref) : null;
+    const rRec = e.type==='return' ? returns.find(x=>x.id===e.id) : null;
     const acts = e.type==='payment'
       ? `<button class="sm ghost" onclick="sendPaymentWhatsAppById('${e.id}')">WhatsApp</button> <button class="sm danger" onclick="deletePayment('${e.id}')">Delete</button>`
+      : e.type==='return' ? `<button class="sm danger" onclick="deleteReturn('${e.id}')">Delete return</button>`
       : (b ? `<button class="sm ghost" onclick='viewBillById("${b.id}")'>View</button>
           <button class="sm ghost" onclick='editBillById("${b.id}","payments")'>Edit</button>
           <button class="sm ghost" onclick='printBillById("${b.id}")'>Print</button>
           <button class="sm ghost" onclick='shareBillPdfById("${b.id}")'>Share PDF</button>
           <button class="sm ghost" onclick='sendBillWhatsAppById("${b.id}")'>WhatsApp</button>
           <button class="sm danger" onclick='deleteBill("${b.id}")'>Delete</button>` : '');
-    const pr = b ? computeProfit(b) : null;
+    const pr = b ? computeProfit(b) : (rRec ? (()=>{ const t=computeReturnTotals(rRec); return { cost:-t.cost, inclGst:-t.inclGst }; })() : null);
     const cp = pr ? `<div class="bl-cp profit-sec masked"><span>Cost: <span class="v" data-v="${fmt(pr.cost)}">••••</span></span><span>Profit: <span class="v" data-v="${fmt(pr.inclGst)}" style="color:var(--primary-dark);">••••</span></span><button type="button" class="eye" title="Show / hide" onclick="event.stopPropagation();blToggleCP(this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>` : '';
     return `<tr class="bl-row" data-i="${i}">
       <td>${new Date(e.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</td>
-      <td>${e.type==='bill' ? '<b>'+e.ref+'</b>' : (e.ref||'Payment')}</td>
+      <td>${e.type==='bill' ? '<b>'+e.ref+'</b>' : (e.type==='return' ? '<b>'+escapeHtml(e.ref)+'</b><span class="ret-tag">Return</span>' : (e.ref||'Payment'))}</td>
       <td class="num">${e.debit? fmt(e.debit):'—'}</td>
       <td class="num">${e.credit? fmt(e.credit):'—'}</td>
     </tr>
@@ -5367,6 +5668,24 @@ function renderPartySaleReport(silent){
       rows.push({ billNo:b.billNo, date:b.date, customer:b.customerName, name:it.name, qty:it.qty, rate:it.rate, amount:saleIncl });
     });
   });
+  /* returns reduce sale / profit / quantity and show as negative rows */
+  returns.forEach(r=>{
+    const d = new Date(r.date);
+    if(from && d<from) return;
+    if(to && d>to) return;
+    const rParty = (r.party||'').trim();
+    if(useAllParties){ /* all parties */ }
+    else if(useCityFilter){ if(!matchNames.has(rParty.toLowerCase())) return; }
+    else if(rParty.toLowerCase() !== party.trim().toLowerCase()) return;
+    (r.items||[]).forEach(it=>{
+      const f = retItemFigures(it);
+      sales -= f.saleIncl;
+      if(f.inclGst!=null) profitIncl -= f.inclGst;
+      if(f.simple!=null) profitSimple -= f.simple;
+      qtyTotal -= it.qty;
+      rows.push({ billNo:'↩ '+r.retNo, date:r.date, customer:r.party, name:it.name, qty:-it.qty, rate:it.rate, amount:-f.saleIncl });
+    });
+  });
   document.getElementById('pwSales').textContent = fmt(sales);
   document.getElementById('pwProfitIncl').textContent = fmt(profitIncl);
   document.getElementById('pwProfitSimple').textContent = fmt(profitSimple);
@@ -5442,6 +5761,21 @@ function renderProductSaleReport(silent){
       rows.push({ billNo:b.billNo, date:b.date, customer:b.customerName, qty:it.qty, rate:it.rate, amount:saleIncl });
     });
   });
+  returns.forEach(r=>{
+    const d = new Date(r.date);
+    if(from && d<from) return;
+    if(to && d>to) return;
+    if(party && (r.party||'').trim().toLowerCase() !== party.trim().toLowerCase()) return;
+    (r.items||[]).forEach(it=>{
+      if(it.name.trim().toLowerCase() !== product.trim().toLowerCase()) return;
+      const f = retItemFigures(it);
+      sales -= f.saleIncl;
+      if(f.inclGst!=null) profitIncl -= f.inclGst;
+      if(f.simple!=null) profitSimple -= f.simple;
+      qtyTotal -= it.qty;
+      rows.push({ billNo:'↩ '+r.retNo, date:r.date, customer:r.party, qty:-it.qty, rate:it.rate, amount:-f.saleIncl });
+    });
+  });
   document.getElementById('psSales').textContent = fmt(sales);
   document.getElementById('psProfitIncl').textContent = fmt(profitIncl);
   document.getElementById('psProfitSimple').textContent = fmt(profitSimple);
@@ -5501,6 +5835,7 @@ function renderExpenses(){
     const p = computeProfit(b);
     profitIncl += p.inclGst; profitSimple += p.simple;
   });
+  { const rt = sumReturns(r=>{ const d=new Date(r.date); return !(from && d<from) && !(to && d>to); }); profitIncl -= rt.inclGst; profitSimple -= rt.simple; }
   document.getElementById('netProfitIncl').textContent = fmt(profitIncl - expTotal);
   document.getElementById('netProfitSimple').textContent = fmt(profitSimple - expTotal);
 }
@@ -5799,6 +6134,19 @@ function invCycleSale(inv, from, to){
       const amt = itemSaleAmounts(it).saleIncl;
       pl.total += amt;
       pl.byProduct[k] = (pl.byProduct[k]||0) + amt;
+    });
+  });
+  returns.forEach(r=>{
+    const pl = byChemist[invKey(r.party)]; if(!pl) return;
+    const d = new Date(r.date);
+    if(isNaN(d) || d<from || (to && d>=to)) return;
+    if(!pl.want.size){ pl.total -= Number(r.total)||0; return; }
+    (r.items||[]).forEach(it=>{
+      const k = invKey(it.name);
+      if(!pl.want.has(k)) return;
+      const amt = itemSaleAmounts(it).saleIncl;
+      pl.total -= amt;
+      pl.byProduct[k] = (pl.byProduct[k]||0) - amt;
     });
   });
   return { total: perLink.reduce((s,pl)=>s+pl.total,0), perLink };
@@ -6236,6 +6584,14 @@ function drStatsForRange(doctorKey, chemistKeys, from, to){
     if(to && d>to) return;
     ret += Number(b.grandTotal)||0;
     profit += computeProfit(b).inclGst || 0;
+  });
+  returns.forEach(r=>{
+    if(!chemistKeys.has((r.party||'').trim().toLowerCase())) return;
+    const d = new Date(r.date);
+    if(from && d<from) return;
+    if(to && d>to) return;
+    const t = computeReturnTotals(r);
+    ret -= t.value; profit -= t.inclGst;
   });
   const target = invested * INV_TARGET_MULT;
   const salePending = target - ret; // how much sale (of the target) is still pending
