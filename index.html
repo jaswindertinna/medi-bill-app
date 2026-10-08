@@ -1023,7 +1023,7 @@
     <div class="view" id="view-newbill">
       <div class="page-head"><div><button class="sm ghost" id="btnBackToSale" type="button" style="margin-bottom:8px;">‹ Back to Bill</button><h2>New bill</h2><p>Search medicines, add to cart and generate the invoice.</p></div></div>
       <div id="editBillBanner" style="display:none;background:var(--accent-light);border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;justify-content:space-between;align-items:center;">
-        <span>Editing bill <b id="editBillNo"></b> — stock will be adjusted for any quantity changes when you save.</span>
+        <span><span id="editBillLabel">Editing bill</span> <b id="editBillNo"></b> — stock will be adjusted for any quantity changes when you save.</span>
         <button class="sm ghost" id="btnCancelEditBill" type="button">Cancel edit</button>
       </div>
       <div class="bill-layout">
@@ -1080,7 +1080,7 @@
     <!-- TEMP BILLS -->
     <div class="view" id="view-tempbills">
       <div class="page-head">
-        <div><h2>Temp bill</h2><p>Bills saved temporarily. Confirm to move it into your bills (History › Recent) (stock already deducted), or delete to cancel and return stock.</p></div>
+        <div><h2>Temp bill</h2><p>Bills saved temporarily. View or edit one any time, confirm to move it into your bills (History › Recent) (stock already deducted), or delete to cancel and return stock.</p></div>
       </div>
       <div class="panel" style="padding:0;overflow-x:auto;">
         <table>
@@ -2787,7 +2787,7 @@ function showView(name){
   if(name==='purchaseorder') poEnter();
   if(name==='newpurchase') resetPurchaseForm();
   if(name==='purchases') renderPurchasesHistory();
-  if(name==='newbill'){ if(!editingBillId && !document.getElementById('billDate').value) document.getElementById('billDate').value = new Date().toISOString().slice(0,10); renderBillMedList(); updateCustNameSuggestions(); updateCustDuesBox(); }
+  if(name==='newbill'){ if(!editingBillId && !editingTempId && !document.getElementById('billDate').value) document.getElementById('billDate').value = new Date().toISOString().slice(0,10); renderBillMedList(); updateCustNameSuggestions(); updateCustDuesBox(); }
   if(name==='tempbills') renderTempBills();
   if(name==='returns') retEnter();
   if(name==='payments') renderPayments();
@@ -4142,13 +4142,40 @@ document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
   const customerPhone = document.getElementById('custPhone').value.trim();
   if(!customerName){ toast('Select a doctor or chemist'); return; }
   /* Bills can only go to Dr List / Chemist List entries (an old bill being edited keeps its original name) */
-  const isOriginalEditName = editingBillId && customerName.toLowerCase()===(editingBillOriginalCustomerName||'').trim().toLowerCase();
+  const isOriginalEditName = (editingBillId || editingTempId) && customerName.toLowerCase()===(editingBillOriginalCustomerName||'').trim().toLowerCase();
   if(!isOriginalEditName){
     const canon = getCustPickerRows().find(r=> r.name.toLowerCase()===customerName.toLowerCase());
     if(!canon){ toast('Bills can only be made to Dr List or Chemist List — use + Add doctor / + Add chemist first'); return; }
     customerName = canon.name;
   }
   const newItems = cart.map(c=>({name:c.name, unit:c.unit, rate:c.rate, gst:c.gst, rateType:'incl', qty:c.qty, free:Number(c.free)||0, amount:cartLineAmounts(c).lineTotal, batch:c.batch||'', expiry:c.expiry||'', cd:!!c.cd}));
+
+  if(editingTempId){
+    const idx = tempBills.findIndex(t=>t.id===editingTempId);
+    if(idx===-1){ toast('That temp bill no longer exists'); exitEditMode(); showView('tempbills'); return; }
+    const original = tempBills[idx];
+    // Give back the stock this temp bill reserved, then reserve stock for the edited items.
+    original.items.forEach(it=>{
+      const m = medicines.find(x=>x.name===it.name);
+      if(m) m.stock = Number(m.stock) + Number(it.qty) + (Number(it.free)||0);
+    });
+    cart.forEach(c=>{
+      const m = medicines.find(x=>x.id===c.medId);
+      if(m) m.stock = Math.max(0, Number(m.stock) - (Number(c.qty) + (Number(c.free)||0)));
+    });
+    const tDateVal = document.getElementById('billDate').value;
+    tempBills[idx] = {
+      ...original,
+      customerName, customerPhone, items: newItems,
+      date: tDateVal ? new Date(tDateVal+'T12:00:00').toISOString() : original.date,
+      subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true
+    };
+    await saveMedicines(); await saveTempBills();
+    toast('Temp bill updated');
+    exitEditMode();
+    showView('tempbills');
+    return;
+  }
 
   if(editingBillId){
     const idx = bills.findIndex(b=>b.id===editingBillId);
@@ -4250,6 +4277,8 @@ function renderTempBills(){
       <td class="num">${t.items.length}</td>
       <td class="num">${fmt(t.grandTotal)}</td>
       <td><div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+        <button class="sm ghost" onclick='viewTempBillById("${t.id}")'>View</button>
+        <button class="sm ghost" onclick='editTempBillById("${t.id}")'>Edit</button>
         <button class="sm primary" onclick='confirmTempBill("${t.id}")'>Confirm</button>
         <button class="sm danger" onclick='deleteTempBill("${t.id}")'>Delete</button>
       </div></td>
@@ -4287,6 +4316,29 @@ window.deleteTempBill = async function(id){
   await saveMedicines(); await saveTempBills();
   toast('Temp bill deleted, stock returned');
   renderTempBills();
+};
+
+/* View: opens the invoice preview for a temp bill (shown as TEMP, no pending-balance line) */
+window.viewTempBillById = function(id){
+  const t = tempBills.find(x=>x.id===id); if(!t) return;
+  openPrintView({ ...t, billNo:'TEMP', isTemp:true });
+};
+/* Edit: loads the temp bill into New Bill. Its stock is already reserved, so the cart treats
+   that reserved qty as still available; saving swaps the old reservation for the new one. */
+window.editTempBillById = function(id){
+  const t = tempBills.find(x=>x.id===id);
+  if(!t){ toast('Temp bill not found'); return; }
+  editingBillId = null;
+  editingTempId = id;
+  billEditReturnView = 'tempbills';
+  editingBillOriginalCustomerName = t.customerName||'';
+  loadBillIntoForm(t);
+  document.getElementById('editBillLabel').textContent = 'Editing temp bill';
+  document.getElementById('editBillNo').textContent = '('+(t.customerName||'Walk-in')+', '+new Date(t.date).toLocaleDateString('en-IN')+')';
+  document.getElementById('btnGenerateBill').textContent = 'Update temp bill';
+  document.getElementById('btnSaveTempBill').style.display = 'none';
+  showView('newbill');
+  renderCart();
 };
 
 window.deleteBill = function(id){
@@ -4522,14 +4574,11 @@ window.sendBillWhatsAppById = function(id){
 
 /* ---------- Edit an existing bill ---------- */
 let editingBillId = null;
+let editingTempId = null;
 let editingBillOriginalCustomerName = null;
 let billEditReturnView = 'payments';
-window.editBillById = function(id, returnView){
-  const b = bills.find(x=>x.id===id);
-  if(!b){ toast('Bill not found'); return; }
-  billEditReturnView = returnView || 'payments';
-  editingBillId = id;
-  editingBillOriginalCustomerName = b.customerName||'';
+/* Fills the New Bill form (cart, customer, date, discount) from a saved bill or temp bill. */
+function loadBillIntoForm(b){
   cart = b.items.map(it=>{
     const m = medicines.find(x=>x.name===it.name);
     /* older bills may hold a tax-exclusive rate — convert it so the line total stays the same */
@@ -4562,14 +4611,27 @@ window.editBillById = function(id, returnView){
   const preDiscountTotal = (Number(b.subtotal)||0) + (Number(b.gstTotal)||0);
   const discountPct = preDiscountTotal>0 ? ((Number(b.discountAmt)||0) / preDiscountTotal * 100) : 0;
   document.getElementById('billDiscount').value = Math.round(discountPct*100)/100;
-  document.getElementById('editBillNo').textContent = b.billNo;
   document.getElementById('editBillBanner').style.display = 'flex';
+}
+window.editBillById = function(id, returnView){
+  const b = bills.find(x=>x.id===id);
+  if(!b){ toast('Bill not found'); return; }
+  billEditReturnView = returnView || 'payments';
+  editingTempId = null;
+  editingBillId = id;
+  editingBillOriginalCustomerName = b.customerName||'';
+  loadBillIntoForm(b);
+  document.getElementById('editBillLabel').textContent = 'Editing bill';
+  document.getElementById('editBillNo').textContent = b.billNo;
   document.getElementById('btnGenerateBill').textContent = 'Update bill';
+  document.getElementById('btnSaveTempBill').style.display = '';
   showView('newbill');
   renderCart();
 };
 function exitEditMode(){
   editingBillId = null;
+  editingTempId = null;
+  document.getElementById('btnSaveTempBill').style.display = '';
   editingBillOriginalCustomerName = null;
   cart = [];
   document.getElementById('custName').value='';
@@ -4587,9 +4649,10 @@ document.getElementById('btnCancelEditBill').addEventListener('click', ()=>{
 });
 document.getElementById('btnBackToSale').addEventListener('click', ()=>{
   if(cart.length && !confirm('Leave without saving this bill? Items in the cart will be lost.')) return;
-  const back = editingBillId ? billEditReturnView : 'payments';
-  if(!editingBillId) selectedPartyListParty = RECENT_KEY;
-  if(editingBillId) exitEditMode();
+  const editingAny = !!(editingBillId || editingTempId);
+  const back = editingAny ? billEditReturnView : 'payments';
+  if(!editingAny) selectedPartyListParty = RECENT_KEY;
+  if(editingAny) exitEditMode();
   showView(back);
 });
 
@@ -7151,7 +7214,7 @@ function buildInvoiceHtml(bill){
       ${(bill.cdAtEnd && (Number(bill.cdAmt)||0)>0) ? `<div class="totals-line"><span>CD ${CD_PCT}% extra discount</span><span>−${fmt(bill.cdAmt)}</span></div>` : ''}
       <div class="totals-line grand"><span>Total</span><span>${fmt(bill.grandTotal)}</span></div>
     </div>
-    ${bill.customerName ? (()=>{ const t = computePartyTotals(bill.customerName); return `
+    ${(bill.customerName && !bill.isTemp) ? (()=>{ const t = computePartyTotals(bill.customerName); return `
     <div style="margin-top:14px;max-width:260px;margin-left:auto;border-top:1px dashed var(--border);padding-top:8px;">
       <div class="totals-line grand" style="color:${t.pending>0?'var(--danger)':'var(--primary-dark)'};"><span>Total pending payment</span><span>${fmt(t.pending)}</span></div>
     </div>`; })() : ''}
