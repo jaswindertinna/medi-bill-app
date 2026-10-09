@@ -636,6 +636,7 @@
     <div class="topbar-shortcuts">
       <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill">New Bill</button>
       <button type="button" class="topbar-shortcut-btn" id="btnTopLedger">Bill Ledger</button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopReminder">Reminder</button>
     </div>
   </div>
 
@@ -722,6 +723,7 @@
       <div class="sec-heading">List</div>
       <div class="nav-item" data-view="drlist"><span class="nav-dot"></span>Dr List</div>
       <div class="nav-item" data-view="chemistlist"><span class="nav-dot"></span>Chemist List</div>
+      <div class="nav-item" data-view="reminder"><span class="nav-dot"></span>Reminder</div>
     </div>
     <div class="nav-submenu" id="submenu-notes">
       <div class="sec-heading">Notes</div>
@@ -1445,6 +1447,58 @@
       </div>
     </div>
 
+    <!-- REMINDER (doctor lists + WhatsApp message) -->
+    <div class="view" id="view-reminder">
+      <div class="page-head">
+        <div><h2>Reminder</h2><p>Pick a doctor, type his own message, tap Send. A beautiful picture card with your company name goes to WhatsApp.</p></div>
+        <div class="top-actions"><button class="primary" id="btnRemNew" type="button" style="display:none;">+ New reminder list</button></div>
+      </div>
+      <div id="remQuickWrap">
+        <div class="panel" style="margin-bottom:10px;">
+          <div class="field" style="margin:0;"><label>Company name shown at the end of the picture</label>
+            <input id="remCompany" placeholder="e.g. ONESTA LIFE"></div>
+        </div>
+        <div id="remQuickRows"></div>
+        <div class="top-actions" style="margin-top:6px;"><button class="ghost" id="btnRemAddRow" type="button">+ Add another doctor</button></div>
+      </div>
+      <div id="remListWrap" style="display:none;">
+        <div id="remListBody"></div>
+        <div class="empty" id="remListEmpty" style="display:none;"><h3>No reminder lists yet</h3><p>Tap "+ New reminder list", pick doctors from Dr List and type the message.</p></div>
+      </div>
+      <div id="remFormWrap" style="display:none;">
+        <div class="panel">
+          <h3 id="remFormTitle">New reminder list</h3>
+          <div class="field"><label>List name</label><input id="remName" placeholder="e.g. Diwali wishes, Monthly visit"></div>
+          <div class="field"><label>Message</label>
+            <textarea id="remMessage" rows="4" placeholder="Type the WhatsApp message…" style="width:100%;font-family:'Inter',sans-serif;font-size:13px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);"></textarea>
+            <div class="field-hint">Tip: write {name} where you want each doctor's name to appear (e.g. "Hello {name}, ...").</div>
+          </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;"><input type="checkbox" id="remAsPic" style="width:auto;" checked> Send as a beautiful picture card (company name at the end)</label>
+          </div>
+          <div class="field">
+            <label>Doctors in this list <b id="remSelCount" style="color:var(--primary-dark);">(0 selected)</b></label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+              <input id="remDrSearch" placeholder="Search doctor…" style="flex:1;min-width:160px;">
+              <button class="sm ghost" id="btnRemSelAll" type="button">Select all shown</button>
+              <button class="sm ghost" id="btnRemClear" type="button">Clear</button>
+            </div>
+            <div id="remDrPick" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:#fff;"></div>
+          </div>
+          <div class="field" id="remPersonalWrap" style="display:none;">
+            <label>Personal message for each selected doctor</label>
+            <div class="field-hint" style="margin:0 0 6px;">Type a different message for each doctor. Leave a box empty to use the common message above.</div>
+            <div id="remPersonal"></div>
+          </div>
+          <div class="top-actions">
+            <button class="primary" id="btnRemSave" type="button">Save list</button>
+            <button class="ghost" id="btnRemCancel" type="button">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div id="remSendWrap" style="display:none;"></div>
+    </div>
+
     <!-- PARTY LIST -->
     <div class="view" id="view-partylist">
       <div class="page-head"><div><h2>History</h2><p>Recent shows every bill from the last 30 days. Or pick a party from the list to see their details — everyone billed at least once appears here automatically.</p></div></div>
@@ -1768,6 +1822,7 @@ let parties = [];
 let notes = [];
 let investments = [];
 let drList = [];
+let reminders = [];
 let schedule = { months:{} };
 let businessPlan = { temp:[], actual:[] };
 let settings = { shopName:'', address:'', phone:'', gstin:'', prefix:'INV-', nextNo:1 };
@@ -1849,6 +1904,7 @@ async function loadAll(){
   try{ const v = localStorage.getItem(LS_PREFIX+'notes'); notes = v ? JSON.parse(v) : []; }catch(e){ notes = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'investments'); investments = v ? JSON.parse(v) : []; }catch(e){ investments = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'drlist'); drList = v ? JSON.parse(v) : []; }catch(e){ drList = []; }
+  try{ const v = localStorage.getItem(LS_PREFIX+'reminders'); reminders = v ? JSON.parse(v) : []; }catch(e){ reminders = []; }
   try{ const v = localStorage.getItem(LS_PREFIX+'schedule'); schedule = v ? JSON.parse(v) : { months:{} }; if(!schedule.months) schedule.months = {}; }catch(e){ schedule = { months:{} }; }
   try{ const v = localStorage.getItem(LS_PREFIX+'businessplan'); businessPlan = v ? JSON.parse(v) : { temp:[], actual:[] }; normBusinessPlan(); }catch(e){ businessPlan = { temp:[], actual:[] }; }
   try{ const v = localStorage.getItem(LS_PREFIX+'settings'); if(v) settings = JSON.parse(v); }catch(e){}
@@ -1865,6 +1921,7 @@ async function saveParties(){ try{ localStorage.setItem(LS_PREFIX+'parties', JSO
 async function saveNotes(){ try{ localStorage.setItem(LS_PREFIX+'notes', JSON.stringify(notes)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveInvestments(){ try{ localStorage.setItem(LS_PREFIX+'investments', JSON.stringify(investments)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveDrList(){ try{ localStorage.setItem(LS_PREFIX+'drlist', JSON.stringify(drList)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
+async function saveReminders(){ try{ localStorage.setItem(LS_PREFIX+'reminders', JSON.stringify(reminders)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveSchedule(){ try{ localStorage.setItem(LS_PREFIX+'schedule', JSON.stringify(schedule)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 async function saveBusinessPlan(){ try{ localStorage.setItem(LS_PREFIX+'businessplan', JSON.stringify(businessPlan)); }catch(e){ toast('Could not save data'); } pushToCloud(); }
 function normBusinessPlan(){ if(!businessPlan || typeof businessPlan!=='object') businessPlan={}; if(!Array.isArray(businessPlan.temp)) businessPlan.temp=[]; if(!Array.isArray(businessPlan.actual)) businessPlan.actual=[]; }
@@ -2216,6 +2273,7 @@ function listenToCloud(){
     notes = data.notes || [];
     investments = data.investments || [];
     drList = data.drList || [];
+    reminders = data.reminders || [];
     schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
     businessPlan = data.businessPlan || { temp:[], actual:[] }; normBusinessPlan();
     if(data.settings) settings = data.settings;
@@ -2233,6 +2291,7 @@ function listenToCloud(){
       localStorage.setItem(LS_PREFIX+'notes', JSON.stringify(notes));
       localStorage.setItem(LS_PREFIX+'investments', JSON.stringify(investments));
       localStorage.setItem(LS_PREFIX+'drlist', JSON.stringify(drList));
+      localStorage.setItem(LS_PREFIX+'reminders', JSON.stringify(reminders));
       localStorage.setItem(LS_PREFIX+'schedule', JSON.stringify(schedule));
       localStorage.setItem(LS_PREFIX+'businessplan', JSON.stringify(businessPlan));
       localStorage.setItem(LS_PREFIX+'settings', JSON.stringify(settings));
@@ -2252,7 +2311,7 @@ function pushToCloud(immediate){
   clearTimeout(syncPushTimer);
   const doPush = ()=>{
     syncDb.collection(SYNC_COLLECTION).doc(currentUid).set({
-      medicines, bills, returns, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, schedule, businessPlan, settings,
+      medicines, bills, returns, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, reminders, schedule, businessPlan, settings,
       updatedAt: new Date().toISOString()
     }).then(()=> setSyncStatus('Synced — last update '+new Date().toLocaleTimeString('en-IN')))
       .catch(e=> setSyncStatus('Sync error: '+e.message));
@@ -2298,7 +2357,7 @@ document.getElementById('btnDisconnectSync').addEventListener('click', ()=>{
 
 /* ---------- Backup / Restore (safety net, since browser data can be cleared) ---------- */
 function downloadBackup(){
-  const data = { medicines, bills, returns, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, schedule, businessPlan, settings, exportedAt: new Date().toISOString() };
+  const data = { medicines, bills, returns, tempBills, purchases, purchaseOrders, expenses, accountEntries, payments, parties, notes, investments, drList, reminders, schedule, businessPlan, settings, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2326,10 +2385,11 @@ function restoreBackup(file){
       notes = data.notes || [];
       investments = data.investments || [];
       drList = data.drList || [];
+      reminders = data.reminders || [];
       schedule = data.schedule || { months:{} }; if(!schedule.months) schedule.months = {};
       businessPlan = data.businessPlan || { temp:[], actual:[] }; normBusinessPlan();
       settings = data.settings || settings;
-      await saveMedicines(); await saveBills(); await saveTempBills(); await saveReturns(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await saveAccountEntries(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveSchedule(); await saveBusinessPlan(); await saveSettings();
+      await saveMedicines(); await saveBills(); await saveTempBills(); await saveReturns(); await savePurchases(); await savePurchaseOrders(); await saveExpenses(); await saveAccountEntries(); await savePayments(); await saveParties(); await saveNotes(); await saveInvestments(); await saveDrList(); await saveReminders(); await saveSchedule(); await saveBusinessPlan(); await saveSettings();
       renderDashboard(); toast('Backup restored');
     }catch(e){ toast('Invalid backup file'); }
   };
@@ -2355,7 +2415,7 @@ document.querySelectorAll('.nav-item').forEach(el=>{
 const NOTES_GROUP_VIEWS = ['notes','completednotes'];
 const LEDGER_GROUP_VIEWS = ['payments'];
 const INVESTMENT_GROUP_VIEWS = ['investment','drreport','schedule','businessplan'];
-const LIST_GROUP_VIEWS = ['drlist','chemistlist'];
+const LIST_GROUP_VIEWS = ['drlist','chemistlist','reminder'];
 const ACCOUNT_GROUP_VIEWS = ['account'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
   el.addEventListener('click', ()=>{
@@ -2453,6 +2513,7 @@ const MOBILE_MENU = [
   { label:'List', children:[
       { label:'Dr List', view:'drlist' },
       { label:'Chemist List', view:'chemistlist' },
+      { label:'Reminder', view:'reminder' },
   ]},
   { label:'Notes', children:[
       { label:'All Notes', view:'notes' },
@@ -2653,6 +2714,10 @@ document.getElementById('btnTopNewBill').addEventListener('click', ()=>{
   closeMobileNav();
   showView('newbill');
 });
+document.getElementById('btnTopReminder').addEventListener('click', ()=>{
+  closeMobileNav();
+  showView('reminder');
+});
 document.getElementById('btnTopLedger').addEventListener('click', ()=>{
   if(isWideScreen()){ closeMobileNav(); showView('payments'); return; }
   const ledgerNode = MOBILE_MENU.find(n=>n.dynamic==='ledgerParties');
@@ -2779,6 +2844,7 @@ function showView(name){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===name));
   document.getElementById('btnTopNewBill').classList.toggle('active', name==='newbill');
   document.getElementById('btnTopLedger').classList.toggle('active', name==='payments');
+  document.getElementById('btnTopReminder').classList.toggle('active', name==='reminder');
   openNavGroupForView(name);
   renderSidebarPartyList();
   setHistoryDrill(name==='partylist');
@@ -2800,6 +2866,7 @@ function showView(name){
   if(name==='account'){ renderAccount(); }
   if(name==='drlist'){ renderDrList(); }
   if(name==='chemistlist'){ renderChemistList(); }
+  if(name==='reminder'){ remEnter(); }
   if(name==='partylist'){ renderSidebarPartyListForList(); renderPartyListDetail(); }
   if(name==='investment'){ populateInvestmentSelects(); renderInvestments(); }
   if(name==='drreport'){ populateReportDoctorSelect(); renderDrReport(); }
@@ -7313,6 +7380,367 @@ window.shareBillPdf = async function(bill){
 window.shareBillPdfById = function(id){
   const b = bills.find(x=>x.id===id); if(!b) return;
   shareBillPdf(b);
+};
+
+/* ---------- Reminder: doctor lists + WhatsApp message ----------
+   WhatsApp does not let a webpage send messages silently, so "Send all" opens WhatsApp for one doctor
+   at a time with the message already typed; tap Send there, come back and tap "Send next". */
+let remMode = 'list';        // list | form | send
+let remEditId = null;
+let remDraft = { name:'', message:'', drIds:[], msgs:{}, asPic:true };
+let remPicCache = {};        // drId -> PNG blob (pre-built so the Send tap is instant)
+let remSend = null;          // { id, sent:{ drId:true } }
+function remEnter(){ remMode = 'list'; remEditId = null; remSend = null; renderReminder(); }
+function remDoctors(r){ return (r.drIds||[]).map(id=>drList.find(d=>d.id===id)).filter(Boolean); }
+function remMsgFor(r, d){ const own = ((r.msgs||{})[d.id]||'').trim(); return String(own || r.message||'').replace(/\{name\}/gi, d.name||''); }
+function renderReminder(){
+  ['remListWrap','remFormWrap','remSendWrap','btnRemNew'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+  renderRemQuick();
+}
+function renderRemList(){
+  const body = document.getElementById('remListBody');
+  document.getElementById('remListEmpty').style.display = reminders.length ? 'none' : 'block';
+  body.innerHTML = reminders.map(r=>{
+    const docs = remDoctors(r), noPhone = docs.filter(d=>!(d.phone||'').trim()).length;
+    return `<div class="panel">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="min-width:0;flex:1;">
+          <h3 style="margin-bottom:4px;">${escapeHtml(r.name||'Untitled list')}</h3>
+          <div style="font-size:11px;color:var(--muted);">${docs.length} doctor${docs.length===1?'':'s'}${noPhone?` · <span style="color:var(--danger);">${noPhone} without phone</span>`:''}</div>
+          <div style="font-size:12px;margin-top:6px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(r.message||'')}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:6px;">${r.asPic!==false?'🖼 Picture card · ':''}${Object.keys(r.msgs||{}).length?Object.keys(r.msgs).length+' personal message(s) · ':''}${docs.map(d=>escapeHtml(d.name)).join(', ')}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="sm primary" onclick="remStartSend('${r.id}')">Send all</button>
+          <button class="sm ghost" onclick="remEdit('${r.id}')">Edit</button>
+          <button class="sm danger" onclick="remDelete('${r.id}')">Delete</button>
+        </div>
+      </div></div>`;
+  }).join('');
+}
+document.getElementById('btnRemNew').addEventListener('click', ()=>{
+  remEditId = null; remDraft = { name:'', message:'', drIds:[], msgs:{}, asPic:true };
+  document.getElementById('remDrSearch').value = '';
+  remMode = 'form'; renderReminder();
+});
+window.remEdit = function(id){
+  const r = reminders.find(x=>x.id===id); if(!r) return;
+  remEditId = id; remDraft = { name:r.name||'', message:r.message||'', drIds:[...(r.drIds||[])], msgs:Object.assign({}, r.msgs||{}), asPic:r.asPic!==false };
+  document.getElementById('remDrSearch').value = '';
+  remMode = 'form'; renderReminder();
+};
+window.remDelete = async function(id){
+  const r = reminders.find(x=>x.id===id); if(!r) return;
+  if(!confirm('Delete reminder list "'+(r.name||'Untitled')+'"?')) return;
+  reminders = reminders.filter(x=>x.id!==id);
+  await saveReminders(); renderReminder(); toast('Reminder list deleted');
+};
+function renderRemForm(){
+  document.getElementById('remFormTitle').textContent = remEditId ? 'Edit reminder list' : 'New reminder list';
+  document.getElementById('remName').value = remDraft.name;
+  document.getElementById('remMessage').value = remDraft.message;
+  document.getElementById('remAsPic').checked = remDraft.asPic;
+  renderRemPick();
+}
+function renderRemPick(){
+  const q = (document.getElementById('remDrSearch').value||'').trim().toLowerCase();
+  const rows = drList.filter(d=> !q || (d.name||'').toLowerCase().includes(q) || (d.city||'').toLowerCase().includes(q) || (d.location||'').toLowerCase().includes(q))
+    .slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  document.getElementById('remSelCount').textContent = '('+remDraft.drIds.length+' selected)';
+  renderRemPersonal();
+  const box = document.getElementById('remDrPick');
+  if(!drList.length){ box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--muted);">No doctors yet — add them in Dr List first.</div>'; return; }
+  if(!rows.length){ box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--muted);">No matching doctors.</div>'; return; }
+  box.innerHTML = rows.map(d=>`
+    <label style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-bottom:1px solid var(--border);margin:0;cursor:pointer;font-size:12px;color:var(--text);">
+      <input type="checkbox" style="width:auto;" ${remDraft.drIds.includes(d.id)?'checked':''} onchange="remToggleDr('${d.id}',this.checked)">
+      <span style="flex:1;min-width:0;"><b>${escapeHtml(d.name)}</b><span style="color:var(--muted);font-size:10.5px;"> ${[d.city,d.location].filter(Boolean).map(escapeHtml).join(', ')}</span></span>
+      <span style="font-size:10.5px;color:${(d.phone||'').trim()?'var(--muted)':'var(--danger)'};">${(d.phone||'').trim()?escapeHtml(d.phone):'no phone'}</span>
+    </label>`).join('');
+}
+window.remToggleDr = function(id, on){
+  remDraft.drIds = remDraft.drIds.filter(x=>x!==id);
+  if(on) remDraft.drIds.push(id);
+  document.getElementById('remSelCount').textContent = '('+remDraft.drIds.length+' selected)';
+  renderRemPersonal();
+};
+function renderRemPersonal(){
+  const wrap = document.getElementById('remPersonalWrap'), box = document.getElementById('remPersonal');
+  const docs = remDraft.drIds.map(id=>drList.find(d=>d.id===id)).filter(Boolean);
+  wrap.style.display = docs.length ? '' : 'none';
+  box.innerHTML = docs.map(d=>`
+    <div style="margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:3px;">${escapeHtml(d.name)}</div>
+      <textarea rows="2" data-drmsg="${d.id}" placeholder="Message for ${escapeHtml(d.name)}…" style="width:100%;font-family:'Inter',sans-serif;font-size:13px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);">${escapeHtml((remDraft.msgs||{})[d.id]||'')}</textarea>
+    </div>`).join('');
+}
+document.getElementById('remPersonal').addEventListener('input', e=>{
+  const id = e.target.getAttribute && e.target.getAttribute('data-drmsg'); if(!id) return;
+  remDraft.msgs = remDraft.msgs||{}; remDraft.msgs[id] = e.target.value;
+});
+document.getElementById('remAsPic').addEventListener('change', e=>{ remDraft.asPic = e.target.checked; });
+document.getElementById('remName').addEventListener('input', e=>{ remDraft.name = e.target.value; });
+document.getElementById('remMessage').addEventListener('input', e=>{ remDraft.message = e.target.value; });
+document.getElementById('remDrSearch').addEventListener('input', renderRemPick);
+document.getElementById('btnRemSelAll').addEventListener('click', ()=>{
+  const q = (document.getElementById('remDrSearch').value||'').trim().toLowerCase();
+  drList.filter(d=> !q || (d.name||'').toLowerCase().includes(q) || (d.city||'').toLowerCase().includes(q) || (d.location||'').toLowerCase().includes(q))
+    .forEach(d=>{ if(!remDraft.drIds.includes(d.id)) remDraft.drIds.push(d.id); });
+  renderRemPick();
+});
+document.getElementById('btnRemClear').addEventListener('click', ()=>{ remDraft.drIds = []; renderRemPick(); });
+document.getElementById('btnRemCancel').addEventListener('click', ()=>{ remMode = 'list'; renderReminder(); });
+document.getElementById('btnRemSave').addEventListener('click', async ()=>{
+  const name = remDraft.name.trim(), message = remDraft.message.trim();
+  if(!name){ toast('Enter a list name'); return; }
+  if(!remDraft.drIds.length){ toast('Select at least one doctor'); return; }
+  const msgs = {}; remDraft.drIds.forEach(id=>{ const t=((remDraft.msgs||{})[id]||'').trim(); if(t) msgs[id]=t; });
+  if(!message && remDraft.drIds.some(id=>!msgs[id])){ toast('Type the common message, or a personal message for every doctor'); return; }
+  if(remEditId){
+    const r = reminders.find(x=>x.id===remEditId);
+    if(r){ r.name = name; r.message = message; r.drIds = [...remDraft.drIds]; r.msgs = msgs; r.asPic = remDraft.asPic; }
+  } else reminders.push({ id:uid(), name, message, drIds:[...remDraft.drIds], msgs, asPic:remDraft.asPic });
+  await saveReminders();
+  toast(remEditId ? 'Reminder list updated' : 'Reminder list saved');
+  remMode = 'list'; renderReminder();
+});
+/* Sending */
+window.remStartSend = function(id){
+  const r = reminders.find(x=>x.id===id); if(!r) return;
+  if(!remDoctors(r).some(d=>(d.phone||'').trim())){ toast('None of the doctors in this list have a phone number'); return; }
+  remSend = { id, sent:{} };
+  remPicCache = {};
+  remMode = 'send';
+  renderReminder();
+  if(r.asPic!==false) remPrebuild(r); else remSendNext();
+};
+/* ---- Picture card ---- */
+function remDrTitle(d){ const n=(d.name||'').trim(); return /^dr\.?\s/i.test(n) ? n : 'Dr. '+n; }
+async function remBuildCard(r, d){
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-10000px;top:0;width:540px;';
+  const today = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  wrap.innerHTML = `
+  <div style="width:540px;background:linear-gradient(160deg,#0A4A3F 0%,#0F6B5C 55%,#1b8f7b 100%);padding:26px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;">
+    <div style="background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+      <div style="background:linear-gradient(90deg,#0A4A3F,#0F6B5C);padding:22px 26px;color:#fff;">
+        <div style="font-size:11px;letter-spacing:3px;opacity:.8;font-weight:600;">FRIENDLY REMINDER</div>
+        <div style="font-size:24px;font-weight:700;margin-top:6px;">${escapeHtml(remDrTitle(d))}</div>
+        <div style="font-size:12px;opacity:.85;margin-top:3px;">${today}</div>
+      </div>
+      <div style="padding:26px 28px 10px;">
+        <div style="font-size:30px;line-height:1;color:#0F6B5C;font-weight:800;">&ldquo;</div>
+        <div style="font-size:17px;line-height:1.65;color:#1f2933;white-space:pre-wrap;word-break:break-word;margin-top:-4px;">${escapeHtml(remMsgFor(r,d))}</div>
+      </div>
+      <div style="margin:18px 28px 0;border-top:2px dashed #cfe5df;"></div>
+      <div style="padding:16px 28px 24px;text-align:center;">
+        <div style="font-size:11px;letter-spacing:2px;color:#6b7c78;">WITH WARM REGARDS</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:3px;color:#0A4A3F;margin-top:4px;">${escapeHtml(remCompany())}</div>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(wrap);
+  try{
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+    const canvas = await html2canvas(wrap.firstElementChild, {scale:2, backgroundColor:null});
+    return await new Promise(res=>canvas.toBlob(res,'image/png'));
+  } finally { document.body.removeChild(wrap); }
+}
+async function remPrebuild(r){
+  const id = remSend && remSend.id;
+  for(const d of remDoctors(r)){
+    if(!remSend || remSend.id!==id) return;
+    if(!(d.phone||'').trim() || remPicCache[d.id]) continue;
+    try{ remPicCache[d.id] = await remBuildCard(r,d); }catch(e){ console.error(e); }
+    if(remMode==='send') renderReminder();
+  }
+}
+async function remSendPic(r, d){
+  const blob = remPicCache[d.id]; if(!blob){ toast('Picture still getting ready…'); return false; }
+  const file = new File([blob], (d.name||'reminder').replace(/[^\w]+/g,'_')+'_reminder.png', {type:'image/png'});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:'Reminder' });   // choose WhatsApp → then this doctor's chat
+      return true;
+    }
+  }catch(err){ if(err && err.name==='AbortError') return false; console.error(err); }
+  // Desktop fallback: copy the picture, open this doctor's chat, user presses Ctrl+V then Send
+  let copied = false;
+  try{ await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); copied = true; }catch(e){}
+  if(!copied){
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
+  }
+  const digits = normalizePhoneForWhatsApp(d.phone);
+  if(digits) window.open('https://wa.me/'+digits, '_blank');
+  toast(copied ? 'Picture copied — paste it in the chat (Ctrl+V) and press Send' : 'Picture downloaded — attach it in the chat');
+  return true;
+}
+async function remSendOne(drId){
+  const r = reminders.find(x=>x.id===remSend.id); if(!r) return;
+  const d = drList.find(x=>x.id===drId); if(!d) return;
+  if(!(d.phone||'').trim()){ toast(d.name+' has no phone number'); return; }
+  if(r.asPic!==false){
+    if(await remSendPic(r,d)){ remSend.sent[drId] = true; renderReminder(); }
+    return;
+  }
+  remSend.sent[drId] = true;
+  sendWhatsAppMessage(d.phone, remMsgFor(r, d));
+  renderReminder();
+}
+window.remSendOne = remSendOne;
+function remSendNext(){
+  const r = reminders.find(x=>x.id===remSend.id); if(!r) return;
+  const nxt = remDoctors(r).find(d=>(d.phone||'').trim() && !remSend.sent[d.id]);
+  if(!nxt){ toast('All messages opened'); renderReminder(); return; }
+  remSendOne(nxt.id);
+}
+window.remSendNext = remSendNext;
+function renderRemSend(){
+  const r = reminders.find(x=>x.id===remSend.id);
+  const box = document.getElementById('remSendWrap');
+  if(!r){ remMode='list'; renderReminder(); return; }
+  const docs = remDoctors(r);
+  const withPhone = docs.filter(d=>(d.phone||'').trim());
+  const done = withPhone.filter(d=>remSend.sent[d.id]).length;
+  const finished = done>=withPhone.length;
+  box.innerHTML = `
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <h3 style="margin:0;">${escapeHtml(r.name||'Untitled list')} — ${done} of ${withPhone.length} opened</h3>
+        <div style="display:flex;gap:6px;">
+          <button class="sm primary" onclick="remSendNext()" ${finished?'disabled':''}>${done? 'Send next' : 'Send first'}</button>
+          <button class="sm ghost" onclick="remEnter()">Back to lists</button>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);">${r.asPic!==false
+        ? 'Each doctor gets their own picture card. Tap <b>Send</b> on a row → pick <b>WhatsApp</b> and that doctor (on desktop the picture is copied and the chat opens — press Ctrl+V, then Send).'
+        : 'WhatsApp opens with the message ready. Tap <b>Send</b> inside WhatsApp, return here and tap <b>Send next</b>.'}</div>
+    </div>
+    <div class="panel" style="padding:0;overflow-x:auto;">
+      <table>
+        <thead><tr><th>Doctor</th><th>Message</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+        <tbody>${docs.map(d=>{
+          const ph = (d.phone||'').trim(), sent = !!remSend.sent[d.id];
+          const ready = r.asPic===false || !!remPicCache[d.id];
+          return `<tr><td><b>${escapeHtml(d.name)}</b></td><td style="max-width:220px;font-size:11px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(remMsgFor(r,d))}</td><td>${ph?escapeHtml(ph):'—'}</td>
+            <td>${!ph?'<span class="pill low">No phone</span>':(sent?'<span class="pill ok">Opened</span>':'<span class="pill soon">Pending</span>')}</td>
+            <td style="text-align:right;">${ph?`<button class="sm ${sent?'ghost':'primary'}" ${ready?'':'disabled'} onclick="remSendOne('${d.id}')">${!ready?'Preparing…':(sent?'Resend':'Send')}</button>`:''}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+
+/* ---------- Quick Reminder: one row per doctor, own message, one tap -> picture card to WhatsApp ---------- */
+let remQRows = [];            // [{ id, drId, text }]
+let remQBlobs = {};           // rowId -> { key, blob, url }
+try{ remQRows = JSON.parse(localStorage.getItem(LS_PREFIX+'remquick')||'[]')||[]; }catch(e){ remQRows = []; }
+if(!remQRows.length) remQRows = [{ id:uid(), drId:'', text:'' }];
+function remQSave(){ try{ localStorage.setItem(LS_PREFIX+'remquick', JSON.stringify(remQRows)); }catch(e){} }
+function remQDoctor(row){ return drList.find(d=>d.id===row.drId); }
+function remCompany(){ return ((settings&&settings.reminderName)||'').trim() || WHATSAPP_SIGNOFF; }
+function renderRemQuick(){
+  document.getElementById('remCompany').value = remCompany();
+  const box = document.getElementById('remQuickRows');
+  const docs = drList.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!docs.length){ box.innerHTML = '<div class="panel" style="font-size:12px;color:var(--muted);">No doctors yet — add them in Dr List first.</div>'; return; }
+  box.innerHTML = remQRows.map((row,i)=>{
+    const d = remQDoctor(row), ph = d && (d.phone||'').trim();
+    const b = remQBlobs[row.id];
+    return `<div class="panel" style="margin-bottom:10px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <select data-qdr="${row.id}" style="flex:1;min-width:180px;">
+          <option value="">— Select doctor —</option>
+          ${docs.map(x=>`<option value="${x.id}" ${x.id===row.drId?'selected':''}>${escapeHtml(x.name)}${(x.city||'')?' ('+escapeHtml(x.city)+')':''}</option>`).join('')}
+        </select>
+        <span style="font-size:11px;color:${d&&!ph?'var(--danger)':'var(--muted)'};">${d?(ph?escapeHtml(ph):'no phone number'):''}</span>
+        <button class="sm danger" onclick="remQRemove('${row.id}')">✕</button>
+      </div>
+      <textarea data-qmsg="${row.id}" rows="3" placeholder="Type this doctor's message…" style="width:100%;font-family:'Inter',sans-serif;font-size:13px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);">${escapeHtml(row.text||'')}</textarea>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;">
+        <button class="sm primary" onclick="remQSend('${row.id}')">Send picture</button>
+        <button class="sm ghost" onclick="remQPreview('${row.id}')">Preview</button>
+        <button class="sm ghost" onclick="remQSendText('${row.id}')">Send as text</button>
+        <span id="remQStat-${row.id}" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+      <img id="remQImg-${row.id}" style="display:none;max-width:100%;width:340px;margin-top:10px;border-radius:12px;border:1px solid var(--border);" alt="">
+    </div>`;
+  }).join('');
+}
+function remQRow(id){ return remQRows.find(r=>r.id===id); }
+document.getElementById('remQuickRows').addEventListener('input', e=>{
+  const id = e.target.getAttribute('data-qmsg'); if(!id) return;
+  const row = remQRow(id); if(row){ row.text = e.target.value; remQSave(); delete remQBlobs[id]; }
+});
+document.getElementById('remQuickRows').addEventListener('change', e=>{
+  const id = e.target.getAttribute('data-qdr'); if(!id) return;
+  const row = remQRow(id); if(row){ row.drId = e.target.value; remQSave(); delete remQBlobs[id]; renderRemQuick(); }
+});
+document.getElementById('remQuickRows').addEventListener('focusout', e=>{
+  const id = e.target.getAttribute && e.target.getAttribute('data-qmsg'); if(id) remQBuild(id, true);  // pre-build so Send is instant
+});
+document.getElementById('remCompany').addEventListener('change', async e=>{
+  settings.reminderName = e.target.value.trim();
+  await saveSettings();
+  remQBlobs = {};
+  toast('Company name saved');
+});
+document.getElementById('btnRemAddRow').addEventListener('click', ()=>{ remQRows.push({ id:uid(), drId:'', text:'' }); remQSave(); renderRemQuick(); });
+window.remQRemove = function(id){
+  remQRows = remQRows.filter(r=>r.id!==id); delete remQBlobs[id];
+  if(!remQRows.length) remQRows = [{ id:uid(), drId:'', text:'' }];
+  remQSave(); renderRemQuick();
+};
+async function remQBuild(id, quiet){
+  const row = remQRow(id); if(!row) return null;
+  const d = remQDoctor(row);
+  if(!d || !(row.text||'').trim()) return null;
+  const key = d.id+'|'+row.text;
+  if(remQBlobs[id] && remQBlobs[id].key===key) return remQBlobs[id].blob;
+  try{
+    const blob = await remBuildCard({ message: row.text }, d);
+    remQBlobs[id] = { key, blob };
+    return blob;
+  }catch(err){ console.error(err); if(!quiet) toast('Could not create the picture'); return null; }
+}
+window.remQPreview = async function(id){
+  const row = remQRow(id); if(!row) return;
+  if(!remQDoctor(row)){ toast('Select a doctor'); return; }
+  if(!(row.text||'').trim()){ toast('Type the message'); return; }
+  const blob = await remQBuild(id); if(!blob) return;
+  const img = document.getElementById('remQImg-'+id);
+  if(img){ img.src = URL.createObjectURL(blob); img.style.display = 'block'; }
+};
+window.remQSend = async function(id){
+  const row = remQRow(id); if(!row) return;
+  const d = remQDoctor(row);
+  if(!d){ toast('Select a doctor'); return; }
+  if(!(d.phone||'').trim()){ toast(d.name+' has no phone number'); return; }
+  if(!(row.text||'').trim()){ toast('Type the message'); return; }
+  const stat = document.getElementById('remQStat-'+id);
+  if(stat) stat.textContent = 'Preparing picture…';
+  const blob = await remQBuild(id);
+  if(stat) stat.textContent = '';
+  if(!blob) return;
+  const fname = (d.name||'reminder').replace(/[^\w]+/g,'_')+'_reminder.png';
+  const digits = normalizePhoneForWhatsApp(d.phone);
+  if(!digits){ toast('No valid phone number saved for WhatsApp'); return; }
+  // 1) copy the picture, 2) open this doctor's chat directly (number already selected)
+  let copied = false;
+  try{ await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); copied = true; }catch(e){}
+  if(!copied){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname; document.body.appendChild(a); a.click(); a.remove(); }
+  const link = 'https://wa.me/'+digits;
+  const w = window.open(link, '_blank');
+  if(!w) window.location.href = link;
+  toast(copied ? 'Chat opened — long-press the message box, tap Paste, then Send' : 'Picture saved to Downloads — in the chat tap 📎 and attach it');
+  if(stat) stat.textContent = copied ? '✓ Picture copied — paste in WhatsApp' : '✓ Picture downloaded';
+};
+window.remQSendText = function(id){
+  const row = remQRow(id); if(!row) return;
+  const d = remQDoctor(row);
+  if(!d){ toast('Select a doctor'); return; }
+  if(!(row.text||'').trim()){ toast('Type the message'); return; }
+  sendWhatsAppMessage(d.phone, row.text.trim()+'\n\n'+remCompany());
 };
 
 /* ---------- Settings ---------- */
