@@ -1225,6 +1225,8 @@
               <button class="sm ghost" id="btnBlFilterToggle">Filter</button>
               <button class="sm ghost" id="btnBlEditParty">Edit party</button>
               <button class="sm ghost" id="btnShareLedgerWhatsApp">WhatsApp</button>
+              <button class="sm ghost" id="btnBlRemind" title="Send a pending-payment reminder on WhatsApp">🔔 Remind</button>
+              <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);">Remind on <input type="date" id="blRemindDate" title="Alert me on this date if payment is still pending" style="width:auto;padding:5px 8px;font-size:12px;"></span>
               <button class="sm ghost" id="btnShareLedgerView">View</button>
               <button class="sm ghost" id="btnShareLedgerPdf">PDF</button>
             </div>
@@ -1456,7 +1458,7 @@
       <div id="remQuickWrap">
         <div class="panel" style="margin-bottom:10px;">
           <div class="field" style="margin:0;"><label>Company name shown at the end of the picture</label>
-            <input id="remCompany" placeholder="e.g. ONESTA LIFE"></div>
+            <input id="remCompany" placeholder="e.g. MCLAINE"></div>
         </div>
         <div id="remQuickRows"></div>
         <div class="top-actions" style="margin-top:6px;"><button class="ghost" id="btnRemAddRow" type="button">+ Add another doctor</button></div>
@@ -1862,7 +1864,7 @@ function sendWhatsAppMessage(phone, message){
 }
 /* Messages deliberately omit the party's name — they go to that party's own chat, so
    addressing them by name is redundant and risks showing a mismatched/misspelt saved name. */
-const WHATSAPP_SIGNOFF = 'ONESTA LIFE';
+const WHATSAPP_SIGNOFF = 'MCLAINE';
 function buildBillWhatsAppMessage(bill){
   const pending = bill.customerName ? computePartyTotals(bill.customerName).pending : bill.grandTotal;
   const pendingLine = pending>0
@@ -1887,6 +1889,49 @@ function sendPaymentWhatsAppIfPossible(party, payment){
   const phone = (findPartyRecord(party)||{}).phone;
   if(!phone) return;
   sendWhatsAppMessage(phone, buildPaymentWhatsAppMessage(party, payment));
+}
+
+/* ---------- Payment reminder (per party) ----------
+   "Remind" sends a pending-payment message on WhatsApp. "Remind on" saves a date for the party (kept in
+   settings, so it syncs to every device); when that date comes and money is still pending, MCLAINE shows an alert. */
+function partyRemindKey(n){ return String(n||'').trim().toLowerCase(); }
+function getPartyRemindDate(name){
+  const r = (settings.partyReminders||{})[partyRemindKey(name)];
+  return r && r.date ? r.date : '';
+}
+function setPartyRemindDate(name, date){
+  if(!settings.partyReminders) settings.partyReminders = {};
+  const k = partyRemindKey(name);
+  if(date) settings.partyReminders[k] = { date, name: String(name).trim() };
+  else delete settings.partyReminders[k];
+  saveSettings();
+}
+function getPartyPhoneAny(name){
+  const rec = findPartyRecord(name) || {};
+  const d = (typeof findDrListEntry==='function' && findDrListEntry(name)) || null;
+  return (d && d.phone) || rec.phone || '';
+}
+function buildPaymentReminderMessage(party){
+  const pending = computePartyTotals(party).pending;
+  return `Payment Reminder: Total Payment Pending: ${fmt(pending)}.\nKindly arrange the payment at the earliest.\n\nRegards and Thanks,\n${WHATSAPP_SIGNOFF}`;
+}
+window.sendPartyPaymentReminder = function(party){
+  if(!party){ toast('Select a party first'); return; }
+  const pending = computePartyTotals(party).pending;
+  if(!(pending>0)){ toast('No payment pending for this party'); return; }
+  const phone = getPartyPhoneAny(party);
+  if(!phone){ toast('No phone number saved for this party — use Edit party to add one'); return; }
+  sendWhatsAppMessage(phone, buildPaymentReminderMessage(party));
+};
+let dueRemindersShown = false;
+function showDuePaymentReminders(){
+  if(dueRemindersShown) return;
+  const all = settings.partyReminders || {};
+  const today = new Date().toISOString().slice(0,10);
+  const due = Object.keys(all).map(k=>all[k]).filter(r=> r && r.date && r.date<=today && computePartyTotals(r.name).pending>0);
+  if(!due.length) return;
+  dueRemindersShown = true;
+  toast('⏰ Payment reminder due: '+due.map(r=>r.name+' ('+fmt(computePartyTotals(r.name).pending)+')').join(', '));
 }
 
 const LS_PREFIX = 'medibill_';
@@ -4022,13 +4067,91 @@ function renderBillMedList(){
   const list = medicines.filter(m=>m.name.toLowerCase().includes(filter)).sort((a,b)=>a.name.localeCompare(b.name));
   const box = document.getElementById('billMedList');
   if(list.length===0){ box.innerHTML = '<p style="color:var(--muted);font-size:13px;">No medicines found. Add stock first.</p>'; return; }
-  box.innerHTML = list.map(m=>`
+  const partyMap = getPartyRateMap(document.getElementById('custName').value);
+  box.innerHTML = list.map(m=>{
+    const lp = partyMap.get(String(m.name||'').trim().toLowerCase());
+    const lpTxt = lp ? ` · <span style="color:var(--primary-dark);font-weight:600;">Last for party ₹${lp.rate.toFixed(2)}</span>` : '';
+    return `
     <div class="med-pick-row">
-      <div><div class="nm">${m.name}</div><div class="sub">Stock: ${m.stock} ${m.unit} · ₹${Number(m.rate).toFixed(2)} · GST ${m.gst}%</div></div>
+      <div><div class="nm">${m.name}</div><div class="sub">Stock: ${m.stock} ${m.unit} · ₹${Number(m.rate).toFixed(2)} · GST ${m.gst}%${lpTxt}</div></div>
       <button class="sm ${Number(m.stock)<=0?'':'primary'}" ${Number(m.stock)<=0?'disabled':''} onclick="addToCart('${m.id}')">${Number(m.stock)<=0?'Out of stock':'Add'}</button>
-    </div>`).join('');
+    </div>`;}).join('');
 }
 document.getElementById('billSearch').addEventListener('input', renderBillMedList);
+
+/* ---------- Party-wise last price ----------
+   For each party we look back through saved bills and remember the LAST rate each product was billed at.
+   Nothing extra is stored: it is read from Bill History, so it also works for old bills and syncs to every device. */
+function billItemRateIncl(b, it){
+  let rate = (it.rateType==='incl') ? (parseFloat(it.rate)||0) : Math.round((parseFloat(it.rate)||0)*(1+(parseFloat(it.gst)||0)/100)*100)/100;
+  /* very old bills had CD baked into the rate — put back the plain tier rate */
+  if(!b.cdAtEnd && it.cd){
+    const m = medicines.find(x=>x.name===it.name);
+    const mrpVal = (m && m.mrp!=null && m.mrp!=='' && !isNaN(Number(m.mrp)) && Number(m.mrp)>0) ? Number(m.mrp) : null;
+    if(mrpVal!=null){
+      const hit = MRP_DISCOUNT_TIERS.find(t=>{ const r = rateFromMrp(mrpVal, t+CD_PCT); return r!=null && Math.abs(r-rate)<0.02; });
+      if(hit!=null) rate = rateFromMrp(mrpVal, hit);
+    }
+  }
+  return rate;
+}
+function getPartyRateMap(party){
+  const map = new Map();
+  const pk = String(party||'').trim().toLowerCase();
+  if(!pk) return map;
+  const times = new Map();
+  bills.forEach(b=>{
+    if(editingBillId && b.id===editingBillId) return;
+    if(String(b.customerName||'').trim().toLowerCase()!==pk) return;
+    const t = new Date(b.date).getTime()||0;
+    (b.items||[]).forEach(it=>{
+      if((Number(it.qty)||0)<=0) return;
+      const nk = String(it.name||'').trim().toLowerCase();
+      if(!nk) return;
+      if(times.has(nk) && t<times.get(nk)) return;
+      const rate = billItemRateIncl(b, it);
+      if(!(rate>0)) return;
+      times.set(nk, t);
+      map.set(nk, { rate, date:b.date, billNo:b.billNo, cd:!!it.cd });
+    });
+  });
+  return map;
+}
+/* Puts the party's last billed rate on a cart line (unless the user already set the rate by hand).
+   Returns true if the line changed. */
+function applyPartyRate(c, map){
+  const party = document.getElementById('custName').value.trim();
+  const last = (party && map) ? map.get(String(c.name||'').trim().toLowerCase()) : null;
+  let changed = false;
+  /* CD 3%: follows the party's last bill for this product, unless the user toggled it by hand */
+  if(!c.cdTouched){
+    if(last){ if(!!c.cd!==!!last.cd) changed = true; c.cd = !!last.cd; c.partyCd = true; }
+    else if(c.partyCd){ c.cd = false; c.partyCd = false; changed = true; }
+  }
+  /* Rate: last billed rate for this party, unless the user typed it / picked a tier by hand */
+  if(!c.rateTouched){
+    if(last){
+      const tierHit = (c.mrp!=null) ? MRP_DISCOUNT_TIERS.find(t=>{ const r = rateFromMrp(c.mrp, t); return r!=null && Math.abs(r-last.rate)<0.02; }) : undefined;
+      const note = 'Last billed to '+party+': '+new Date(last.date).toLocaleDateString('en-IN')+(last.cd?' · CD '+CD_PCT+'%':'');
+      if(c.rate!==last.rate || c.partyNote!==note) changed = true;
+      c.rate = last.rate; c.mrpPct = tierHit!=null ? tierHit : null;
+      c.partyRated = true; c.partyNote = note;
+    } else if(c.partyRated){
+      c.rate = c.defRate; c.mrpPct = c.defPct;
+      c.partyRated = false; c.partyNote = '';
+      changed = true;
+    }
+  }
+  return changed;
+}
+/* Called whenever the selected party changes: re-prices cart lines that were not set by hand */
+function repriceCartForParty(){
+  const map = getPartyRateMap(document.getElementById('custName').value);
+  let changed = false;
+  cart.forEach(c=>{ if(applyPartyRate(c, map)) changed = true; });
+  if(changed) renderCart();
+  renderBillMedList();
+}
 
 window.addToCart = function(medId){
   const m = medicines.find(x=>x.id===medId); if(!m) return;
@@ -4042,7 +4165,9 @@ window.addToCart = function(medId){
        be switched to MRP − 57% per line; without an MRP we fall back to the stored sale rate. */
     const mrp = (m.mrp!=null && m.mrp!=='') ? Number(m.mrp) : null;
     const startRate = mrp!=null ? rateFromMrp(mrp, 17) : m.rate;
-    cart.push({medId:m.id, name:m.name, mrp, mrpPct: mrp!=null ? 17 : null, cd:false, rate:startRate, gst:m.gst, unit:m.unit, qty:1, free:0, maxStock:m.stock, rateType:'incl', batch:m.batch||'', expiry:m.expiry||''});
+    const newLine = {medId:m.id, name:m.name, mrp, mrpPct: mrp!=null ? 17 : null, cd:false, rate:startRate, defRate:startRate, defPct: mrp!=null ? 17 : null, gst:m.gst, unit:m.unit, qty:1, free:0, maxStock:m.stock, rateType:'incl', batch:m.batch||'', expiry:m.expiry||''};
+    cart.push(newLine);
+    applyPartyRate(newLine, getPartyRateMap(document.getElementById('custName').value));
   }
   renderCart();
 };
@@ -4078,6 +4203,7 @@ window.updateCartRate = function(medId, rate){
   if(isNaN(rate) || rate<0){ toast('Enter a valid rate'); renderCart(); return; }
   item.rate = rate;
   item.mrpPct = null; // typed by hand, so it no longer matches an MRP tier
+  item.rateTouched = true; item.partyRated = false; item.partyNote = '';
   renderCart();
 };
 /* Switches a line between the MRP − 17% and MRP − 57% tiers (CD is separate and does not change the rate) */
@@ -4087,12 +4213,14 @@ window.setCartMrpTier = function(medId, pct){
   if(r==null){ toast('No MRP saved for this medicine'); return; }
   item.mrpPct = pct;
   item.rate = r;
+  item.rateTouched = true; item.partyRated = false; item.partyNote = '';
   renderCart();
 };
 /* Cash discount toggle: marks this line for the extra CD 3%, deducted at the end of the bill. The rate is NOT changed. */
 window.toggleCartCd = function(medId){
   const item = cart.find(c=>c.medId===medId); if(!item) return;
   item.cd = !item.cd;
+  item.cdTouched = true; // set by hand, so changing the party will not override it
   renderCart();
 };
 window.updateCartGst = function(medId, gst){
@@ -4136,7 +4264,7 @@ function renderCart(){
         </div>`;
       return `
       <div class="cart-row" style="flex-wrap:wrap;">
-        <div style="flex:1;min-width:140px;"><div style="font-weight:500;font-size:13.5px;">${c.name}</div><div style="font-size:11.5px;color:var(--muted);">${c.qty} × ${fmt(c.rate)} = ${fmt(lineTotal)} total${mrpNote}${freeNote}</div></div>
+        <div style="flex:1;min-width:140px;"><div style="font-weight:500;font-size:13.5px;">${c.name}</div><div style="font-size:11.5px;color:var(--muted);">${c.qty} × ${fmt(c.rate)} = ${fmt(lineTotal)} total${mrpNote}${freeNote}</div>${c.partyNote ? `<div style="font-size:11px;color:var(--primary-dark);">↺ ${escapeHtml(c.partyNote)}</div>` : ''}</div>
         ${tierBtns}
         <div style="display:flex;flex-direction:column;align-items:center;">
           <span style="font-size:9.5px;color:var(--muted);">Rate ₹</span>
@@ -4200,7 +4328,7 @@ function updateCustDuesBox(){
   document.getElementById('custDuesAmtAfter').textContent = fmt(totals.pending + lastBillGrand);
   box.style.display='block';
 }
-document.getElementById('custName').addEventListener('input', updateCustDuesBox);
+document.getElementById('custName').addEventListener('input', ()=>{ updateCustDuesBox(); repriceCartForParty(); });
 
 document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
   if(cart.length===0){ toast('Add at least one medicine'); return; }
@@ -4663,7 +4791,7 @@ function loadBillIntoForm(b){
       medId: m ? m.id : null,
       name: it.name, unit: it.unit,
       mrp: mrpVal, mrpPct: tierHit!=null ? tierHit : null,
-      rate,
+      rate, rateTouched: true, cdTouched: true,
       gst: it.gst,
       rateType: 'incl', qty: it.qty, free: Number(it.free)||0,
       batch: it.batch || (m ? m.batch : '') || '', expiry: it.expiry || (m ? m.expiry : '') || '',
@@ -4814,6 +4942,7 @@ function closeCustDropdown(){
     if(!opt) return;
     input.value = opt.dataset.name;
     updateCustDuesBox();
+    repriceCartForParty();
     closeCustDropdown();
   });
   document.addEventListener('click', e=>{
@@ -4828,6 +4957,7 @@ function updateCustNameSuggestions(){
 window.fillCustName = function(name){
   document.getElementById('custName').value = name;
   updateCustDuesBox();
+  repriceCartForParty();
 };
 function populateSelectWithParties(selId, placeholder){
   const sel = document.getElementById(selId);
@@ -5028,6 +5158,7 @@ document.getElementById('btnSaveParty').addEventListener('click', async ()=>{
   toast('Party saved');
   if(partyFormReturnView==='newbill'){ document.getElementById('custName').value = name; }
   showView(partyFormReturnView);
+  if(partyFormReturnView==='newbill'){ try{ repriceCartForParty(); }catch(e){} }
 });
 document.getElementById('btnAddChemist').addEventListener('click', ()=>openPartyForm(null, 'chemistlist', 'Medical Store'));
 /* Chemists (parties tagged Medical Store) have their own list below. Doctors live only on the main
@@ -5431,7 +5562,7 @@ function renderLedgerPartyCard(){
   });
   const addr = addrParts.join(', ');
   cell.innerHTML = `<div class="pc-grid">
-      <div class="pc-info"><div class="pc-top"><div class="pc-name">${esc(selectedLedgerParty)}</div>${addr?`<div class="pc-addr">📍 ${esc(addr)}</div>`:''}</div>${phone?`<div class="pc-phone">📞 ${esc(phone)}</div>`:''}</div>
+      <div class="pc-info"><div class="pc-top"><div class="pc-name">${esc(selectedLedgerParty)}</div>${addr?`<div class="pc-addr">📍 ${esc(addr)}</div>`:''}</div>${phone?`<div class="pc-phone">📞 ${esc(phone)}</div>`:''}${(()=>{ const rd = getPartyRemindDate(selectedLedgerParty); if(!rd) return ''; const due = rd <= new Date().toISOString().slice(0,10) && t.pending>0; return `<div class="pc-phone" style="${due?'color:var(--danger);font-weight:700;':''}">⏰ Remind on ${new Date(rd).toLocaleDateString('en-IN')}${due?' — due':''}</div>`; })()}</div>
       <div class="pc-stat"><div class="pc-lbl">Total</div><div class="pc-val">${fmt(t.totalBilled)}</div></div>
       <div class="pc-stat"><div class="pc-lbl">Received</div><div class="pc-val">${fmt(t.totalReceived)}</div></div>
       <div class="pc-stat"><div class="pc-lbl">Pending</div><div class="pc-val" style="color:var(--danger);">${fmt(t.pending)}</div></div>
@@ -5460,6 +5591,7 @@ function renderLedgerDetail(){
   overviewEl.classList.add('party-only');
   emptyEl.style.display='none';
   contentEl.style.display='block';
+  { const rd = document.getElementById('blRemindDate'); if(rd) rd.value = getPartyRemindDate(selectedLedgerParty); }
 
   const fromVal = document.getElementById('payFrom').value;
   const toVal = document.getElementById('payTo').value;
@@ -5710,6 +5842,13 @@ async function shareLedgerStatementPdf(){
   }
 }
 document.getElementById('btnShareLedgerWhatsApp').addEventListener('click', shareLedgerStatementWhatsApp);
+document.getElementById('btnBlRemind').addEventListener('click', ()=> sendPartyPaymentReminder(selectedLedgerParty));
+document.getElementById('blRemindDate').addEventListener('change', e=>{
+  if(!selectedLedgerParty) return;
+  setPartyRemindDate(selectedLedgerParty, e.target.value);
+  renderLedgerPartyCard();
+  toast(e.target.value ? 'Reminder date saved' : 'Reminder date cleared');
+});
 document.getElementById('btnShareLedgerView').addEventListener('click', shareLedgerStatementView);
 document.getElementById('btnShareLedgerPdf').addEventListener('click', shareLedgerStatementPdf);
 document.getElementById('btnAddPayment').addEventListener('click', async ()=>{
@@ -7829,6 +7968,7 @@ function mergeDoctorPartiesIntoDrList(){
 function runStartupMigrations(){
   mergeDoctorPartiesIntoDrList();
   migrateGstTo5PercentOnce();
+  try{ showDuePaymentReminders(); }catch(e){}
 }
 async function migrateGstTo5PercentOnce(){
   if(settings.gstMigratedTo5) return;
