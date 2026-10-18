@@ -5841,6 +5841,290 @@ async function shareLedgerStatementPdf(){
     toast('Could not create the PDF');
   }
 }
+
+/* ---------- Doctor monthly sale statement ----------
+   For one doctor and one month: every bill of the chemists (and only the products) linked to that doctor
+   under Dr Investment. Each line shows  sale − purchase cost  (e.g. bill ₹1000, cost ₹200 → ₹800),
+   returns from those chemists are taken off, and the PDF is shared like the other PDFs. */
+function drStmtLinks(doctorName){
+  const key = invKey(doctorName);
+  const map = {};
+  investments.forEach(inv=>{
+    if(invKey(inv.doctor)!==key) return;
+    readInvLinks(inv).forEach(l=>{
+      const ck = invKey(l.chemist); if(!ck) return;
+      const e = map[ck] || (map[ck] = { chemist:String(l.chemist).trim(), all:false, want:new Set() });
+      const prods = (l.products||[]).map(invKey).filter(Boolean);
+      if(!prods.length) e.all = true; else prods.forEach(x=>e.want.add(x));
+    });
+  });
+  return map;
+}
+function buildDrStatementData(doctorName, ym){
+  const parts = String(ym||'').split('-').map(Number);
+  const Y = parts[0], M = parts[1];
+  const inMonth = d => { const x = new Date(d); return !isNaN(x) && x.getFullYear()===Y && x.getMonth()===M-1; };
+  const links = drStmtLinks(doctorName);
+  const take = (l, it) => l.all || l.want.has(invKey(it.name));
+  const rows = [], missing = new Set();
+  bills.forEach(b=>{
+    const l = links[invKey(b.customerName)]; if(!l || !inMonth(b.date)) return;
+    (b.items||[]).forEach(it=>{
+      if(!take(l, it)) return;
+      let net = itemProfit(it, findMedByName(it.name)).inclGst;
+      if(net==null){ net = itemSaleAmounts(it).saleIncl; missing.add(it.name); }
+      rows.push({ chemist:l.chemist, date:b.date, ref:b.billNo||'', name:it.name, qty:it.qty, net, ret:false });
+    });
+  });
+  returns.forEach(r=>{
+    const l = links[invKey(r.party)]; if(!l || !inMonth(r.date)) return;
+    (r.items||[]).forEach(it=>{
+      if(!take(l, it)) return;
+      const f = retItemFigures(it);
+      let net = f.inclGst;
+      if(net==null){ net = f.saleIncl; missing.add(it.name); }
+      rows.push({ chemist:l.chemist, date:r.date, ref:'Return', name:it.name, qty:it.qty, net:-net, ret:true });
+    });
+  });
+  rows.sort((a,b)=> (new Date(a.date)-new Date(b.date)) || String(a.ref).localeCompare(String(b.ref), undefined, {numeric:true}) || a.chemist.localeCompare(b.chemist));
+  return { rows, missing:[...missing] };
+}
+function buildDrStatementHtml(doctorName, ym, data){
+  const [Y,M] = ym.split('-').map(Number);
+  const monthLabel = new Date(Y, M-1, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  const th = 'text-align:left;padding:6px 6px;border-bottom:2px solid #0F6B5C;font-size:11.5px;';
+  const td = 'padding:5px 6px;border-bottom:1px solid #e5e7eb;font-size:11.5px;';
+  const grand = data.rows.reduce((t,r)=>t+r.net,0);
+  const body = data.rows.map(r=>`<tr${r.ret?' style="color:#b42318;"':''}>
+      <td style="${td}">${new Date(r.date).toLocaleDateString('en-IN')}</td>
+      <td style="${td}">${r.ret?'Return':escapeHtml(String(r.ref))}</td>
+      <td style="${td}">${escapeHtml(r.chemist)}</td>
+      <td style="${td}">${escapeHtml(r.name||'')}</td>
+      <td style="${td}text-align:right;">${r.qty}</td>
+      <td style="${td}text-align:right;">${fmt(r.net)}</td></tr>`).join('');
+  const chemists = [...new Set(data.rows.map(r=>r.chemist))].sort((a,b)=>a.localeCompare(b));
+  const summary = chemists.length>1 ? `
+    <div style="margin-top:16px;font-size:12px;font-weight:700;">Chemist-wise total</div>
+    <table style="width:100%;border-collapse:collapse;margin-top:4px;">
+      ${chemists.map(c=>`<tr><td style="${td}">${escapeHtml(c)}</td><td style="${td}text-align:right;">${fmt(data.rows.filter(r=>r.chemist===c).reduce((t,r)=>t+r.net,0))}</td></tr>`).join('')}
+    </table>` : '';
+  return `
+    <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:14px;">
+      <div>
+        <div style="font-size:20px;font-weight:700;">${escapeHtml(settings.shopName || 'MCLAINE')}</div>
+        <div style="font-size:12px;color:#667;">${escapeHtml(settings.address||'')}</div>
+        <div style="font-size:12px;color:#667;">${settings.phone?('Ph: '+escapeHtml(settings.phone)):''}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:15px;font-weight:600;">Monthly sale statement</div>
+        <div style="font-size:13px;">${monthLabel}</div>
+      </div>
+    </div>
+    <div style="font-size:13px;margin-bottom:10px;"><b>Doctor:</b> ${escapeHtml(doctorName)}</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr><th style="${th}">Date</th><th style="${th}">Bill no.</th><th style="${th}">Chemist</th><th style="${th}">Product</th><th style="${th}text-align:right;">Qty</th><th style="${th}text-align:right;">Net sale ₹</th></tr></thead>
+      <tbody>${body || '<tr><td colspan="6" style="padding:14px;text-align:center;color:#667;font-size:12.5px;">No sale in this month</td></tr>'}</tbody>
+    </table>
+    ${summary}
+    <div style="margin-top:14px;max-width:300px;margin-left:auto;display:flex;justify-content:space-between;font-size:14px;font-weight:700;border-top:2px solid #0F6B5C;padding-top:8px;">
+      <span>Total net sale — ${monthLabel}</span><span>${fmt(grand)}</span>
+    </div>`;
+}
+async function generateDrStatementPdfBlob(html){
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff;width:720px;padding:36px 40px;color:#111;font-family:Inter,sans-serif;';
+  container.innerHTML = html;
+  document.body.appendChild(container);
+  try{
+    const canvas = await html2canvas(container, {scale:2, backgroundColor:'#ffffff'});
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','pt','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgHeight = canvas.height * pageWidth / canvas.width;
+    let heightLeft = imgHeight, position = 0;
+    pdf.addImage(imgData,'PNG',0,position,pageWidth,imgHeight);
+    heightLeft -= pageHeight;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData,'PNG',0,position,pageWidth,imgHeight);
+      heightLeft -= pageHeight;
+    }
+    return pdf.output('blob');
+  } finally { document.body.removeChild(container); }
+}
+
+/* ---------- Doctor month-wise rows (Dr Investment → open a doctor) ----------
+   Each month: Net sale, doctor's share % (default 30), and Paid / Pending. Tap a row for
+   View · Pay · WhatsApp · Statement. "Paid" is kept in settings so it syncs to every device. */
+var drOpenMonth = null; // "doctorkey|YYYY-MM" of the row that is open
+function drSharePct(name){ const v = (settings.drSharePct||{})[invKey(name)]; return (v==null || isNaN(Number(v))) ? 30 : Number(v); }
+function drPaidInfo(name, ym){ return (settings.drPaid||{})[invKey(name)+'|'+ym] || null; }
+function drMonthLabel(ym, long){ const [Y,M] = ym.split('-').map(Number); return new Date(Y, M-1, 1).toLocaleDateString('en-IN', long ? {month:'long',year:'numeric'} : {month:'short',year:'numeric'}).toUpperCase(); }
+function drMonthsFor(name){
+  const links = drStmtLinks(name);
+  const set = new Set();
+  const note = (d, it, l)=>{
+    const x = new Date(d); if(isNaN(x)) return;
+    if(l.all || l.want.has(invKey(it.name))) set.add(x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'));
+  };
+  bills.forEach(b=>{ const l = links[invKey(b.customerName)]; if(l) (b.items||[]).forEach(it=>note(b.date, it, l)); });
+  returns.forEach(r=>{ const l = links[invKey(r.party)]; if(l) (r.items||[]).forEach(it=>note(r.date, it, l)); });
+  return [...set].sort().reverse();
+}
+function drMonthNumbers(name, ym){
+  const data = buildDrStatementData(name, ym);
+  const net = data.rows.reduce((t,r)=>t+r.net,0);
+  const share = Math.round(net * drSharePct(name)) / 100;
+  return { data, net, share };
+}
+function drMonthlyPanelHtml(name){
+  const months = drMonthsFor(name);
+  const pct = drSharePct(name);
+  const key = invKey(name);
+  const rows = months.map(ym=>{
+    const n = drMonthNumbers(name, ym);
+    const paid = drPaidInfo(name, ym);
+    const open = drOpenMonth === key+'|'+ym;
+    const status = paid
+      ? `<span style="color:var(--primary-dark);font-weight:700;">✔ Paid ${fmt(paid.amount)}</span>`
+      : `<span style="color:var(--danger);font-weight:600;">Pending</span>`;
+    const extra = paid && Math.abs(n.share - paid.amount) > 0.5
+      ? `<div style="font-size:10.5px;color:var(--danger);">Now ${fmt(n.share)} (changed after payment)</div>` : '';
+    const attrs = `data-name="${escapeHtml(name)}" data-ym="${ym}"`;
+    return `<tr style="cursor:pointer;${open?'background:var(--primary-light);':''}" onclick="drMonthToggle(this.dataset.name,this.dataset.ym)" ${attrs}>
+        <td style="font-weight:700;">${drMonthLabel(ym)}</td>
+        <td class="num">${fmt(n.net)}</td>
+        <td class="num">${fmt(n.share)}</td>
+        <td>${status}${extra}</td></tr>
+      ${open ? `<tr><td colspan="4" style="background:#fafcfb;">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">
+          <button class="sm ghost" onclick="drMonthView(this.dataset.name,this.dataset.ym)" ${attrs}>View</button>
+          ${paid ? `<button class="sm ghost" disabled style="opacity:.7;">Paid ✔ ${new Date(paid.date).toLocaleDateString('en-IN')}</button>`
+                 : `<button class="sm primary" onclick="drMonthPay(this.dataset.name,this.dataset.ym)" ${attrs}>Pay</button>`}
+          <button class="sm ghost" onclick="drMonthWhatsApp(this.dataset.name,this.dataset.ym)" ${attrs}>WhatsApp</button>
+          <button class="sm ghost" onclick="drMonthStatement(this.dataset.name,this.dataset.ym)" ${attrs}>Statement</button>
+        </div></td></tr>` : ''}`;
+  }).join('');
+  return `<div class="panel" style="padding:0;overflow-x:auto;margin:10px 0 14px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border);">
+      <b style="margin-right:auto;">Month-wise net sale &amp; doctor share</b>
+      <label style="font-size:12px;display:inline-flex;align-items:center;gap:6px;">Share %
+        <input type="number" min="0" max="100" step="0.5" value="${pct}" style="width:70px;padding:4px 6px;" data-name="${escapeHtml(name)}" onchange="drSetSharePct(this.dataset.name,this.value)">
+      </label>
+    </div>
+    <table>
+      <thead><tr><th>Month</th><th class="num">Net sale ₹</th><th class="num">${pct}% share ₹</th><th>Status</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:14px;">No sale yet from the linked chemists &amp; products</td></tr>'}</tbody>
+    </table>
+  </div>`;
+}
+window.drSetSharePct = function(name, val){
+  const v = parseFloat(val);
+  if(isNaN(v) || v<0 || v>100){ toast('Enter a share between 0 and 100'); renderInvestments(); return; }
+  if(!settings.drSharePct) settings.drSharePct = {};
+  settings.drSharePct[invKey(name)] = v;
+  saveSettings(); renderInvestments();
+};
+window.drMonthToggle = function(name, ym){
+  const k = invKey(name)+'|'+ym;
+  drOpenMonth = (drOpenMonth===k) ? null : k;
+  renderInvestments();
+};
+window.drMonthView = function(name, ym){ openDrStatement(name, ym); };
+window.drMonthPay = function(name, ym){
+  if(drPaidInfo(name, ym)) return;
+  const n = drMonthNumbers(name, ym);
+  if(!(n.share>0)){ toast('Nothing to pay for this month'); return; }
+  if(!confirm('Mark '+drMonthLabel(ym,true)+' as PAID — '+fmt(n.share)+' to '+name+'?\n\nOnce paid it stays fixed.')) return;
+  if(!settings.drPaid) settings.drPaid = {};
+  settings.drPaid[invKey(name)+'|'+ym] = { amount:n.share, net:n.net, pct:drSharePct(name), date:new Date().toISOString() };
+  saveSettings(); renderInvestments();
+  toast('Marked as paid');
+};
+window.drMonthWhatsApp = function(name, ym){
+  const phone = getPartyPhoneAny(name);
+  if(!phone){ toast('No phone number saved for this doctor — add it in Dr List'); return; }
+  const n = drMonthNumbers(name, ym);
+  const paid = drPaidInfo(name, ym);
+  const amt = paid ? paid.amount : n.share;
+  const msg = `Sale of ${drMonthLabel(ym,true)}: ${fmt(n.net)}.\n`
+    + `Total Amount (${drSharePct(name)}%): ${fmt(amt)}${paid?' — PAID':''}.\n\nRegards and Thanks,\n${WHATSAPP_SIGNOFF}`;
+  sendWhatsAppMessage(phone, msg);
+};
+async function shareDrStatementPdf(name, ym){
+  toast('Preparing PDF…');
+  try{
+    const html = buildDrStatementHtml(name, ym, buildDrStatementData(name, ym));
+    const blob = await generateDrStatementPdfBlob(html);
+    const fileName = 'Sale statement - '+name+' - '+ym+'.pdf';
+    const file = new File([blob], fileName, {type:'application/pdf'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:'Sale statement — '+name, text:(settings.shopName||'MCLAINE')+' — '+name+' — '+drMonthLabel(ym,true) });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      toast('PDF downloaded — attach it in WhatsApp');
+    }
+  }catch(err){
+    if(err && err.name==='AbortError') return;
+    console.error(err); toast('Could not create the PDF');
+  }
+}
+window.drMonthStatement = function(name, ym){ shareDrStatementPdf(name, ym); };
+
+window.openDrStatement = function(name, startYm){
+  if(!name) return;
+  if(!Object.keys(drStmtLinks(name)).length){ toast('Link chemists and products to this doctor first (Edit the investment)'); return; }
+  const old = document.getElementById('drStmtOverlay'); if(old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'drStmtOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99990;overflow:auto;padding:12px;';
+  const now = new Date();
+  const defYm = startYm || (now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'));
+  ov.innerHTML = `<div style="background:#fff;max-width:820px;margin:0 auto;border-radius:12px;padding:16px;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
+      <b style="margin-right:auto;">Monthly statement — ${escapeHtml(name)}</b>
+      <input type="month" id="drStmtMonth" value="${defYm}" style="width:auto;">
+      <button class="primary sm" id="drStmtPdf">PDF</button>
+      <button class="sm ghost" id="drStmtPrint">Print</button>
+      <button class="sm ghost" id="drStmtClose">Close</button>
+    </div>
+    <div id="drStmtWarn"></div>
+    <div id="drStmtBody" style="border:1px solid var(--border);padding:16px;overflow-x:auto;background:#fff;"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const monthEl = ov.querySelector('#drStmtMonth');
+  let current = null;
+  const refresh = ()=>{
+    const ym = monthEl.value || defYm;
+    const data = buildDrStatementData(name, ym);
+    const html = buildDrStatementHtml(name, ym, data);
+    current = { ym, html };
+    ov.querySelector('#drStmtBody').innerHTML = html;
+    ov.querySelector('#drStmtWarn').innerHTML = data.missing.length
+      ? `<div style="background:#fff7e6;border:1px solid #f5c26b;border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:10px;">⚠ Purchase cost is not saved for: <b>${data.missing.map(escapeHtml).join(', ')}</b>. Their full sale amount is shown (no cost taken off). Save the purchase rate on these products and the figure will be corrected.</div>`
+      : '';
+  };
+  monthEl.addEventListener('change', refresh);
+  ov.querySelector('#drStmtClose').onclick = ()=> ov.remove();
+  ov.querySelector('#drStmtPrint').onclick = ()=>{
+    document.getElementById('printArea').innerHTML = current.html;
+    ov.remove();
+    document.getElementById('printOverlay').classList.add('show');
+    document.getElementById('printBar').innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;gap:8px;box-shadow:0 6px 20px rgba(0,0,0,0.15);">
+        <button class="primary sm" onclick="window.print()">Print</button>
+        <button class="sm ghost" onclick="closePrintView()">Close</button>
+      </div>`;
+  };
+  ov.querySelector('#drStmtPdf').onclick = ()=> shareDrStatementPdf(name, current.ym);
+  refresh();
+};
+
 document.getElementById('btnShareLedgerWhatsApp').addEventListener('click', shareLedgerStatementWhatsApp);
 document.getElementById('btnBlRemind').addEventListener('click', ()=> sendPartyPaymentReminder(selectedLedgerParty));
 document.getElementById('blRemindDate').addEventListener('change', e=>{
@@ -6652,8 +6936,12 @@ function renderInvestments(){
     content.innerHTML = `
       <div class="dr-card-head" style="justify-content:space-between;align-items:center;">
         <div style="display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;"><h3>${escapeHtml(sel.name)}</h3>${meta.join('')}</div>
-        <button class="sm primary" data-invact="new-for-doc" data-name="${escapeHtml(sel.name)}">+ New investment</button>
+        <span style="display:inline-flex;gap:6px;flex-wrap:wrap;">
+          <button class="sm ghost" onclick="openDrStatement(this.dataset.name)" data-name="${escapeHtml(sel.name)}">📄 Monthly statement</button>
+          <button class="sm primary" data-invact="new-for-doc" data-name="${escapeHtml(sel.name)}">+ New investment</button>
+        </span>
       </div>
+      ${drMonthlyPanelHtml(sel.name)}
       ${sel.cycles.map(cycleHtmlFn).join('')}`;
   }
   invRefocus();
