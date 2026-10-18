@@ -714,6 +714,7 @@
       <div class="sec-heading">Dr Investment</div>
       <div class="nav-subtoggle-row">
         <div class="nav-subtoggle" data-view="investment"><span class="nav-dot"></span>Dr Investment</div>
+        <div class="nav-subtoggle" data-view="drmargin"><span class="nav-dot"></span>Doctor Margin</div>
         <div class="nav-subtoggle" data-view="drreport"><span class="nav-dot"></span>Report</div>
         <div class="nav-subtoggle" data-view="schedule"><span class="nav-dot"></span>Schedule</div>
         <div class="nav-subtoggle" data-view="businessplan"><span class="nav-dot"></span>Business Plan</div>
@@ -1637,6 +1638,19 @@
       </div>
     </div>
 
+    <!-- DOCTOR MARGIN -->
+    <div class="view" id="view-drmargin">
+      <div class="page-head"><div><h2>Doctor Margin</h2><p>Select a doctor to see month-wise net sale and his share.</p></div></div>
+      <div class="panel">
+        <div class="field chemist-picker" id="dmPicker" style="max-width:360px;">
+          <label>Select Dr</label>
+          <input id="dmSearch" autocomplete="off" placeholder="Search doctor…">
+          <div class="chemist-suggestions" id="dmList" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="dmBody"></div>
+    </div>
+
     <!-- BUSINESS PLAN -->
     <div class="view" id="view-businessplan">
       <div class="page-head"><div><h2>Business Plan</h2><p><b>Temp</b>: type any Dr name and profit yourself. <b>Actual</b>: pick the Dr from Dr List — profit comes from the chemists linked under Dr Investment.</p></div></div>
@@ -2459,7 +2473,7 @@ document.querySelectorAll('.nav-item').forEach(el=>{
 /* Top-level accordion: Billing / Ledger / Dr Investment / Notes */
 const NOTES_GROUP_VIEWS = ['notes','completednotes'];
 const LEDGER_GROUP_VIEWS = ['payments'];
-const INVESTMENT_GROUP_VIEWS = ['investment','drreport','schedule','businessplan'];
+const INVESTMENT_GROUP_VIEWS = ['investment','drmargin','drreport','schedule','businessplan'];
 const LIST_GROUP_VIEWS = ['drlist','chemistlist','reminder'];
 const ACCOUNT_GROUP_VIEWS = ['account'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
@@ -2551,6 +2565,7 @@ const MOBILE_MENU = [
   { label:'Bill Ledger', dynamic:'ledgerParties' },
   { label:'Investment', children:[
       { label:'Dr Investment', view:'investment' },
+      { label:'Doctor Margin', view:'drmargin' },
       { label:'Report', view:'drreport' },
       { label:'Schedule', view:'schedule' },
       { label:'Business Plan', view:'businessplan' },
@@ -2914,6 +2929,7 @@ function showView(name){
   if(name==='reminder'){ remEnter(); }
   if(name==='partylist'){ renderSidebarPartyListForList(); renderPartyListDetail(); }
   if(name==='investment'){ populateInvestmentSelects(); renderInvestments(); }
+  if(name==='drmargin'){ renderDrMargin(); }
   if(name==='drreport'){ populateReportDoctorSelect(); renderDrReport(); }
   if(name==='schedule'){ renderSchedule(); }
   if(name==='businessplan'){ renderBusinessPlan(); }
@@ -6001,11 +6017,11 @@ function drMonthlyPanelHtml(name){
         <td>${status}${extra}</td></tr>
       ${open ? `<tr><td colspan="4" style="background:#fafcfb;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">
-          <button class="sm ghost" onclick="drMonthView(this.dataset.name,this.dataset.ym)" ${attrs}>View</button>
-          ${paid ? `<button class="sm ghost" disabled style="opacity:.7;">Paid ✔ ${new Date(paid.date).toLocaleDateString('en-IN')}</button>`
-                 : `<button class="sm primary" onclick="drMonthPay(this.dataset.name,this.dataset.ym)" ${attrs}>Pay</button>`}
-          <button class="sm ghost" onclick="drMonthWhatsApp(this.dataset.name,this.dataset.ym)" ${attrs}>WhatsApp</button>
-          <button class="sm ghost" onclick="drMonthStatement(this.dataset.name,this.dataset.ym)" ${attrs}>Statement</button>
+          <button class="sm ghost" style="border:1px solid var(--primary);background:#fff;color:var(--primary-dark);padding:6px 14px;border-radius:8px;font-weight:600;cursor:pointer;" onclick="drMonthView(this.dataset.name,this.dataset.ym)" ${attrs}>View</button>
+          ${paid ? `<button class="sm ghost" disabled style="opacity:.8;border:1px solid var(--primary);background:#fff;color:var(--primary-dark);padding:6px 14px;border-radius:8px;font-weight:600;">Paid ✔ ${new Date(paid.date).toLocaleDateString('en-IN')}</button>`
+                 : `<button class="sm primary" style="padding:6px 14px;border-radius:8px;font-weight:600;" onclick="drMonthPay(this.dataset.name,this.dataset.ym)" ${attrs}>Pay</button>`}
+          <button class="sm ghost" style="border:1px solid var(--primary);background:#fff;color:var(--primary-dark);padding:6px 14px;border-radius:8px;font-weight:600;cursor:pointer;" onclick="drMonthWhatsApp(this.dataset.name,this.dataset.ym)" ${attrs}>WhatsApp</button>
+          <button class="sm ghost" style="border:1px solid var(--primary);background:#fff;color:var(--primary-dark);padding:6px 14px;border-radius:8px;font-weight:600;cursor:pointer;" onclick="drMonthStatement(this.dataset.name,this.dataset.ym)" ${attrs}>Statement</button>
         </div></td></tr>` : ''}`;
   }).join('');
   return `<div class="panel" style="padding:0;overflow-x:auto;margin:10px 0 14px;">
@@ -6023,15 +6039,15 @@ function drMonthlyPanelHtml(name){
 }
 window.drSetSharePct = function(name, val){
   const v = parseFloat(val);
-  if(isNaN(v) || v<0 || v>100){ toast('Enter a share between 0 and 100'); renderInvestments(); return; }
+  if(isNaN(v) || v<0 || v>100){ toast('Enter a share between 0 and 100'); renderDrMargin(); return; }
   if(!settings.drSharePct) settings.drSharePct = {};
   settings.drSharePct[invKey(name)] = v;
-  saveSettings(); renderInvestments();
+  saveSettings(); renderDrMargin();
 };
 window.drMonthToggle = function(name, ym){
   const k = invKey(name)+'|'+ym;
   drOpenMonth = (drOpenMonth===k) ? null : k;
-  renderInvestments();
+  renderDrMargin();
 };
 window.drMonthView = function(name, ym){ openDrStatement(name, ym); };
 window.drMonthPay = function(name, ym){
@@ -6041,7 +6057,7 @@ window.drMonthPay = function(name, ym){
   if(!confirm('Mark '+drMonthLabel(ym,true)+' as PAID — '+fmt(n.share)+' to '+name+'?\n\nOnce paid it stays fixed.')) return;
   if(!settings.drPaid) settings.drPaid = {};
   settings.drPaid[invKey(name)+'|'+ym] = { amount:n.share, net:n.net, pct:drSharePct(name), date:new Date().toISOString() };
-  saveSettings(); renderInvestments();
+  saveSettings(); renderDrMargin();
   toast('Marked as paid');
 };
 window.drMonthWhatsApp = function(name, ym){
@@ -6054,6 +6070,46 @@ window.drMonthWhatsApp = function(name, ym){
     + `Total Amount (${drSharePct(name)}%): ${fmt(amt)}${paid?' — PAID':''}.\n\nRegards and Thanks,\n${WHATSAPP_SIGNOFF}`;
   sendWhatsAppMessage(phone, msg);
 };
+
+/* ---------- Doctor Margin page: search box → list of investment doctors → month list ---------- */
+var dmSelected = null;
+function dmDoctorNames(){
+  const seen = {};
+  investments.forEach(i=>{ const k = invKey(i.doctor); if(k && !seen[k]) seen[k] = (i.doctor||'').trim(); });
+  return Object.keys(seen).map(k=>seen[k]).sort((a,b)=>a.localeCompare(b));
+}
+function dmRenderList(){
+  const box = document.getElementById('dmList'), inp = document.getElementById('dmSearch');
+  let q = inp.value.trim().toLowerCase();
+  if(dmSelected && q===dmSelected.toLowerCase()) q = '';
+  const names = dmDoctorNames().filter(n=>!q || n.toLowerCase().includes(q));
+  box.innerHTML = names.length
+    ? names.map(n=>`<div class="chemist-suggestion-item" data-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`).join('')
+    : '<div class="chemist-suggestion-empty">No doctor with an investment found</div>';
+  box.style.display = 'block';
+}
+function renderDrMargin(){
+  const inp = document.getElementById('dmSearch'); if(!inp) return;
+  if(document.activeElement!==inp) inp.value = dmSelected || '';
+  document.getElementById('dmBody').innerHTML = dmSelected
+    ? drMonthlyPanelHtml(dmSelected)
+    : '<div class="empty"><h3>Select a doctor</h3><p>Tap the search box and choose a doctor to see the month-wise list.</p></div>';
+}
+(function(){
+  const inp = document.getElementById('dmSearch'), box = document.getElementById('dmList');
+  if(!inp) return;
+  inp.addEventListener('focus', dmRenderList);
+  inp.addEventListener('click', dmRenderList);
+  inp.addEventListener('input', dmRenderList);
+  box.addEventListener('click', e=>{
+    const it = e.target.closest('.chemist-suggestion-item'); if(!it) return;
+    dmSelected = it.dataset.name; drOpenMonth = null;
+    inp.value = dmSelected; box.style.display = 'none'; inp.blur();
+    renderDrMargin();
+  });
+  document.addEventListener('click', e=>{ if(!e.target.closest('#dmPicker')) box.style.display = 'none'; });
+})();
+
 async function shareDrStatementPdf(name, ym){
   toast('Preparing PDF…');
   try{
