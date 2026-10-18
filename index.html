@@ -1597,7 +1597,7 @@
           <div class="field"><label>Sale date <span style="font-weight:400;">(sale is counted from this date)</span></label><input type="date" id="invSaleDate"></div>
         </div>
         <div class="row c2">
-          <div class="field"><label>Amount (₹)</label><input id="invAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label>Amount (₹) <span style="font-weight:400;">(0 = monthly investment)</span></label><input id="invAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
           <div class="field"><label>Investment type</label><input id="invType" placeholder="e.g. Cash, Gift, Sponsorship"></div>
         </div>
         <div class="field"><label>Note <span style="font-weight:400;">(optional)</span></label><input id="invNote" placeholder="e.g. Purpose or terms of investment"></div>
@@ -6893,7 +6893,7 @@ function invCycleViewHtml(c){
   const billRows = invCycleBillRows(inv, c.from, c.to);
   return `<div class="inv-cycle ${c.active?'':'done'}">
     <div class="inv-cycle-head">
-      <div><span class="inv-cycle-title">Investment ${c.no}</span><span class="inv-cycle-sub">${escapeHtml(inv.invType)||'—'}</span></div>
+      <div><span class="inv-cycle-title">Investment ${c.no}</span><span class="inv-cycle-sub">${(Number(inv.amount)||0)===0?'Monthly · ':''}${escapeHtml(inv.invType)||'—'}</span></div>
       <div>${status}</div>
     </div>
     <div class="inv-line-stats">
@@ -6931,7 +6931,7 @@ function invCycleEditHtml(c){
     : `<span class="pill ok">Completed</span>`;
   return `<div class="inv-cycle ${c.active?'':'done'}">
     <div class="inv-cycle-head">
-      <div><span class="inv-cycle-title">Investment ${c.no}</span><span class="inv-cycle-sub">${escapeHtml(inv.invType)||'—'}</span></div>
+      <div><span class="inv-cycle-title">Investment ${c.no}</span><span class="inv-cycle-sub">${(Number(inv.amount)||0)===0?'Monthly · ':''}${escapeHtml(inv.invType)||'—'}</span></div>
       <div>${status}</div>
     </div>
     <div class="inv-dates">
@@ -7047,7 +7047,7 @@ document.getElementById('btnAddInvestment').addEventListener('click', async ()=>
   if(!date){ toast('Pick an investment date'); return; }
   if(!saleFrom){ toast('Pick the sale date'); return; }
   if(!doctor){ toast('Select the doctor (add one in Dr List first if the list is empty)'); return; }
-  if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
+  if(isNaN(amount) || amount<0){ toast('Enter the amount — type 0 for a monthly investment'); return; }
   const prev = invCyclesFor(invKey(doctor));
   if(prev.length && invStart({date:saleFrom}) <= prev[prev.length-1].from){
     toast('Sale date must be later than the previous investment\'s sale date'); return;
