@@ -6936,12 +6936,8 @@ function renderInvestments(){
     content.innerHTML = `
       <div class="dr-card-head" style="justify-content:space-between;align-items:center;">
         <div style="display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;"><h3>${escapeHtml(sel.name)}</h3>${meta.join('')}</div>
-        <span style="display:inline-flex;gap:6px;flex-wrap:wrap;">
-          <button class="sm ghost" onclick="openDrStatement(this.dataset.name)" data-name="${escapeHtml(sel.name)}">📄 Monthly statement</button>
-          <button class="sm primary" data-invact="new-for-doc" data-name="${escapeHtml(sel.name)}">+ New investment</button>
-        </span>
+        <button class="sm primary" data-invact="new-for-doc" data-name="${escapeHtml(sel.name)}">+ New investment</button>
       </div>
-      ${drMonthlyPanelHtml(sel.name)}
       ${sel.cycles.map(cycleHtmlFn).join('')}`;
   }
   invRefocus();
