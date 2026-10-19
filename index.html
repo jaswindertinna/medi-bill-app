@@ -1895,12 +1895,12 @@ function buildPaymentWhatsAppMessage(party, payment){
 }
 /* Tries the bill's own phone field first, falling back to the party's saved phone. */
 function sendBillWhatsAppIfPossible(bill){
-  const phone = bill.customerPhone || (bill.customerName ? (findPartyRecord(bill.customerName)||{}).phone : '');
+  const phone = bill.customerPhone || (bill.customerName ? getPartyPhoneAny(bill.customerName) : '');
   if(!phone) return;
   sendWhatsAppMessage(phone, buildBillWhatsAppMessage(bill));
 }
 function sendPaymentWhatsAppIfPossible(party, payment){
-  const phone = (findPartyRecord(party)||{}).phone;
+  const phone = getPartyPhoneAny(party);
   if(!phone) return;
   sendWhatsAppMessage(phone, buildPaymentWhatsAppMessage(party, payment));
 }
@@ -4778,7 +4778,7 @@ window.openPrintViewById = window.viewBillById; // kept for backward compatibili
 /* Manual resend: lets the shop owner (re)send a bill's WhatsApp message on demand */
 window.sendBillWhatsAppById = function(id){
   const b = bills.find(x=>x.id===id); if(!b) return;
-  const phone = b.customerPhone || (b.customerName ? (findPartyRecord(b.customerName)||{}).phone : '');
+  const phone = b.customerPhone || (b.customerName ? getPartyPhoneAny(b.customerName) : '');
   if(!phone){ toast('No phone number saved for this customer'); return; }
   sendBillWhatsAppIfPossible(b);
 };
@@ -5662,7 +5662,7 @@ window.blToggleCP = function(btn){
 /* Manual resend for a payment row in the ledger */
 window.sendPaymentWhatsAppById = function(id){
   const p = payments.find(x=>x.id===id); if(!p) return;
-  const phone = (findPartyRecord(p.party)||{}).phone;
+  const phone = getPartyPhoneAny(p.party);
   if(!phone){ toast('No phone number saved for this party'); return; }
   sendPaymentWhatsAppIfPossible(p.party, p);
 };
@@ -5747,7 +5747,7 @@ function buildLedgerStatementText(party){
 }
 function shareLedgerStatementWhatsApp(){
   if(!selectedLedgerParty) return;
-  const phone = (findPartyRecord(selectedLedgerParty)||{}).phone;
+  const phone = getPartyPhoneAny(selectedLedgerParty);
   if(!phone){ toast('No phone number saved for this party'); return; }
   sendWhatsAppMessage(phone, buildLedgerStatementText(selectedLedgerParty));
 }
