@@ -178,7 +178,9 @@
   .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:background .12s,border-color .12s;}
   .pin-dot.filled{background:var(--primary);border-color:var(--primary);}
   .pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-  .pin-key{padding:14px 0;font-size:16px;font-weight:600;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;}
+  html,body{touch-action:manipulation;}
+  .pin-key{padding:14px 0;font-size:16px;font-weight:600;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+  #pinOverlay input{font-size:16px;}
   .pin-key:hover{background:var(--primary-light);}
   .pin-key:active{background:var(--primary-light);}
   #pinKeyClear,#pinKeyBack{font-size:11.5px;color:var(--muted);font-weight:600;}
@@ -567,6 +569,26 @@
     .bill-layout > .panel:first-child{display:none;}
     .mobile-add-product{display:block !important;}
   }
+
+  .sc-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;}
+  @media (max-width:760px){.sc-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  .sc-box{background:var(--surface);border:1px solid var(--primary);border-radius:10px;padding:7px 10px;cursor:pointer;}
+  .sc-box:hover{box-shadow:0 4px 14px rgba(0,0,0,.10);}
+  .sc-box h4{margin:0 0 4px;font-size:13px;font-family:'Source Serif 4',serif;color:var(--primary-dark);}
+  .sc-row{display:flex;justify-content:space-between;font-size:11px;padding:0;line-height:1.35;}
+  .sc-row.profit{border-top:1px solid var(--border);margin-top:2px;padding-top:2px;font-weight:700;}
+  .sc-pos{color:var(--primary-dark);} .sc-neg{color:var(--danger);}
+  .sc-calwrap{overflow-x:auto;}
+  .sc-cal{display:grid;grid-template-columns:repeat(7,minmax(98px,1fr));gap:4px;min-width:700px;}
+  .sc-dow{font-size:10.5px;font-weight:700;color:var(--muted);text-align:center;padding:1px 0;}
+  .sc-day{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:3px 6px;min-height:62px;}
+  .sc-day.has{border-color:var(--primary);}
+  .sc-day .dn{font-weight:700;font-size:10.5px;line-height:1.2;}
+  .sc-day .sc-row{font-size:10px;padding:0;line-height:1.22;}
+  .sc-day .sc-row.profit{margin-top:1px;padding-top:1px;}
+  .sc-total{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;background:var(--surface);border:1px solid var(--primary);border-radius:10px;padding:6px 12px;margin-bottom:8px;font-size:12.5px;}
+  .sc-total span.k{color:var(--muted);margin-right:4px;}
+  .sc-crumb-link{color:var(--primary-dark);font-weight:600;cursor:pointer;text-decoration:underline;}
 </style>
 </head>
 <body class="hide-profit">
@@ -668,6 +690,7 @@
       <div class="nav-toggle open" data-toggle="billing">BILLING</div>
       <div class="nav-toggle" data-toggle="ledger">BILL LEDGER</div>
       <div class="nav-toggle" data-toggle="investment">INVESTMENT</div>
+      <div class="nav-toggle" data-toggle="salecal">SALE</div>
       <div class="nav-toggle" data-toggle="list">LIST</div>
       <div class="nav-toggle" data-toggle="notes">NOTES</div>
       <div class="nav-toggle" data-toggle="account">ACCOUNT</div>
@@ -729,6 +752,10 @@
     <div class="nav-submenu" id="submenu-notes">
       <div class="sec-heading">Notes</div>
       <div class="nav-item" data-view="completednotes"><span class="nav-dot"></span>Completed Notes</div>
+    </div>
+    <div class="nav-submenu" id="submenu-salecal">
+      <div class="sec-heading">Sale</div>
+      <div class="sec-note">Year → month → day: sale, cost, investment and profit.</div>
     </div>
     <div class="nav-submenu" id="submenu-account">
       <div class="sec-heading">Account</div>
@@ -1638,6 +1665,14 @@
       </div>
     </div>
 
+    <!-- SALE CALENDAR -->
+    <div class="view" id="view-salecal">
+      <div class="page-head"><div><h2>Sale</h2><p>Sale, cost, investment and profit — by year, month and day.</p></div></div>
+      <div id="scCrumb" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px;font-size:13.5px;"></div>
+      <div id="scBody"></div>
+      <div id="scNote" style="margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.5;"></div>
+    </div>
+
     <!-- DOCTOR MARGIN -->
     <div class="view" id="view-drmargin">
       <div class="page-head"><div><h2>Doctor Margin</h2><p>Select a doctor to see month-wise net sale and his share.</p></div></div>
@@ -2060,7 +2095,7 @@ function showPinOverlay(mode){
   if(isAnswerStep){ document.getElementById('pinAnswerInput').value=''; setTimeout(()=>document.getElementById('pinAnswerInput').focus(), 50); }
   document.getElementById('pinOverlay').classList.add('show');
 }
-function hidePinOverlay(){ document.getElementById('pinOverlay').classList.remove('show'); }
+function hidePinOverlay(){ document.getElementById('pinOverlay').classList.remove('show'); bootAfterUnlock(); }
 
 function handleForgotPin(){
   const errEl = document.getElementById('pinErr');
@@ -2476,6 +2511,7 @@ const LEDGER_GROUP_VIEWS = ['payments'];
 const INVESTMENT_GROUP_VIEWS = ['investment','drmargin','drreport','schedule','businessplan'];
 const LIST_GROUP_VIEWS = ['drlist','chemistlist','reminder'];
 const ACCOUNT_GROUP_VIEWS = ['account'];
+const SALECAL_GROUP_VIEWS = ['salecal'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
   el.addEventListener('click', ()=>{
     const key = el.dataset.toggle;
@@ -2513,6 +2549,12 @@ document.querySelectorAll('.nav-toggle').forEach(el=>{
       el.classList.add('open');
       submenu.classList.add('open');
       showView('account');
+      return;
+    }
+    if(key==='salecal'){
+      el.classList.add('open');
+      submenu.classList.add('open');
+      showView('salecal');
       return;
     }
     if(!isOpen){
@@ -2579,6 +2621,7 @@ const MOBILE_MENU = [
       { label:'All Notes', view:'notes' },
       { label:'Completed Notes', view:'completednotes' },
   ]},
+  { label:'Sale', view:'salecal' },
   { label:'Account', view:'account' },
   { label:'Settings', view:'settings' },
 ];
@@ -2882,6 +2925,7 @@ function openNavGroupForView(name){
   else if(INVESTMENT_GROUP_VIEWS.includes(name)) group = 'investment';
   else if(LIST_GROUP_VIEWS.includes(name)) group = 'list';
   else if(ACCOUNT_GROUP_VIEWS.includes(name)) group = 'account';
+  else if(SALECAL_GROUP_VIEWS.includes(name)) group = 'salecal';
   document.querySelectorAll('.nav-toggle').forEach(t=>t.classList.toggle('open', t.dataset.toggle===group));
   document.querySelectorAll('.nav-submenu').forEach(s=>s.classList.toggle('open', s.id==='submenu-'+group));
 
@@ -2930,6 +2974,7 @@ function showView(name){
   if(name==='partylist'){ renderSidebarPartyListForList(); renderPartyListDetail(); }
   if(name==='investment'){ populateInvestmentSelects(); renderInvestments(); }
   if(name==='drmargin'){ renderDrMargin(); }
+  if(name==='salecal'){ renderSaleCal(true); }
   if(name==='drreport'){ populateReportDoctorSelect(); renderDrReport(); }
   if(name==='schedule'){ renderSchedule(); }
   if(name==='businessplan'){ renderBusinessPlan(); }
@@ -5862,11 +5907,12 @@ async function shareLedgerStatementPdf(){
    For one doctor and one month: every bill of the chemists (and only the products) linked to that doctor
    under Dr Investment. Each line shows  sale − purchase cost  (e.g. bill ₹1000, cost ₹200 → ₹800),
    returns from those chemists are taken off, and the PDF is shared like the other PDFs. */
-function drStmtLinks(doctorName){
+function drStmtLinks(doctorName, monthlyOnly){
   const key = invKey(doctorName);
   const map = {};
   investments.forEach(inv=>{
     if(invKey(inv.doctor)!==key) return;
+    if(monthlyOnly && (Number(inv.amount)||0)!==0) return;
     readInvLinks(inv).forEach(l=>{
       const ck = invKey(l.chemist); if(!ck) return;
       const e = map[ck] || (map[ck] = { chemist:String(l.chemist).trim(), all:false, want:new Set() });
@@ -6109,6 +6155,133 @@ function renderDrMargin(){
   });
   document.addEventListener('click', e=>{ if(!e.target.closest('#dmPicker')) box.style.display = 'none'; });
 })();
+
+
+/* ---------- SALE page: year → month → day ----------
+   Sale   = bill totals − returns.
+   Cost   = purchase cost of what was sold (− cost of returned goods).
+   INV    = Dr advance investments (on the investment date) + monthly doctor share
+            (the share % of net sale of the chemists/products linked to a monthly doctor, i.e. amount 0).
+   Profit = Sale − Cost − INV. */
+var scLevel = 'months', scYear = new Date().getFullYear(), scMonth = null;
+function scKey(d){ const x = new Date(d); if(isNaN(x)) return null; return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function scBuildDays(){
+  const days = {};
+  const day = k => days[k] || (days[k] = { sale:0, cost:0, inv:0, miss:0 });
+  bills.forEach(b=>{
+    const k = scKey(b.date); if(!k) return; const d = day(k);
+    d.sale += Number(b.grandTotal)||0;
+    d.cost += computeProfit(b).cost;
+    (b.items||[]).forEach(it=>{ if(itemProfit(it, findMedByName(it.name)).costIncl==null) d.miss++; });
+  });
+  returns.forEach(r=>{
+    const k = scKey(r.date); if(!k) return; const d = day(k);
+    d.sale -= Number(r.total)||0;
+    d.cost -= computeReturnTotals(r).cost;
+  });
+  investments.forEach(i=>{
+    const amt = Number(i.amount)||0; if(amt<=0) return;
+    const k = scKey(i.date); if(!k) return;
+    day(k).inv += amt;
+  });
+  /* monthly doctors: share % of net sale (sale − cost) of their linked chemists/products */
+  const monthlyDocs = {};
+  investments.forEach(i=>{ if((Number(i.amount)||0)===0 && invKey(i.doctor)) monthlyDocs[invKey(i.doctor)] = String(i.doctor).trim(); });
+  Object.keys(monthlyDocs).forEach(dk=>{
+    const name = monthlyDocs[dk];
+    const links = drStmtLinks(name, true);
+    const pct = drSharePct(name);
+    const take = (l,it)=> l.all || l.want.has(invKey(it.name));
+    bills.forEach(b=>{
+      const l = links[invKey(b.customerName)]; const k = scKey(b.date); if(!l || !k) return;
+      (b.items||[]).forEach(it=>{
+        if(!take(l,it)) return;
+        let net = itemProfit(it, findMedByName(it.name)).inclGst;
+        if(net==null) return;
+        day(k).inv += net*pct/100;
+      });
+    });
+    returns.forEach(r=>{
+      const l = links[invKey(r.party)]; const k = scKey(r.date); if(!l || !k) return;
+      (r.items||[]).forEach(it=>{
+        if(!take(l,it)) return;
+        const f = retItemFigures(it);
+        if(f.inclGst==null) return;
+        day(k).inv -= f.inclGst*pct/100;
+      });
+    });
+  });
+  return days;
+}
+function scSum(days, prefix){
+  const t = { sale:0, cost:0, inv:0, miss:0 };
+  Object.keys(days).forEach(k=>{ if(k.indexOf(prefix)===0){ const d = days[k]; t.sale+=d.sale; t.cost+=d.cost; t.inv+=d.inv; t.miss+=d.miss; } });
+  t.profit = t.sale - t.cost - t.inv;
+  return t;
+}
+function scN(n){ return '₹'+Math.round(n).toLocaleString('en-IN'); }
+function scRowsHtml(t){
+  return `<div class="sc-row"><span>Sale</span><span>${scN(t.sale)}</span></div>
+    <div class="sc-row"><span>Cost</span><span>${scN(t.cost)}</span></div>
+    <div class="sc-row"><span>INV</span><span>${scN(t.inv)}</span></div>
+    <div class="sc-row profit"><span>Profit</span><span class="${t.profit<0?'sc-neg':'sc-pos'}">${scN(t.profit)}</span></div>`;
+}
+function scTotalHtml(label, t){
+  return `<div class="sc-total"><b>${label}</b><span><span class="k">Sale</span>${scN(t.sale)}</span><span><span class="k">Cost</span>${scN(t.cost)}</span><span><span class="k">INV</span>${scN(t.inv)}</span><span><span class="k">Profit</span><b class="${t.profit<0?'sc-neg':'sc-pos'}">${scN(t.profit)}</b></span></div>`;
+}
+function scBoxHtml(title, t, onclick){
+  return `<div class="sc-box" onclick="${onclick}"><h4>${title}</h4>${scRowsHtml(t)}</div>`;
+}
+var SC_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function renderSaleCal(reset){
+  if(reset){ scLevel = 'months'; scYear = new Date().getFullYear(); scMonth = null; }
+  const days = scBuildDays();
+  const crumb = [];
+  const link = (txt, act)=>`<span class="sc-crumb-link" onclick="${act}">${txt}</span>`;
+  let body = '', miss = 0;
+  if(scLevel==='years'){
+    crumb.push('<b>All years</b>');
+    const nowY = new Date().getFullYear();
+    let minY = nowY;
+    Object.keys(days).forEach(k=>{ const y = Number(k.slice(0,4)); if(y<minY) minY = y; });
+    for(let y=nowY; y>=minY; y--){
+      const t = scSum(days, y+'-'); miss += t.miss;
+      body += scBoxHtml(String(y), t, `scOpenYear(${y})`);
+    }
+    body = `<div class="sc-grid">${body}</div>`;
+  } else if(scLevel==='months'){
+    crumb.push(link('All years','scGo(\'years\')'), '›', '<b>'+scYear+'</b>');
+    const yt = scSum(days, scYear+'-'); miss = yt.miss;
+    body = scTotalHtml(scYear+' total', yt)+'<div class="sc-grid">';
+    for(let m=1; m<=12; m++){
+      const t = scSum(days, scYear+'-'+String(m).padStart(2,'0')+'-');
+      body += scBoxHtml(SC_MONTHS[m-1], t, `scOpenMonth(${scYear},${m})`);
+    }
+    body += '</div>';
+  } else {
+    crumb.push(link('All years','scGo(\'years\')'), '›', link(String(scYear),'scGo(\'months\')'), '›', '<b>'+SC_MONTHS[scMonth-1]+' '+scYear+'</b>');
+    const mp = scYear+'-'+String(scMonth).padStart(2,'0')+'-';
+    const mt = scSum(days, mp); miss = mt.miss;
+    const first = new Date(scYear, scMonth-1, 1).getDay();
+    const dim = new Date(scYear, scMonth, 0).getDate();
+    let cells = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="sc-dow">${d}</div>`).join('');
+    for(let i=0;i<first;i++) cells += '<div></div>';
+    for(let d=1; d<=dim; d++){
+      const k = mp+String(d).padStart(2,'0');
+      const t = scSum(days, k);
+      const has = !!days[k];
+      cells += `<div class="sc-day${has?' has':''}"><div class="dn">${d}</div>${has ? scRowsHtml(t) : ''}</div>`;
+    }
+    body = scTotalHtml(SC_MONTHS[scMonth-1]+' '+scYear+' total', mt)+`<div class="sc-calwrap"><div class="sc-cal">${cells}</div></div>`;
+  }
+  document.getElementById('scCrumb').innerHTML = crumb.join(' ');
+  document.getElementById('scBody').innerHTML = body;
+  document.getElementById('scNote').innerHTML = 'INV = Dr advance investments (on the investment date) + monthly doctor share. Profit = Sale − Cost − INV.'
+    + (miss>0 ? ' <span style="color:var(--danger);">'+miss+' bill item(s) have no purchase cost saved, so their cost counts as 0.</span>' : '');
+}
+window.scGo = function(level){ scLevel = level; renderSaleCal(false); };
+window.scOpenYear = function(y){ scYear = y; scLevel = 'months'; renderSaleCal(false); };
+window.scOpenMonth = function(y, m){ scYear = y; scMonth = m; scLevel = 'days'; renderSaleCal(false); };
 
 async function shareDrStatementPdf(name, ym){
   toast('Preparing PDF…');
@@ -8343,12 +8516,19 @@ async function migrateGstTo5PercentOnce(){
 }
 
 /* ---------- Init ---------- */
-(async function init(){
-  await loadAll();
+/* The PIN screen opens first and stays light. The heavy work (drawing the dashboard and party list,
+   starting cloud sync) runs only once the PIN is accepted, so tapping the keypad is not slowed down. */
+var appBooted = false;
+function bootAfterUnlock(){
+  if(appBooted) return;
+  appBooted = true;
   applyProfitVisibility();
   renderDashboard();
   renderSidebarPartyList();
   initSync();
+}
+(async function init(){
+  await loadAll();
   initPinLock();
 })();
 </script>
