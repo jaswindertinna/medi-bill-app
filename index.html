@@ -7112,7 +7112,14 @@ function invCycleEditHtml(c){
       <div class="inv-date"><div class="lbl">Sale date</div><div class="val">${invDateLabel(c.from)}</div></div>
       <div class="inv-date"><div class="lbl">Inv value</div><div class="val">${fmt(c.amount)}</div></div>
     </div>
-    ${inv.note ? `<div class="inv-note">${escapeHtml(inv.note)}</div>` : ''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0 6px;">
+      <div class="field" style="margin:0;"><label>Inv date</label><input type="date" id="ied-date-${ctx}" value="${(inv.date||'').slice(0,10)}"></div>
+      <div class="field" style="margin:0;"><label>Sale date</label><input type="date" id="ied-sale-${ctx}" value="${((inv.saleFrom||inv.date)||'').slice(0,10)}"></div>
+      <div class="field" style="margin:0;"><label>Amount ₹ (0 = monthly)</label><input type="number" min="0" step="0.01" id="ied-amt-${ctx}" value="${Number(inv.amount)||0}"></div>
+      <div class="field" style="margin:0;"><label>Type</label><input id="ied-type-${ctx}" value="${escapeHtml(inv.invType||'')}"></div>
+      <div class="field" style="margin:0;grid-column:1/-1;"><label>Note</label><input id="ied-note-${ctx}" value="${escapeHtml(inv.note||'')}"></div>
+    </div>
+    <div style="margin-bottom:10px;"><button class="sm primary" data-invact="save-details" data-ctx="${ctx}">Save changes</button></div>
     <div class="inv-links">
       <div class="inv-links-title">Linked chemists &amp; products — add more, or remove below</div>
       ${invLinksHtml(ctx, links, true, c.sale.perLink)}
@@ -7317,6 +7324,23 @@ document.addEventListener('click', async e=>{
     invLinkMutate(ctx, links=>{ links.splice(+el.dataset.idx, 1); }, null);
   } else if(act==='rm-product'){
     invLinkMutate(ctx, links=>{ const l = links[+el.dataset.idx]; if(l) l.products.splice(+el.dataset.pidx, 1); }, null);
+  } else if(act==='save-details'){
+    const inv = investments.find(i=>i.id===ctx); if(!inv) return;
+    const g = id => (document.getElementById(id+'-'+ctx)||{value:''}).value;
+    const date = g('ied-date'), saleFrom = g('ied-sale') || date, amount = parseFloat(g('ied-amt'));
+    if(!date){ toast('Pick an investment date'); return; }
+    if(isNaN(amount) || amount<0){ toast('Enter the amount — type 0 for a monthly investment'); return; }
+    const cyc = invCyclesFor(invKey(inv.doctor));
+    const me = cyc.find(c=>c.inv.id===ctx);
+    const newFrom = invSaleStart({ date, saleFrom });
+    const prev = me && me.no>1 ? cyc[me.no-2] : null, next = me && me.no<cyc.length ? cyc[me.no] : null;
+    if(prev && newFrom <= prev.from){ toast('Sale date must be later than the previous investment\'s sale date'); return; }
+    if(next && newFrom >= next.from){ toast('Sale date must be earlier than the next investment\'s sale date'); return; }
+    inv.date = date; inv.saleFrom = saleFrom; inv.amount = amount;
+    inv.invType = g('ied-type').trim(); inv.note = g('ied-note').trim();
+    await saveInvestments();
+    renderInvestments();
+    toast('Investment updated');
   } else if(act==='del-cycle'){
     if(!confirm('Delete this investment? The sale tallied against it will no longer be counted.')) return;
     investments = investments.filter(i=>i.id!==ctx);
