@@ -265,6 +265,8 @@
   .cust-opt:last-child{border-bottom:none;}
   .cust-opt:hover,.cust-opt:active{background:var(--primary-light);}
   .cust-opt .cust-tag{font-size:9.5px;font-weight:700;color:var(--primary-dark);background:var(--primary-light);padding:1px 8px;border-radius:10px;flex-shrink:0;}
+  .cust-opt .cust-addr{display:block;font-size:10.5px;color:var(--muted);margin-top:2px;font-weight:400;line-height:1.35;}
+  .cust-addr-note{font-size:11px;color:var(--primary-dark);margin-top:5px;line-height:1.4;}
   .cust-opt.new{color:var(--primary-dark);font-weight:600;}
   .cust-empty{padding:11px;font-size:11.5px;color:var(--muted);}
 
@@ -1070,6 +1072,7 @@
                 <div class="cust-dd-list" id="custDdList"></div>
               </div>
             </div>
+            <div class="cust-addr-note" id="custAddrNote" style="display:none;"></div>
           </div>
           <div class="field"><label>Phone number</label><input id="custPhone" placeholder="Optional"></div>
           <div class="field"><label>Bill date</label><input id="billDate" type="date"></div>
@@ -4339,6 +4342,7 @@ function cartLineAmounts(c){
   return { base, gstAmt: lineTotal-base, lineTotal };
 }
 function renderCart(){
+  try{ updateCustAddrNote(); }catch(e){}
   const box = document.getElementById('cartList');
   if(cart.length===0){ box.innerHTML = '<p style="color:var(--muted);font-size:13px;">No items added yet.</p>'; }
   else{
@@ -4986,13 +4990,16 @@ function getCustPickerRows(){
   /* Bills can only go to Dr List or Chemist List entries:
      Doctors = main Dr List + parties tagged Doctor; Chemists = parties tagged Medical Store. */
   const map = new Map();
-  const add = (name, type)=>{
+  const detailOf = (o)=> [o.address, o.location, o.city].map(v=>(v||'').trim()).filter(Boolean).join(' · ');
+  const add = (name, type, o)=>{
     const n = (name||'').trim(); if(!n) return;
     const k = n.toLowerCase();
-    if(!map.has(k)) map.set(k, { name:n, type });
+    const detail = o ? detailOf(o) : '';
+    if(!map.has(k)) map.set(k, { name:n, type, detail });
+    else if(!map.get(k).detail && detail) map.get(k).detail = detail;
   };
-  drList.forEach(d=> add(d.name, 'Doctor'));
-  parties.forEach(p=>{ if(p.type==='Doctor' || p.type==='Medical Store') add(p.name, p.type); });
+  drList.forEach(d=> add(d.name, 'Doctor', d));
+  parties.forEach(p=>{ if(p.type==='Doctor' || p.type==='Medical Store') add(p.name, p.type, p); });
   return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name));
 }
 function isAllowedBillCustomer(name){
@@ -5012,12 +5019,12 @@ function renderCustDropdown(){
   } else {
     base = pickerRows.filter(r=> r.type===custDdTab);
   }
-  const rows = base.filter(r=> !q || r.name.toLowerCase().includes(q));
-  let html = rows.map(r=>`<div class="cust-opt" data-name="${escapeHtml(r.name)}"><span>${escapeHtml(r.name)}</span><span class="cust-tag">${r.type==='Doctor' ? 'Dr' : 'Chemist'}</span></div>`).join('');
+  const rows = base.filter(r=> !q || r.name.toLowerCase().includes(q) || (r.detail||'').toLowerCase().includes(q));
+  let html = rows.map(r=>`<div class="cust-opt" data-name="${escapeHtml(r.name)}"><span><span>${escapeHtml(r.name)}</span>${r.detail ? `<span class="cust-addr">${escapeHtml(r.detail)}</span>` : '<span class="cust-addr">No address saved</span>'}</span><span class="cust-tag">${r.type==='Doctor' ? 'Dr' : 'Chemist'}</span></div>`).join('');
   if(!html){
     let msg;
     if(q){
-      const elsewhere = pickerRows.some(r=> r.name.toLowerCase().includes(q));
+      const elsewhere = pickerRows.some(r=> r.name.toLowerCase().includes(q) || (r.detail||'').toLowerCase().includes(q));
       msg = elsewhere ? 'No match in this list — try the Party, Doctors or Chemists tab.'
                       : 'Not in Dr List or Chemist List. Use + Add doctor / + Add chemist above to add them first.';
     } else {
@@ -5029,6 +5036,13 @@ function renderCustDropdown(){
   }
   list.innerHTML = html;
   document.querySelectorAll('#custDropdown .cust-tab').forEach(t=> t.classList.toggle('active', t.dataset.tab===custDdTab));
+}
+function updateCustAddrNote(){
+  const el = document.getElementById('custAddrNote'); if(!el) return;
+  const key = (document.getElementById('custName').value||'').trim().toLowerCase();
+  const row = key ? getCustPickerRows().find(r=> r.name.toLowerCase()===key) : null;
+  if(row){ el.style.display = ''; el.textContent = '📍 ' + (row.detail || 'No address saved for this party'); }
+  else { el.style.display = 'none'; el.textContent = ''; }
 }
 function openCustDropdown(){
   renderCustDropdown();
@@ -5043,7 +5057,7 @@ function closeCustDropdown(){
   const dd = document.getElementById('custDropdown');
   input.addEventListener('focus', openCustDropdown);
   input.addEventListener('click', openCustDropdown);
-  input.addEventListener('input', openCustDropdown);
+  input.addEventListener('input', ()=>{ openCustDropdown(); updateCustAddrNote(); });
   input.addEventListener('keydown', e=>{ if(e.key==='Escape' || e.key==='Enter'){ closeCustDropdown(); if(e.key==='Enter') e.preventDefault(); } });
   /* keep the input focused while tapping inside the list */
   dd.addEventListener('mousedown', e=> e.preventDefault());
@@ -5053,6 +5067,7 @@ function closeCustDropdown(){
     const opt = e.target.closest('.cust-opt');
     if(!opt) return;
     input.value = opt.dataset.name;
+    updateCustAddrNote();
     updateCustDuesBox();
     repriceCartForParty();
     closeCustDropdown();
@@ -5068,6 +5083,7 @@ function updateCustNameSuggestions(){
 }
 window.fillCustName = function(name){
   document.getElementById('custName').value = name;
+  updateCustAddrNote();
   updateCustDuesBox();
   repriceCartForParty();
 };
@@ -5250,8 +5266,24 @@ document.getElementById('btnQuickAddDoctor').addEventListener('click', ()=>{
 });
 document.getElementById('btnQuickAddChemist').addEventListener('click', ()=> showView('chemistlist'));
 document.getElementById('btnCancelParty').addEventListener('click', ()=>showView(partyFormReturnView));
+/* Builds a unique name for a second party that shares a name: "Name – <short address>" (adds (2), (3)… if still taken) */
+function uniquePartyDisplayName(base, address, location, city){
+  let tag = String(address||'').replace(/\s+/g,' ').trim();
+  if(tag.length>30){ const cut = tag.slice(0,30); const i = Math.max(cut.lastIndexOf(','), cut.lastIndexOf(' ')); tag = (i>8 ? cut.slice(0,i) : cut).replace(/[,\s]+$/,''); }
+  if(!tag) tag = (location||city||'').trim();
+  const taken = (n)=>{
+    const k = n.toLowerCase();
+    return parties.some(p=>(p.name||'').trim().toLowerCase()===k)
+        || drList.some(d=>(d.name||'').trim().toLowerCase()===k)
+        || getAllPartyNames().some(x=>String(x).trim().toLowerCase()===k);
+  };
+  let cand = tag ? base+' – '+tag : base+' (2)';
+  let n = 2;
+  while(taken(cand)){ cand = (tag ? base+' – '+tag : base)+' ('+n+')'; n++; }
+  return cand;
+}
 document.getElementById('btnSaveParty').addEventListener('click', async ()=>{
-  const name = (editingPartyOriginalName || document.getElementById('pfName').value).trim();
+  let name = (editingPartyOriginalName || document.getElementById('pfName').value).trim();
   if(!name){ toast('Enter a party name'); return; }
   const phone = document.getElementById('pfPhone').value.trim();
   const type = document.getElementById('pfType').value;
@@ -5262,12 +5294,29 @@ document.getElementById('btnSaveParty').addEventListener('click', async ()=>{
   const dlB = document.getElementById('pfDlB').value.trim();
   const gstNo = document.getElementById('pfGstNo').value.trim();
   const address = document.getElementById('pfAddress').value.trim();
-  const key = name.toLowerCase();
-  const existing = parties.find(p=>p.name.trim().toLowerCase()===key);
+  let key = name.toLowerCase();
+  let existing = parties.find(p=>p.name.trim().toLowerCase()===key);
+  let savedAsSeparate = false;
+  /* Same name, different shop: keep BOTH. The app files every bill, payment and return under the party's name,
+     so the second shop is saved under a unique display name (name + short address) — nothing is overwritten and
+     nothing is mixed into the first shop's ledger. */
+  if(existing && !editingPartyOriginalName){
+    const exAddr = (existing.address||'').trim().toLowerCase(), newAddr = address.trim().toLowerCase();
+    let separate = false;
+    if(newAddr && exAddr && newAddr!==exAddr) separate = true;
+    else if(newAddr && !exAddr) separate = confirm('"'+name+'" already exists with no address saved.\n\nOK = this is a DIFFERENT shop (save it separately)\nCancel = same shop (just fill in its address)');
+    else if(!newAddr && exAddr){ toast('"'+name+'" already exists at '+existing.address+'. Enter this shop\'s address to save it as a separate party.'); return; }
+    if(separate){
+      name = uniquePartyDisplayName(name, address, location, city);
+      key = name.toLowerCase();
+      existing = null;
+      savedAsSeparate = true;
+    }
+  }
   if(existing){ existing.phone=phone; existing.type=type; existing.underInv=underInv; existing.city=city; existing.location=location; existing.dlA=dlA; existing.dlB=dlB; existing.gstNo=gstNo; existing.address=address; }
   else{ parties.push({ id:uid(), name, phone, type, underInv, city, location, dlA, dlB, gstNo, address }); }
   await saveParties();
-  toast('Party saved');
+  toast(savedAsSeparate ? 'Saved as a separate party: '+name : 'Party saved');
   if(partyFormReturnView==='newbill'){ document.getElementById('custName').value = name; }
   showView(partyFormReturnView);
   if(partyFormReturnView==='newbill'){ try{ repriceCartForParty(); }catch(e){} }
