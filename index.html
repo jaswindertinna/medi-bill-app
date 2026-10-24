@@ -178,9 +178,7 @@
   .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:background .12s,border-color .12s;}
   .pin-dot.filled{background:var(--primary);border-color:var(--primary);}
   .pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-  html,body{touch-action:manipulation;}
-  .pin-key{padding:14px 0;font-size:16px;font-weight:600;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
-  #pinOverlay input{font-size:16px;}
+  .pin-key{padding:14px 0;font-size:16px;font-weight:600;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;}
   .pin-key:hover{background:var(--primary-light);}
   .pin-key:active{background:var(--primary-light);}
   #pinKeyClear,#pinKeyBack{font-size:11.5px;color:var(--muted);font-weight:600;}
@@ -311,6 +309,14 @@
     .bill-layout{grid-template-columns:clamp(190px,25vw,280px) minmax(0,1fr);}
   }
   .med-pick{max-height:340px;overflow-y:auto;}
+  /* New Bill: P (Pharma) / G (Generic) switch */
+  .bill-mode-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:8px 12px;background:var(--surface);border:1px solid var(--primary);border-radius:var(--radius);}
+  .bill-mode-bar .bm-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .bill-mode-bar .bm-btn{min-width:92px;padding:8px 14px;font-size:15px;font-weight:700;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;line-height:1.1;}
+  .bill-mode-bar .bm-btn small{display:block;font-size:9.5px;font-weight:500;color:var(--muted);margin-top:2px;}
+  .bill-mode-bar .bm-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .bill-mode-bar .bm-btn.active small{color:rgba(255,255,255,.85);}
+  .bill-mode-bar .bm-hint{font-size:11px;color:var(--muted);flex:1;min-width:150px;}
   .med-pick-row{display:flex;justify-content:space-between;align-items:center;padding:6px 5px;border-bottom:1px solid var(--border);}
   .med-pick-row:last-child{border-bottom:none;}
   .med-pick-row .nm{font-weight:500;}
@@ -569,26 +575,6 @@
     .bill-layout > .panel:first-child{display:none;}
     .mobile-add-product{display:block !important;}
   }
-
-  .sc-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;}
-  @media (max-width:760px){.sc-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
-  .sc-box{background:var(--surface);border:1px solid var(--primary);border-radius:10px;padding:7px 10px;cursor:pointer;}
-  .sc-box:hover{box-shadow:0 4px 14px rgba(0,0,0,.10);}
-  .sc-box h4{margin:0 0 4px;font-size:13px;font-family:'Source Serif 4',serif;color:var(--primary-dark);}
-  .sc-row{display:flex;justify-content:space-between;font-size:11px;padding:0;line-height:1.35;}
-  .sc-row.profit{border-top:1px solid var(--border);margin-top:2px;padding-top:2px;font-weight:700;}
-  .sc-pos{color:var(--primary-dark);} .sc-neg{color:var(--danger);}
-  .sc-calwrap{overflow-x:auto;}
-  .sc-cal{display:grid;grid-template-columns:repeat(7,minmax(98px,1fr));gap:4px;min-width:700px;}
-  .sc-dow{font-size:10.5px;font-weight:700;color:var(--muted);text-align:center;padding:1px 0;}
-  .sc-day{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:3px 6px;min-height:62px;}
-  .sc-day.has{border-color:var(--primary);}
-  .sc-day .dn{font-weight:700;font-size:10.5px;line-height:1.2;}
-  .sc-day .sc-row{font-size:10px;padding:0;line-height:1.22;}
-  .sc-day .sc-row.profit{margin-top:1px;padding-top:1px;}
-  .sc-total{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;background:var(--surface);border:1px solid var(--primary);border-radius:10px;padding:6px 12px;margin-bottom:8px;font-size:12.5px;}
-  .sc-total span.k{color:var(--muted);margin-right:4px;}
-  .sc-crumb-link{color:var(--primary-dark);font-weight:600;cursor:pointer;text-decoration:underline;}
 </style>
 </head>
 <body class="hide-profit">
@@ -690,7 +676,6 @@
       <div class="nav-toggle open" data-toggle="billing">BILLING</div>
       <div class="nav-toggle" data-toggle="ledger">BILL LEDGER</div>
       <div class="nav-toggle" data-toggle="investment">INVESTMENT</div>
-      <div class="nav-toggle" data-toggle="salecal">SALE</div>
       <div class="nav-toggle" data-toggle="list">LIST</div>
       <div class="nav-toggle" data-toggle="notes">NOTES</div>
       <div class="nav-toggle" data-toggle="account">ACCOUNT</div>
@@ -752,10 +737,6 @@
     <div class="nav-submenu" id="submenu-notes">
       <div class="sec-heading">Notes</div>
       <div class="nav-item" data-view="completednotes"><span class="nav-dot"></span>Completed Notes</div>
-    </div>
-    <div class="nav-submenu" id="submenu-salecal">
-      <div class="sec-heading">Sale</div>
-      <div class="sec-note">Year → month → day: sale, cost, investment and profit.</div>
     </div>
     <div class="nav-submenu" id="submenu-account">
       <div class="sec-heading">Account</div>
@@ -1056,6 +1037,12 @@
         <span><span id="editBillLabel">Editing bill</span> <b id="editBillNo"></b> — stock will be adjusted for any quantity changes when you save.</span>
         <button class="sm ghost" id="btnCancelEditBill" type="button">Cancel edit</button>
       </div>
+      <div class="bill-mode-bar" id="billModeBar">
+        <span class="bm-label">Bill type</span>
+        <button type="button" class="bm-btn active" id="btnModeP" data-mode="P" title="Pharma bill: MRP − 17% / MRP − 57% (key P)">P<small>Pharma</small></button>
+        <button type="button" class="bm-btn" id="btnModeG" data-mode="G" title="Generic bill: purchase cost + 60% (key G)">G<small>Generic</small></button>
+        <span class="bm-hint" id="billModeHint">Pharma: MRP − 17% or − 57%, CD 3% optional</span>
+      </div>
       <div class="bill-layout">
         <div class="panel">
           <h3>Select medicines</h3>
@@ -1114,7 +1101,7 @@
       </div>
       <div class="panel" style="padding:0;overflow-x:auto;">
         <table>
-          <thead><tr><th>Temp no.</th><th>Date</th><th>Customer</th><th class="num">Items</th><th class="num">Total ₹</th><th></th></tr></thead>
+          <thead><tr><th>Temp no.</th><th>Date</th><th>Customer</th><th class="num">Items</th><th class="num">Total ₹</th><th class="num profit-col">Cost ₹</th><th class="num profit-col">Profit ₹</th><th></th></tr></thead>
           <tbody id="tempBillsTableBody"></tbody>
         </table>
         <div class="empty" id="tempBillsEmpty" style="display:none;"><h3>No temp bills</h3><p>Bills saved as temp will appear here, newest first.</p></div>
@@ -1665,14 +1652,6 @@
       </div>
     </div>
 
-    <!-- SALE CALENDAR -->
-    <div class="view" id="view-salecal">
-      <div class="page-head"><div><h2>Sale</h2><p>Sale, cost, investment and profit — by year, month and day.</p></div></div>
-      <div id="scCrumb" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px;font-size:13.5px;"></div>
-      <div id="scBody"></div>
-      <div id="scNote" style="margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.5;"></div>
-    </div>
-
     <!-- DOCTOR MARGIN -->
     <div class="view" id="view-drmargin">
       <div class="page-head"><div><h2>Doctor Margin</h2><p>Select a doctor to see month-wise net sale and his share.</p></div></div>
@@ -2095,7 +2074,7 @@ function showPinOverlay(mode){
   if(isAnswerStep){ document.getElementById('pinAnswerInput').value=''; setTimeout(()=>document.getElementById('pinAnswerInput').focus(), 50); }
   document.getElementById('pinOverlay').classList.add('show');
 }
-function hidePinOverlay(){ document.getElementById('pinOverlay').classList.remove('show'); bootAfterUnlock(); }
+function hidePinOverlay(){ document.getElementById('pinOverlay').classList.remove('show'); }
 
 function handleForgotPin(){
   const errEl = document.getElementById('pinErr');
@@ -2511,7 +2490,6 @@ const LEDGER_GROUP_VIEWS = ['payments'];
 const INVESTMENT_GROUP_VIEWS = ['investment','drmargin','drreport','schedule','businessplan'];
 const LIST_GROUP_VIEWS = ['drlist','chemistlist','reminder'];
 const ACCOUNT_GROUP_VIEWS = ['account'];
-const SALECAL_GROUP_VIEWS = ['salecal'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
   el.addEventListener('click', ()=>{
     const key = el.dataset.toggle;
@@ -2549,12 +2527,6 @@ document.querySelectorAll('.nav-toggle').forEach(el=>{
       el.classList.add('open');
       submenu.classList.add('open');
       showView('account');
-      return;
-    }
-    if(key==='salecal'){
-      el.classList.add('open');
-      submenu.classList.add('open');
-      showView('salecal');
       return;
     }
     if(!isOpen){
@@ -2621,7 +2593,6 @@ const MOBILE_MENU = [
       { label:'All Notes', view:'notes' },
       { label:'Completed Notes', view:'completednotes' },
   ]},
-  { label:'Sale', view:'salecal' },
   { label:'Account', view:'account' },
   { label:'Settings', view:'settings' },
 ];
@@ -2925,7 +2896,6 @@ function openNavGroupForView(name){
   else if(INVESTMENT_GROUP_VIEWS.includes(name)) group = 'investment';
   else if(LIST_GROUP_VIEWS.includes(name)) group = 'list';
   else if(ACCOUNT_GROUP_VIEWS.includes(name)) group = 'account';
-  else if(SALECAL_GROUP_VIEWS.includes(name)) group = 'salecal';
   document.querySelectorAll('.nav-toggle').forEach(t=>t.classList.toggle('open', t.dataset.toggle===group));
   document.querySelectorAll('.nav-submenu').forEach(s=>s.classList.toggle('open', s.id==='submenu-'+group));
 
@@ -2974,7 +2944,6 @@ function showView(name){
   if(name==='partylist'){ renderSidebarPartyListForList(); renderPartyListDetail(); }
   if(name==='investment'){ populateInvestmentSelects(); renderInvestments(); }
   if(name==='drmargin'){ renderDrMargin(); }
-  if(name==='salecal'){ renderSaleCal(true); }
   if(name==='drreport'){ populateReportDoctorSelect(); renderDrReport(); }
   if(name==='schedule'){ renderSchedule(); }
   if(name==='businessplan'){ renderBusinessPlan(); }
@@ -3242,6 +3211,64 @@ document.getElementById('btnCancelMed').addEventListener('click', ()=>showView('
 const MRP_DISCOUNT_TIERS = [17, 57];
 /* Cash discount: optional extra 3% (of MRP) taken off at the END of the bill. It is never put into the rate — rates stay at MRP − 17% / MRP − 57%. */
 const CD_PCT = 3;
+/* Two kinds of bill. P = Pharma (MRP − 17% / MRP − 57%, optional CD 3%). G = Generic: rate = purchase cost + 60%.
+   Cost is the medicine's purchase rate with its GST (the same cost the profit report uses), so the rate stays GST-inclusive like every other New Bill rate. */
+const GENERIC_MARKUP_PCT = 60;
+let billMode = 'P';
+function genericRateFor(m){
+  const c = itemCostAmounts(m, 1);
+  if(!c || !(c.costIncl>0)) return null;
+  return Math.round(c.costIncl * (1 + GENERIC_MARKUP_PCT/100) * 100) / 100;
+}
+/* Re-prices one cart line to the default rate of the current bill type */
+function repriceLineForMode(c){
+  const m = medicines.find(x=>x.id===c.medId);
+  if(!m) return false;
+  c.rateTouched = false; c.cdTouched = false; c.partyRated = false; c.partyNote = ''; c.partyCd = false;
+  if(billMode==='G'){
+    const gr = genericRateFor(m);
+    if(gr==null){ c.mrpPct = null; c.cd = false; return false; }
+    c.rate = gr; c.defRate = gr; c.mrpPct = null; c.defPct = null; c.cd = false;
+  } else {
+    const mrp = c.mrp;
+    const r = mrp!=null ? rateFromMrp(mrp, 17) : m.rate;
+    c.rate = r; c.defRate = r; c.mrpPct = mrp!=null ? 17 : null; c.defPct = mrp!=null ? 17 : null; c.cd = false;
+  }
+  return true;
+}
+function setBillMode(mode, opts){
+  opts = opts || {};
+  mode = (mode==='G') ? 'G' : 'P';
+  const changed = mode!==billMode;
+  billMode = mode;
+  const bp = document.getElementById('btnModeP'), bg = document.getElementById('btnModeG');
+  if(bp) bp.classList.toggle('active', mode==='P');
+  if(bg) bg.classList.toggle('active', mode==='G');
+  const hint = document.getElementById('billModeHint');
+  if(hint) hint.textContent = mode==='G'
+    ? 'Generic: rate = purchase cost + '+GENERIC_MARKUP_PCT+'% (GST included), CD 3% optional'
+    : 'Pharma: MRP − 17% or − 57%, CD 3% optional';
+  if(opts.noReprice || !changed) return;
+  let missing = 0;
+  cart.forEach(c=>{
+    const ok = repriceLineForMode(c);
+    if(!ok && mode==='G') missing++;
+    if(ok && mode==='P') applyPartyRate(c, getPartyRateMap(document.getElementById('custName').value));
+  });
+  renderCart(); renderBillMedList();
+  if(cart.length) toast((mode==='G' ? 'Generic bill' : 'Pharma bill')+' — cart re-priced'+(missing? ' ('+missing+' item(s) have no purchase rate, kept old rate)':''));
+}
+document.querySelectorAll('#billModeBar .bm-btn').forEach(b=>b.addEventListener('click', ()=>setBillMode(b.dataset.mode)));
+/* Keyboard: press P or G on the New Bill screen (when not typing in a box) */
+document.addEventListener('keydown', e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  const t = e.target, tag = t && t.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(t&&t.isContentEditable)) return;
+  const v = document.getElementById('view-newbill');
+  if(!v || !v.classList.contains('active')) return;
+  const k = (e.key||'').toLowerCase();
+  if(k==='p') setBillMode('P'); else if(k==='g') setBillMode('G');
+});
 function rateFromMrp(mrp, pct){
   const m = parseFloat(mrp);
   if(isNaN(m) || m<=0) return null;
@@ -4163,6 +4190,7 @@ function getPartyRateMap(party){
   const times = new Map();
   bills.forEach(b=>{
     if(editingBillId && b.id===editingBillId) return;
+    if(b.billType==='G') return; // generic bills are cost-based, they must not set a pharma party rate
     if(String(b.customerName||'').trim().toLowerCase()!==pk) return;
     const t = new Date(b.date).getTime()||0;
     (b.items||[]).forEach(it=>{
@@ -4181,6 +4209,7 @@ function getPartyRateMap(party){
 /* Puts the party's last billed rate on a cart line (unless the user already set the rate by hand).
    Returns true if the line changed. */
 function applyPartyRate(c, map){
+  if(billMode==='G') return false; // generic bills always use cost + 60%
   const party = document.getElementById('custName').value.trim();
   const last = (party && map) ? map.get(String(c.name||'').trim().toLowerCase()) : null;
   let changed = false;
@@ -4225,8 +4254,15 @@ window.addToCart = function(medId){
     /* When the medicine has an MRP, the bill rate starts at the default MRP − 17% tier and can
        be switched to MRP − 57% per line; without an MRP we fall back to the stored sale rate. */
     const mrp = (m.mrp!=null && m.mrp!=='') ? Number(m.mrp) : null;
-    const startRate = mrp!=null ? rateFromMrp(mrp, 17) : m.rate;
-    const newLine = {medId:m.id, name:m.name, mrp, mrpPct: mrp!=null ? 17 : null, cd:false, rate:startRate, defRate:startRate, defPct: mrp!=null ? 17 : null, gst:m.gst, unit:m.unit, qty:1, free:0, maxStock:m.stock, rateType:'incl', batch:m.batch||'', expiry:m.expiry||''};
+    let startRate = mrp!=null ? rateFromMrp(mrp, 17) : m.rate;
+    let startPct = mrp!=null ? 17 : null;
+    if(billMode==='G'){
+      const gr = genericRateFor(m);
+      if(gr==null){ toast('No purchase rate saved for '+m.name+' — using its sale rate'); }
+      else { startRate = gr; }
+      startPct = null;
+    }
+    const newLine = {medId:m.id, name:m.name, mrp, mrpPct: startPct, cd:false, rate:startRate, defRate:startRate, defPct: startPct, gst:m.gst, unit:m.unit, qty:1, free:0, maxStock:m.stock, rateType:'incl', batch:m.batch||'', expiry:m.expiry||''};
     cart.push(newLine);
     applyPartyRate(newLine, getPartyRateMap(document.getElementById('custName').value));
   }
@@ -4308,9 +4344,9 @@ function renderCart(){
   else{
     box.innerHTML = cart.map(c=>{
       const { lineTotal } = cartLineAmounts(c);
-      const mrpNote = c.mrp!=null ? ` · MRP ${fmt(c.mrp)}${c.mrpPct? ' − '+c.mrpPct+'%':''}` : '';
+      const mrpNote = billMode==='G' ? ` · Cost + ${GENERIC_MARKUP_PCT}%` : c.mrp!=null ? ` · MRP ${fmt(c.mrp)}${c.mrpPct? ' − '+c.mrpPct+'%':''}` : '';
       const freeNote = (Number(c.free)||0) > 0 ? ` <span style="color:var(--primary-dark);font-weight:600;">+ ${Number(c.free)} free</span>` : '';
-      const tierBtns = `
+      const tierBtnsP = `
         <div style="display:flex;flex-direction:column;align-items:center;">
           <span style="font-size:9.5px;color:var(--muted);">${c.mrp!=null ? 'MRP less' : 'Discount'}</span>
           <div style="display:flex;gap:4px;">
@@ -4323,10 +4359,20 @@ function renderCart(){
               title="Extra ${CD_PCT}% cash discount, deducted at the end of the bill (press again to undo)">CD ${CD_PCT}%</button>
           </div>
         </div>`;
+      const tierBtnsG = `
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <span style="font-size:9.5px;color:var(--muted);">Generic</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <span style="font-size:11px;font-weight:700;color:var(--primary-dark);padding:6px 4px;white-space:nowrap;">Cost + ${GENERIC_MARKUP_PCT}%</span>
+            <button class="sm ${c.cd?'primary':'ghost'}" style="padding:5px 8px;"
+              onclick="toggleCartCd('${c.medId}')"
+              title="Extra ${CD_PCT}% cash discount on the generic rate, deducted at the end of the bill (press again to undo)">CD ${CD_PCT}%</button>
+          </div>
+        </div>`;
       return `
       <div class="cart-row" style="flex-wrap:wrap;">
         <div style="flex:1;min-width:140px;"><div style="font-weight:500;font-size:13.5px;">${c.name}</div><div style="font-size:11.5px;color:var(--muted);">${c.qty} × ${fmt(c.rate)} = ${fmt(lineTotal)} total${mrpNote}${freeNote}</div>${c.partyNote ? `<div style="font-size:11px;color:var(--primary-dark);">↺ ${escapeHtml(c.partyNote)}</div>` : ''}</div>
-        ${tierBtns}
+        ${billMode==='G' ? tierBtnsG : tierBtnsP}
         <div style="display:flex;flex-direction:column;align-items:center;">
           <span style="font-size:9.5px;color:var(--muted);">Rate ₹</span>
           <input class="qtybox" style="width:72px" type="number" min="0" step="0.01" value="${c.rate}" title="Change rate for this bill only" onchange="updateCartRate('${c.medId}', this.value)">
@@ -4355,7 +4401,8 @@ let lastBillGrand = 0;
 function cartCdSaving(c){
   if(!c.cd) return 0;
   const qty = Number(c.qty)||0;
-  const perUnit = (c.mrp!=null && !isNaN(Number(c.mrp))) ? Number(c.mrp)*CD_PCT/100
+  /* Generic: CD is 3% of the generic rate (it is cost-based, MRP is not used). Pharma: 3% of MRP. */
+  const perUnit = (billMode!=='G' && c.mrp!=null && !isNaN(Number(c.mrp))) ? Number(c.mrp)*CD_PCT/100
     : (parseFloat(c.rate)||0)*CD_PCT/100;
   return Math.max(0, perUnit) * qty;
 }
@@ -4424,7 +4471,7 @@ document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
       ...original,
       customerName, customerPhone, items: newItems,
       date: tDateVal ? new Date(tDateVal+'T12:00:00').toISOString() : original.date,
-      subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true
+      subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true, billType: billMode
     };
     await saveMedicines(); await saveTempBills();
     toast('Temp bill updated');
@@ -4451,7 +4498,7 @@ document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
       ...original,
       customerName, customerPhone, items: newItems,
       date: editDateVal ? new Date(editDateVal+'T12:00:00').toISOString() : original.date,
-      subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true
+      subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true, billType: billMode
     };
     await saveMedicines(); await saveBills();
     toast('Bill updated: '+original.billNo);
@@ -4467,7 +4514,7 @@ document.getElementById('btnGenerateBill').addEventListener('click', async ()=>{
     id: uid(), billNo, date: billDateVal ? new Date(billDateVal+'T12:00:00').toISOString() : new Date().toISOString(),
     customerName, customerPhone,
     items: newItems,
-    subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true
+    subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true, billType: billMode
   };
   cart.forEach(c=>{
     const m = medicines.find(x=>x.id===c.medId);
@@ -4507,7 +4554,7 @@ document.getElementById('btnSaveTempBill').addEventListener('click', async ()=>{
     id: uid(), date: tempDateVal ? new Date(tempDateVal+'T12:00:00').toISOString() : new Date().toISOString(),
     customerName, customerPhone,
     items: newItems,
-    subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true
+    subtotal: totals.subtotal, gstTotal: totals.gstTotal, discountAmt: totals.discountAmt, grandTotal: totals.grand, cdAmt: totals.cdAmt, cdAtEnd: true, billType: billMode
   };
   cart.forEach(c=>{
     const m = medicines.find(x=>x.id===c.medId);
@@ -4532,6 +4579,8 @@ function renderTempBills(){
       <td>${t.customerName||'Walk-in'}</td>
       <td class="num">${t.items.length}</td>
       <td class="num">${fmt(t.grandTotal)}</td>
+      <td class="num profit-col">${fmt(computeProfit(t).cost)}</td>
+      <td class="num profit-col" style="color:var(--primary-dark);font-weight:600;">${fmt(computeProfit(t).inclGst)}</td>
       <td><div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
         <button class="sm ghost" onclick='viewTempBillById("${t.id}")'>View</button>
         <button class="sm ghost" onclick='editTempBillById("${t.id}")'>Edit</button>
@@ -4550,7 +4599,7 @@ window.confirmTempBill = async function(id){
     id: uid(), billNo, date: temp.date,
     customerName: temp.customerName, customerPhone: temp.customerPhone,
     items: temp.items,
-    subtotal: temp.subtotal, gstTotal: temp.gstTotal, discountAmt: temp.discountAmt, grandTotal: temp.grandTotal, cdAmt: temp.cdAmt, cdAtEnd: temp.cdAtEnd
+    subtotal: temp.subtotal, gstTotal: temp.gstTotal, discountAmt: temp.discountAmt, grandTotal: temp.grandTotal, cdAmt: temp.cdAmt, cdAtEnd: temp.cdAtEnd, billType: temp.billType==='G' ? 'G' : 'P'
   };
   bills.push(bill);
   settings.nextNo = (settings.nextNo||1)+1;
@@ -4835,6 +4884,7 @@ let editingBillOriginalCustomerName = null;
 let billEditReturnView = 'payments';
 /* Fills the New Bill form (cart, customer, date, discount) from a saved bill or temp bill. */
 function loadBillIntoForm(b){
+  setBillMode(b.billType==='G' ? 'G' : 'P', {noReprice:true});
   cart = b.items.map(it=>{
     const m = medicines.find(x=>x.name===it.name);
     /* older bills may hold a tax-exclusive rate — convert it so the line total stays the same */
@@ -4885,6 +4935,7 @@ window.editBillById = function(id, returnView){
   renderCart();
 };
 function exitEditMode(){
+  setBillMode('P', {noReprice:true});
   editingBillId = null;
   editingTempId = null;
   document.getElementById('btnSaveTempBill').style.display = '';
@@ -5907,12 +5958,11 @@ async function shareLedgerStatementPdf(){
    For one doctor and one month: every bill of the chemists (and only the products) linked to that doctor
    under Dr Investment. Each line shows  sale − purchase cost  (e.g. bill ₹1000, cost ₹200 → ₹800),
    returns from those chemists are taken off, and the PDF is shared like the other PDFs. */
-function drStmtLinks(doctorName, monthlyOnly){
+function drStmtLinks(doctorName){
   const key = invKey(doctorName);
   const map = {};
   investments.forEach(inv=>{
     if(invKey(inv.doctor)!==key) return;
-    if(monthlyOnly && (Number(inv.amount)||0)!==0) return;
     readInvLinks(inv).forEach(l=>{
       const ck = invKey(l.chemist); if(!ck) return;
       const e = map[ck] || (map[ck] = { chemist:String(l.chemist).trim(), all:false, want:new Set() });
@@ -6155,133 +6205,6 @@ function renderDrMargin(){
   });
   document.addEventListener('click', e=>{ if(!e.target.closest('#dmPicker')) box.style.display = 'none'; });
 })();
-
-
-/* ---------- SALE page: year → month → day ----------
-   Sale   = bill totals − returns.
-   Cost   = purchase cost of what was sold (− cost of returned goods).
-   INV    = Dr advance investments (on the investment date) + monthly doctor share
-            (the share % of net sale of the chemists/products linked to a monthly doctor, i.e. amount 0).
-   Profit = Sale − Cost − INV. */
-var scLevel = 'months', scYear = new Date().getFullYear(), scMonth = null;
-function scKey(d){ const x = new Date(d); if(isNaN(x)) return null; return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
-function scBuildDays(){
-  const days = {};
-  const day = k => days[k] || (days[k] = { sale:0, cost:0, inv:0, miss:0 });
-  bills.forEach(b=>{
-    const k = scKey(b.date); if(!k) return; const d = day(k);
-    d.sale += Number(b.grandTotal)||0;
-    d.cost += computeProfit(b).cost;
-    (b.items||[]).forEach(it=>{ if(itemProfit(it, findMedByName(it.name)).costIncl==null) d.miss++; });
-  });
-  returns.forEach(r=>{
-    const k = scKey(r.date); if(!k) return; const d = day(k);
-    d.sale -= Number(r.total)||0;
-    d.cost -= computeReturnTotals(r).cost;
-  });
-  investments.forEach(i=>{
-    const amt = Number(i.amount)||0; if(amt<=0) return;
-    const k = scKey(i.date); if(!k) return;
-    day(k).inv += amt;
-  });
-  /* monthly doctors: share % of net sale (sale − cost) of their linked chemists/products */
-  const monthlyDocs = {};
-  investments.forEach(i=>{ if((Number(i.amount)||0)===0 && invKey(i.doctor)) monthlyDocs[invKey(i.doctor)] = String(i.doctor).trim(); });
-  Object.keys(monthlyDocs).forEach(dk=>{
-    const name = monthlyDocs[dk];
-    const links = drStmtLinks(name, true);
-    const pct = drSharePct(name);
-    const take = (l,it)=> l.all || l.want.has(invKey(it.name));
-    bills.forEach(b=>{
-      const l = links[invKey(b.customerName)]; const k = scKey(b.date); if(!l || !k) return;
-      (b.items||[]).forEach(it=>{
-        if(!take(l,it)) return;
-        let net = itemProfit(it, findMedByName(it.name)).inclGst;
-        if(net==null) return;
-        day(k).inv += net*pct/100;
-      });
-    });
-    returns.forEach(r=>{
-      const l = links[invKey(r.party)]; const k = scKey(r.date); if(!l || !k) return;
-      (r.items||[]).forEach(it=>{
-        if(!take(l,it)) return;
-        const f = retItemFigures(it);
-        if(f.inclGst==null) return;
-        day(k).inv -= f.inclGst*pct/100;
-      });
-    });
-  });
-  return days;
-}
-function scSum(days, prefix){
-  const t = { sale:0, cost:0, inv:0, miss:0 };
-  Object.keys(days).forEach(k=>{ if(k.indexOf(prefix)===0){ const d = days[k]; t.sale+=d.sale; t.cost+=d.cost; t.inv+=d.inv; t.miss+=d.miss; } });
-  t.profit = t.sale - t.cost - t.inv;
-  return t;
-}
-function scN(n){ return '₹'+Math.round(n).toLocaleString('en-IN'); }
-function scRowsHtml(t){
-  return `<div class="sc-row"><span>Sale</span><span>${scN(t.sale)}</span></div>
-    <div class="sc-row"><span>Cost</span><span>${scN(t.cost)}</span></div>
-    <div class="sc-row"><span>INV</span><span>${scN(t.inv)}</span></div>
-    <div class="sc-row profit"><span>Profit</span><span class="${t.profit<0?'sc-neg':'sc-pos'}">${scN(t.profit)}</span></div>`;
-}
-function scTotalHtml(label, t){
-  return `<div class="sc-total"><b>${label}</b><span><span class="k">Sale</span>${scN(t.sale)}</span><span><span class="k">Cost</span>${scN(t.cost)}</span><span><span class="k">INV</span>${scN(t.inv)}</span><span><span class="k">Profit</span><b class="${t.profit<0?'sc-neg':'sc-pos'}">${scN(t.profit)}</b></span></div>`;
-}
-function scBoxHtml(title, t, onclick){
-  return `<div class="sc-box" onclick="${onclick}"><h4>${title}</h4>${scRowsHtml(t)}</div>`;
-}
-var SC_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-function renderSaleCal(reset){
-  if(reset){ scLevel = 'months'; scYear = new Date().getFullYear(); scMonth = null; }
-  const days = scBuildDays();
-  const crumb = [];
-  const link = (txt, act)=>`<span class="sc-crumb-link" onclick="${act}">${txt}</span>`;
-  let body = '', miss = 0;
-  if(scLevel==='years'){
-    crumb.push('<b>All years</b>');
-    const nowY = new Date().getFullYear();
-    let minY = nowY;
-    Object.keys(days).forEach(k=>{ const y = Number(k.slice(0,4)); if(y<minY) minY = y; });
-    for(let y=nowY; y>=minY; y--){
-      const t = scSum(days, y+'-'); miss += t.miss;
-      body += scBoxHtml(String(y), t, `scOpenYear(${y})`);
-    }
-    body = `<div class="sc-grid">${body}</div>`;
-  } else if(scLevel==='months'){
-    crumb.push(link('All years','scGo(\'years\')'), '›', '<b>'+scYear+'</b>');
-    const yt = scSum(days, scYear+'-'); miss = yt.miss;
-    body = scTotalHtml(scYear+' total', yt)+'<div class="sc-grid">';
-    for(let m=1; m<=12; m++){
-      const t = scSum(days, scYear+'-'+String(m).padStart(2,'0')+'-');
-      body += scBoxHtml(SC_MONTHS[m-1], t, `scOpenMonth(${scYear},${m})`);
-    }
-    body += '</div>';
-  } else {
-    crumb.push(link('All years','scGo(\'years\')'), '›', link(String(scYear),'scGo(\'months\')'), '›', '<b>'+SC_MONTHS[scMonth-1]+' '+scYear+'</b>');
-    const mp = scYear+'-'+String(scMonth).padStart(2,'0')+'-';
-    const mt = scSum(days, mp); miss = mt.miss;
-    const first = new Date(scYear, scMonth-1, 1).getDay();
-    const dim = new Date(scYear, scMonth, 0).getDate();
-    let cells = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="sc-dow">${d}</div>`).join('');
-    for(let i=0;i<first;i++) cells += '<div></div>';
-    for(let d=1; d<=dim; d++){
-      const k = mp+String(d).padStart(2,'0');
-      const t = scSum(days, k);
-      const has = !!days[k];
-      cells += `<div class="sc-day${has?' has':''}"><div class="dn">${d}</div>${has ? scRowsHtml(t) : ''}</div>`;
-    }
-    body = scTotalHtml(SC_MONTHS[scMonth-1]+' '+scYear+' total', mt)+`<div class="sc-calwrap"><div class="sc-cal">${cells}</div></div>`;
-  }
-  document.getElementById('scCrumb').innerHTML = crumb.join(' ');
-  document.getElementById('scBody').innerHTML = body;
-  document.getElementById('scNote').innerHTML = 'INV = Dr advance investments (on the investment date) + monthly doctor share. Profit = Sale − Cost − INV.'
-    + (miss>0 ? ' <span style="color:var(--danger);">'+miss+' bill item(s) have no purchase cost saved, so their cost counts as 0.</span>' : '');
-}
-window.scGo = function(level){ scLevel = level; renderSaleCal(false); };
-window.scOpenYear = function(y){ scYear = y; scLevel = 'months'; renderSaleCal(false); };
-window.scOpenMonth = function(y, m){ scYear = y; scMonth = m; scLevel = 'days'; renderSaleCal(false); };
 
 async function shareDrStatementPdf(name, ym){
   toast('Preparing PDF…');
@@ -7112,14 +7035,7 @@ function invCycleEditHtml(c){
       <div class="inv-date"><div class="lbl">Sale date</div><div class="val">${invDateLabel(c.from)}</div></div>
       <div class="inv-date"><div class="lbl">Inv value</div><div class="val">${fmt(c.amount)}</div></div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0 6px;">
-      <div class="field" style="margin:0;"><label>Inv date</label><input type="date" id="ied-date-${ctx}" value="${(inv.date||'').slice(0,10)}"></div>
-      <div class="field" style="margin:0;"><label>Sale date</label><input type="date" id="ied-sale-${ctx}" value="${((inv.saleFrom||inv.date)||'').slice(0,10)}"></div>
-      <div class="field" style="margin:0;"><label>Amount ₹ (0 = monthly)</label><input type="number" min="0" step="0.01" id="ied-amt-${ctx}" value="${Number(inv.amount)||0}"></div>
-      <div class="field" style="margin:0;"><label>Type</label><input id="ied-type-${ctx}" value="${escapeHtml(inv.invType||'')}"></div>
-      <div class="field" style="margin:0;grid-column:1/-1;"><label>Note</label><input id="ied-note-${ctx}" value="${escapeHtml(inv.note||'')}"></div>
-    </div>
-    <div style="margin-bottom:10px;"><button class="sm primary" data-invact="save-details" data-ctx="${ctx}">Save changes</button></div>
+    ${inv.note ? `<div class="inv-note">${escapeHtml(inv.note)}</div>` : ''}
     <div class="inv-links">
       <div class="inv-links-title">Linked chemists &amp; products — add more, or remove below</div>
       ${invLinksHtml(ctx, links, true, c.sale.perLink)}
@@ -7324,23 +7240,6 @@ document.addEventListener('click', async e=>{
     invLinkMutate(ctx, links=>{ links.splice(+el.dataset.idx, 1); }, null);
   } else if(act==='rm-product'){
     invLinkMutate(ctx, links=>{ const l = links[+el.dataset.idx]; if(l) l.products.splice(+el.dataset.pidx, 1); }, null);
-  } else if(act==='save-details'){
-    const inv = investments.find(i=>i.id===ctx); if(!inv) return;
-    const g = id => (document.getElementById(id+'-'+ctx)||{value:''}).value;
-    const date = g('ied-date'), saleFrom = g('ied-sale') || date, amount = parseFloat(g('ied-amt'));
-    if(!date){ toast('Pick an investment date'); return; }
-    if(isNaN(amount) || amount<0){ toast('Enter the amount — type 0 for a monthly investment'); return; }
-    const cyc = invCyclesFor(invKey(inv.doctor));
-    const me = cyc.find(c=>c.inv.id===ctx);
-    const newFrom = invSaleStart({ date, saleFrom });
-    const prev = me && me.no>1 ? cyc[me.no-2] : null, next = me && me.no<cyc.length ? cyc[me.no] : null;
-    if(prev && newFrom <= prev.from){ toast('Sale date must be later than the previous investment\'s sale date'); return; }
-    if(next && newFrom >= next.from){ toast('Sale date must be earlier than the next investment\'s sale date'); return; }
-    inv.date = date; inv.saleFrom = saleFrom; inv.amount = amount;
-    inv.invType = g('ied-type').trim(); inv.note = g('ied-note').trim();
-    await saveInvestments();
-    renderInvestments();
-    toast('Investment updated');
   } else if(act==='del-cycle'){
     if(!confirm('Delete this investment? The sale tallied against it will no longer be counted.')) return;
     investments = investments.filter(i=>i.id!==ctx);
@@ -8540,19 +8439,12 @@ async function migrateGstTo5PercentOnce(){
 }
 
 /* ---------- Init ---------- */
-/* The PIN screen opens first and stays light. The heavy work (drawing the dashboard and party list,
-   starting cloud sync) runs only once the PIN is accepted, so tapping the keypad is not slowed down. */
-var appBooted = false;
-function bootAfterUnlock(){
-  if(appBooted) return;
-  appBooted = true;
+(async function init(){
+  await loadAll();
   applyProfitVisibility();
   renderDashboard();
   renderSidebarPartyList();
   initSync();
-}
-(async function init(){
-  await loadAll();
   initPinLock();
 })();
 </script>
