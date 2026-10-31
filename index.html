@@ -298,7 +298,7 @@
 
   .empty{text-align:center;padding:32px 16px;color:var(--muted);}
   .empty h3{color:var(--text);margin-bottom:5px;font-size:13px;}
-  .toast{position:fixed;bottom:18px;right:18px;background:var(--primary-dark);color:#fff;padding:9px 14px;border-radius:7px;font-size:11px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:999;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;}
+  .toast{position:fixed;bottom:136px;right:18px;background:var(--primary-dark);color:#fff;padding:9px 14px;border-radius:7px;font-size:11px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:999;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;}
   .toast.show{opacity:1;transform:translateY(0);}
 
   /* New bill layout */
@@ -748,7 +748,7 @@
   </div>
 
 
-  <div class="settings-fab no-print" id="settingsFab" title="Shop Settings">⚙</div>
+  <div class="settings-fab no-print" id="settingsFab" title="Shop Settings" style="display:none;">⚙</div>
 
   <div id="main">
 
@@ -2715,13 +2715,14 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v4';
+const APP_VERSION = '2026-10-31 safe-sync v5';
 /* --- sync badge --- */
 (function(){
   const el = document.createElement('div');
   el.id = 'syncBadge';
-  el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom, 0px));z-index:960;white-space:nowrap;font:700 12px/1 Inter,system-ui,sans-serif;padding:7px 13px;border-radius:99px;background:#eee;color:#555;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;';
-  el.title = 'Tap to open Settings → sync & backups';
+  el.style.cssText = 'position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom, 0px));z-index:950;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 22px/1 Inter,system-ui,sans-serif;background:#6b7280;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.28);border:2px solid rgba(255,255,255,.25);cursor:pointer;user-select:none;';
+  el.textContent = '☁';
+  el.title = 'Sync status — tap to open Settings';
   el.addEventListener('click', ()=>{ try{ showView('settings'); }catch(e){} });
   const add = ()=>{ if(!document.getElementById('syncBadge')) document.body.appendChild(el); };
   if(document.body) add(); else document.addEventListener('DOMContentLoaded', add);
@@ -2729,11 +2730,11 @@ const APP_VERSION = '2026-10-31 safe-sync v4';
 function syncBadge(state){
   const el = document.getElementById('syncBadge'); if(!el) return;
   const m = {
-    ok:    ['✓ Synced', '#e3f6e8', '#157a35'],
-    wait:  ['⏳ Saved here · waiting to sync', '#fff1d6', '#9a6200'],
-    local: ['Saved on this device only', '#eee', '#555']
-  }[state] || ['', '#eee', '#555'];
-  el.textContent = m[0]; el.style.background = m[1]; el.style.color = m[2];
+    ok:    ['✓', '#157a35', 'Synced — all your data is saved in the cloud'],
+    wait:  ['⏳', '#d98a00', 'Saved on this device — waiting to sync to the cloud'],
+    local: ['☁', '#6b7280', 'Saved on this device only (not signed in)']
+  }[state] || ['☁', '#6b7280', ''];
+  el.textContent = m[0]; el.style.background = m[1]; el.title = m[2] + ' — tap to open Settings';
 }
 window.addEventListener('offline', ()=>syncBadge(currentUid ? 'wait' : 'local'));
 
@@ -2873,7 +2874,7 @@ function syncPopup(state){
   let el = document.getElementById('syncPopup');
   if(!el){
     el = document.createElement('div'); el.id = 'syncPopup';
-    el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(48px + env(safe-area-inset-bottom, 0px));z-index:965;width:max-content;text-align:center;max-width:calc(100% - 28px);font:600 12.5px/1.35 Inter,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);cursor:pointer;display:none;';
+    el.style.cssText = 'position:fixed;right:22px;bottom:calc(84px + env(safe-area-inset-bottom, 0px));z-index:965;width:max-content;text-align:left;max-width:calc(100% - 44px);font:600 12.5px/1.35 Inter,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);cursor:pointer;display:none;';
     el.addEventListener('click', ()=>{ el.style.display = 'none'; });
     document.body.appendChild(el);
   }
