@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>MCLAINE — Pharmacy Billing</title>
 <!-- Lets iPad/iPhone Safari treat this as a standalone app when added to the Home Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -91,6 +91,7 @@
   .settings-fab:hover{background:var(--accent);}
 
   /* ---------- Mobile drill-down menu (phone-style: one screen at a time, with Back) ---------- */
+  html,body{touch-action:pan-x pan-y;} /* no pinch-zoom or double-tap zoom */
   #mobileTopbar{display:none;}
   #mobileNavOverlay{display:none;}
   /* Solid green strip that always covers the notch/status-bar area on phone and iPad, so the
@@ -647,6 +648,7 @@
       <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill">New Bill</button>
       <button type="button" class="topbar-shortcut-btn" id="btnTopLedger">Bill Ledger</button>
       <button type="button" class="topbar-shortcut-btn" id="btnTopReminder">Reminder</button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopStock">Stock</button>
     </div>
   </div>
 
@@ -2715,15 +2717,17 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v5';
+const APP_VERSION = '2026-10-31 safe-sync v6';
+/* iPhone/iPad Safari ignores user-scalable=no, so block the two-finger zoom gestures directly */
+['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
+document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
 /* --- sync badge --- */
 (function(){
   const el = document.createElement('div');
   el.id = 'syncBadge';
-  el.style.cssText = 'position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom, 0px));z-index:950;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 22px/1 Inter,system-ui,sans-serif;background:#6b7280;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.28);border:2px solid rgba(255,255,255,.25);cursor:pointer;user-select:none;';
+  el.style.cssText = 'position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom, 0px));z-index:950;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 22px/1 Inter,system-ui,sans-serif;background:#6b7280;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.28);border:2px solid rgba(255,255,255,.25);cursor:default;user-select:none;pointer-events:none;';
   el.textContent = '☁';
-  el.title = 'Sync status — tap to open Settings';
-  el.addEventListener('click', ()=>{ try{ showView('settings'); }catch(e){} });
+  el.title = 'Sync status';
   const add = ()=>{ if(!document.getElementById('syncBadge')) document.body.appendChild(el); };
   if(document.body) add(); else document.addEventListener('DOMContentLoaded', add);
 })();
@@ -2734,7 +2738,7 @@ function syncBadge(state){
     wait:  ['⏳', '#d98a00', 'Saved on this device — waiting to sync to the cloud'],
     local: ['☁', '#6b7280', 'Saved on this device only (not signed in)']
   }[state] || ['☁', '#6b7280', ''];
-  el.textContent = m[0]; el.style.background = m[1]; el.title = m[2] + ' — tap to open Settings';
+  el.textContent = m[0]; el.style.background = m[1]; el.title = m[2];
 }
 window.addEventListener('offline', ()=>syncBadge(currentUid ? 'wait' : 'local'));
 
@@ -3327,6 +3331,10 @@ document.getElementById('btnTopReminder').addEventListener('click', ()=>{
   closeMobileNav();
   showView('reminder');
 });
+document.getElementById('btnTopStock').addEventListener('click', ()=>{
+  closeMobileNav();
+  showView('inventory');
+});
 document.getElementById('btnTopLedger').addEventListener('click', ()=>{
   if(isWideScreen()){ closeMobileNav(); showView('payments'); return; }
   const ledgerNode = MOBILE_MENU.find(n=>n.dynamic==='ledgerParties');
@@ -3454,6 +3462,7 @@ function showView(name){
   document.getElementById('btnTopNewBill').classList.toggle('active', name==='newbill');
   document.getElementById('btnTopLedger').classList.toggle('active', name==='payments');
   document.getElementById('btnTopReminder').classList.toggle('active', name==='reminder');
+  document.getElementById('btnTopStock').classList.toggle('active', name==='inventory');
   openNavGroupForView(name);
   renderSidebarPartyList();
   setHistoryDrill(name==='partylist');
