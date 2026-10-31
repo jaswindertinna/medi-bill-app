@@ -120,7 +120,8 @@
   #mobileTopbar .title{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
   /* Quick-access shortcuts on the green top bar: New Bill / History / Ledger, centered */
-  .topbar-shortcuts{display:flex;gap:6px;justify-self:center;}
+  .topbar-shortcuts{display:flex;gap:24px;justify-self:center;}
+  @media (max-width:520px){ .topbar-shortcuts{gap:20px;} #mobileTopbar .title{display:none;} }
   .topbar-shortcut-btn{
     background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:#fff;
     border-radius:7px;font-size:10.5px;font-weight:700;font-family:inherit;
@@ -129,7 +130,7 @@
   }
   .topbar-shortcut-btn svg{display:block;}
   /* minimal white outline icons */
-  .topbar-shortcut-btn{min-width:42px;width:42px;height:42px;padding:0;border-radius:12px;border:none;background:transparent;box-shadow:none;transition:background .15s, transform .12s;}
+  .topbar-shortcut-btn{min-width:40px;width:40px;height:40px;padding:0;border-radius:12px;border:none;background:transparent;box-shadow:none;transition:background .15s, transform .12s;}
   .topbar-shortcut-btn:hover{background:rgba(255,255,255,.14);filter:none;}
   .topbar-shortcut-btn:active{transform:scale(.92);}
   .topbar-shortcut-btn.active{background:rgba(255,255,255,.22);box-shadow:none;border:none;}
@@ -2719,7 +2720,7 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v11';
+const APP_VERSION = '2026-10-31 safe-sync v13';
 /* iPhone/iPad Safari ignores user-scalable=no, so block the two-finger zoom gestures directly */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
 document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
