@@ -2715,12 +2715,12 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v3';
+const APP_VERSION = '2026-10-31 safe-sync v4';
 /* --- sync badge --- */
 (function(){
   const el = document.createElement('div');
   el.id = 'syncBadge';
-  el.style.cssText = 'position:fixed;top:6px;right:8px;z-index:60;font:600 11px/1 Inter,system-ui,sans-serif;padding:5px 9px;border-radius:99px;background:#eee;color:#555;box-shadow:0 1px 4px rgba(0,0,0,.18);cursor:pointer;opacity:.95;';
+  el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom, 0px));z-index:960;white-space:nowrap;font:700 12px/1 Inter,system-ui,sans-serif;padding:7px 13px;border-radius:99px;background:#eee;color:#555;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;';
   el.title = 'Tap to open Settings → sync & backups';
   el.addEventListener('click', ()=>{ try{ showView('settings'); }catch(e){} });
   const add = ()=>{ if(!document.getElementById('syncBadge')) document.body.appendChild(el); };
@@ -2873,7 +2873,7 @@ function syncPopup(state){
   let el = document.getElementById('syncPopup');
   if(!el){
     el = document.createElement('div'); el.id = 'syncPopup';
-    el.style.cssText = 'position:fixed;left:14px;bottom:60px;z-index:1000;max-width:calc(100% - 28px);font:600 12.5px/1.35 Inter,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);cursor:pointer;display:none;';
+    el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(48px + env(safe-area-inset-bottom, 0px));z-index:965;width:max-content;text-align:center;max-width:calc(100% - 28px);font:600 12.5px/1.35 Inter,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);cursor:pointer;display:none;';
     el.addEventListener('click', ()=>{ el.style.display = 'none'; });
     document.body.appendChild(el);
   }
