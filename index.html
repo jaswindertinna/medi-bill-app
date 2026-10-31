@@ -125,7 +125,9 @@
     background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:#fff;
     border-radius:7px;font-size:10.5px;font-weight:700;font-family:inherit;
     padding:7px 10px;cursor:pointer;white-space:nowrap;flex-shrink:0;
+    display:inline-flex;align-items:center;justify-content:center;min-width:40px;
   }
+  .topbar-shortcut-btn svg{display:block;}
   .topbar-shortcut-btn:hover{background:rgba(255,255,255,0.24);}
   .topbar-shortcut-btn.active{background:var(--accent);border-color:var(--accent);}
 
@@ -645,10 +647,10 @@
       <div class="title" id="btnMobileLogoHome" role="button" title="Go to Dashboard">MCLAINE</div>
     </div>
     <div class="topbar-shortcuts">
-      <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill">New Bill</button>
-      <button type="button" class="topbar-shortcut-btn" id="btnTopLedger">Bill Ledger</button>
-      <button type="button" class="topbar-shortcut-btn" id="btnTopReminder">Reminder</button>
-      <button type="button" class="topbar-shortcut-btn" id="btnTopStock">Stock</button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill" title="New Bill" aria-label="New Bill"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11.5v6M9 14.5h6"/></svg></button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopLedger" title="Bill Ledger" aria-label="Bill Ledger"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/><path d="M3 7h2M3 12h2M3 17h2"/></svg></button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopReminder" title="Reminder" aria-label="Reminder"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopStock" title="Stock" aria-label="Stock"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.5L12 12.5l8.7-5"/><path d="M12 22.5v-10"/></svg></button>
     </div>
   </div>
 
@@ -795,16 +797,13 @@
           <div class="value" style="color:var(--danger);font-size:15px;" id="moPending">₹0</div>
         </div>
         <div class="metric-card">
-          <div class="label">This week's sale</div>
-          <div class="value" id="wkSale">₹0</div>
-          <div class="profit-sec">
-          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Profit (without inv.)</div>
-          <div class="value" style="font-size:15px;color:var(--primary-dark);" id="wkProfitNoInv">₹0</div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:6px;">Profit (with inv.)</div>
-          <div class="value" style="font-size:15px;" id="wkProfitWithInv">₹0</div>
-          </div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Total payment pending</div>
-          <div class="value" style="color:var(--danger);font-size:15px;" id="wkPending">₹0</div>
+          <div class="label">This month's payments</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;">Total payment (billed this month)</div>
+          <div class="value" id="pmBilled">₹0</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Payment received (this month)</div>
+          <div class="value" style="font-size:15px;color:var(--primary-dark);" id="pmReceived">₹0</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Payment pending (all parties)</div>
+          <div class="value" style="color:var(--danger);font-size:15px;" id="pmPending">₹0</div>
         </div>
         <div class="metric-card profit-sec">
           <div class="label">Total simple profit</div>
@@ -821,12 +820,12 @@
       <p style="font-size:11px;color:var(--muted);margin:8px 0 16px;">Profit (without inv./with inv.) is GST-inclusive real margin (sale − purchase cost), already after deducting expenses for that period — "with inv." additionally deducts that period's doctor investment. Simple profit uses sale rate − purchase rate with no GST adjustment. "Total payment pending" is the current outstanding balance across all customers — it doesn't reset by month or week, so the same figure shows in all three cards.</p>
       <div class="grid metrics">
         <div class="metric-card"><div class="label">Bills today</div><div class="value" id="mTodayBills">0</div></div>
-        <div class="metric-card warn"><div class="label">Low stock items</div><div class="value" id="mLowStock">0</div></div>
+        <div class="metric-card warn" id="cardLowStock" style="cursor:pointer;" title="Tap to see the low stock items"><div class="label">Low stock items</div><div class="value" id="mLowStock">0</div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Tap to view ›</div></div>
         <div class="metric-card danger"><div class="label">Expiring soon</div><div class="value" id="mExpiring">0</div></div>
       </div>
       <div class="panel">
-        <h3>Recent bills</h3>
-        <div id="dashRecentBills"></div>
+        <h3>Recent bills <span id="dashRecentCount" style="font-weight:400;font-size:12px;color:var(--muted);">(last 30 days)</span></h3>
+        <div id="dashRecentBills" style="max-height:480px;overflow:auto;"></div>
       </div>
     </div>
 
@@ -2717,7 +2716,7 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v6';
+const APP_VERSION = '2026-10-31 safe-sync v7';
 /* iPhone/iPad Safari ignores user-scalable=no, so block the two-finger zoom gestures directly */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
 document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
@@ -3630,6 +3629,30 @@ function periodStats(from, to){
     profitSimpleGross, profitSimpleNet: profitSimpleGross - expTotal
   };
 }
+function openLowStockModal(){
+  const low = medicines.filter(m=>Number(m.stock)<10).sort((a,b)=>(Number(a.stock)||0)-(Number(b.stock)||0) || a.name.localeCompare(b.name));
+  let el = document.getElementById('lowStockModal');
+  if(el) el.remove();
+  el = document.createElement('div'); el.id = 'lowStockModal';
+  el.style.cssText = 'position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+  const rows = low.length ? low.map(m=>`<tr><td><b>${escapeHtml(m.name)}</b></td><td>${escapeHtml(m.batch||'—')}</td><td class="num" style="color:var(--danger);font-weight:700;">${escapeHtml(String(m.stock))}</td></tr>`).join('')
+    : '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:18px;">No low stock items 🎉</td></tr>';
+  el.innerHTML = `<div style="background:#fff;border-radius:12px;max-width:520px;width:100%;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
+      <div style="font-weight:700;font-size:15px;">Low stock items (${low.length})<div style="font-weight:400;font-size:11px;color:var(--muted);">Stock below 10</div></div>
+      <button type="button" id="lowStockClose" style="border:none;background:none;font-size:24px;line-height:1;cursor:pointer;color:var(--muted);">×</button>
+    </div>
+    <div style="overflow:auto;padding:4px 16px;"><table><thead><tr><th>Medicine</th><th>Batch</th><th class="num">Stock</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;"><button type="button" class="primary" id="lowStockOpenInv">Open Medicine Stock</button></div>
+  </div>`;
+  document.body.appendChild(el);
+  const close = ()=>{ el.remove(); };
+  el.addEventListener('click', e=>{ if(e.target===el) close(); });
+  document.getElementById('lowStockClose').addEventListener('click', close);
+  document.getElementById('lowStockOpenInv').addEventListener('click', ()=>{ close(); showView('inventory'); });
+}
+document.addEventListener('click', e=>{ if(e.target.closest && e.target.closest('#cardLowStock')) openLowStockModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ const m=document.getElementById('lowStockModal'); if(m) m.remove(); } });
 function renderDashboard(){
   const todayStr = new Date().toDateString();
   document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long', year:'numeric', month:'long', day:'numeric'});
@@ -3660,10 +3683,10 @@ function renderDashboard(){
   document.getElementById('moProfitWithInv').textContent = fmt(mo.profitInclNetWithInv);
   document.getElementById('moPending').textContent = fmt(totalPending);
 
-  document.getElementById('wkSale').textContent = fmt(wk.sale);
-  document.getElementById('wkProfitNoInv').textContent = fmt(wk.profitInclNet);
-  document.getElementById('wkProfitWithInv').textContent = fmt(wk.profitInclNetWithInv);
-  document.getElementById('wkPending').textContent = fmt(totalPending);
+  const monthReceived = payments.filter(p=>{ const d=new Date(p.date); return d>=moStart && d<=moEnd; }).reduce((t,p)=>t+(Number(p.amount)||0),0);
+  document.getElementById('pmBilled').textContent = fmt(mo.sale);
+  document.getElementById('pmReceived').textContent = fmt(monthReceived);
+  document.getElementById('pmPending').textContent = fmt(totalPending);
 
   document.getElementById('spTotalGross').textContent = fmt(all.profitSimpleGross);
   document.getElementById('spTotalNet').textContent = fmt(all.profitSimpleNet);
@@ -3672,9 +3695,11 @@ function renderDashboard(){
   document.getElementById('spWeekGross').textContent = fmt(wk.profitSimpleGross);
   document.getElementById('spWeekNet').textContent = fmt(wk.profitSimpleNet);
 
-  const recent = [...bills].sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0,6);
+  const cutoff = new Date(); cutoff.setHours(0,0,0,0); cutoff.setDate(cutoff.getDate()-30);
+  const recent = bills.filter(b=> new Date(b.date) >= cutoff).sort((a,b)=> new Date(b.date)-new Date(a.date));
   const box = document.getElementById('dashRecentBills');
-  if(recent.length===0){ box.innerHTML = '<div class="empty"><h3>No bills yet</h3><p>Generate your first bill to see it here.</p></div>'; return; }
+  const cnt = document.getElementById('dashRecentCount'); if(cnt) cnt.textContent = '(last 30 days · '+recent.length+' bill'+(recent.length===1?'':'s')+')';
+  if(recent.length===0){ box.innerHTML = '<div class="empty"><h3>No bills in the last 30 days</h3><p>Generate a bill to see it here.</p></div>'; return; }
   box.innerHTML = '<table><thead><tr><th>Bill no.</th><th>Date</th><th>Customer</th><th class="num">Total</th></tr></thead><tbody>'+
     recent.map(b=>`<tr><td>${b.billNo}</td><td>${new Date(b.date).toLocaleDateString('en-IN')}</td><td>${b.customerName||'Walk-in'}</td><td class="num">${fmt(b.grandTotal)}</td></tr>`).join('')+
     '</tbody></table>';
