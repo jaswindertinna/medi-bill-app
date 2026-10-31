@@ -128,8 +128,11 @@
     display:inline-flex;align-items:center;justify-content:center;min-width:40px;
   }
   .topbar-shortcut-btn svg{display:block;}
-  .topbar-shortcut-btn:hover{background:rgba(255,255,255,0.24);}
-  .topbar-shortcut-btn.active{background:var(--accent);border-color:var(--accent);}
+  /* minimal white outline icons */
+  .topbar-shortcut-btn{min-width:42px;width:42px;height:42px;padding:0;border-radius:12px;border:none;background:transparent;box-shadow:none;transition:background .15s, transform .12s;}
+  .topbar-shortcut-btn:hover{background:rgba(255,255,255,.14);filter:none;}
+  .topbar-shortcut-btn:active{transform:scale(.92);}
+  .topbar-shortcut-btn.active{background:rgba(255,255,255,.22);box-shadow:none;border:none;}
 
 
   #mobileNavOverlay{
@@ -647,10 +650,10 @@
       <div class="title" id="btnMobileLogoHome" role="button" title="Go to Dashboard">MCLAINE</div>
     </div>
     <div class="topbar-shortcuts">
-      <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill" title="New Bill" aria-label="New Bill"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11.5v6M9 14.5h6"/></svg></button>
-      <button type="button" class="topbar-shortcut-btn" id="btnTopLedger" title="Bill Ledger" aria-label="Bill Ledger"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/><path d="M3 7h2M3 12h2M3 17h2"/></svg></button>
-      <button type="button" class="topbar-shortcut-btn" id="btnTopReminder" title="Reminder" aria-label="Reminder"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
-      <button type="button" class="topbar-shortcut-btn" id="btnTopStock" title="Stock" aria-label="Stock"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.5L12 12.5l8.7-5"/><path d="M12 22.5v-10"/></svg></button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill" title="New Bill" aria-label="New Bill"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6M9 14h6"/></svg></button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopLedger" title="Bill Ledger" aria-label="Bill Ledger"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M9 4v16"/><path d="M13 8h2M13 12h2"/></svg></button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopReminder" title="Reminder" aria-label="Reminder"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fb923c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7"/><path d="M12 10v3l2 2"/><path d="M7 4L4.25 6M17 4l2.75 2"/></svg></button>
+      <button type="button" class="topbar-shortcut-btn" id="btnTopStock" title="Stock" aria-label="Stock"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l8-8a4.94 4.94 0 0 1 7 7l-8 8a4.94 4.94 0 0 1-7-7"/><path d="M8.5 8.5l7 7"/></svg></button>
     </div>
   </div>
 
@@ -2716,7 +2719,7 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v7';
+const APP_VERSION = '2026-10-31 safe-sync v11';
 /* iPhone/iPad Safari ignores user-scalable=no, so block the two-finger zoom gestures directly */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
 document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
