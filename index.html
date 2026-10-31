@@ -119,16 +119,19 @@
   #mobileTopbar .hamburger span{display:block;height:2.5px;background:#fff;border-radius:2px;}
   #mobileTopbar .title{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-  /* Sync LED: a thin glowing line along the bottom edge of the green top bar.
-     green = upload done, yellow = processing, red = internet / upload error, grey = off (not signed in) */
-  #syncLed{--led:#6b7280;--glow:rgba(0,0,0,0);position:absolute;left:4px;right:4px;bottom:-4px;height:8px;border:2px solid #000;border-radius:999px;pointer-events:none;
-    background:linear-gradient(to bottom,rgba(255,255,255,.6) 0%,rgba(255,255,255,0) 50%,rgba(0,0,0,.28) 100%),var(--led);
-    box-shadow:0 0 8px 2px var(--glow),0 4px 16px 4px var(--glow);transition:background-color .25s ease,box-shadow .25s ease;}
-  #syncLed.ok{--led:#22e55c;--glow:rgba(34,229,92,.7);}
-  #syncLed.busy{--led:#ffd60a;--glow:rgba(255,214,10,.7);animation:syncLedPulse 1.1s ease-in-out infinite;}
-  #syncLed.err{--led:#ff3b30;--glow:rgba(255,59,48,.7);}
-  @keyframes syncLedPulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-  @media (prefers-reduced-motion:reduce){ #syncLed.busy{animation:none;} }
+  /* Sync cloud icon (right side of the green top bar)
+     green tick = upload done, yellow arrow = processing, red slash = internet / upload error, grey = not signed in */
+  #syncCloud{justify-self:end;display:flex;align-items:center;color:#9ca3af;padding-right:2px;}
+  #syncCloud svg{display:block;}
+  #syncCloud .ic-ok,#syncCloud .ic-busy,#syncCloud .ic-err{display:none;}
+  #syncCloud.ok{color:#22e55c;filter:drop-shadow(0 0 4px rgba(34,229,92,.8));}
+  #syncCloud.ok .ic-ok{display:inline;}
+  #syncCloud.busy{color:#ffd60a;filter:drop-shadow(0 0 4px rgba(255,214,10,.8));animation:syncCloudPulse 1.1s ease-in-out infinite;}
+  #syncCloud.busy .ic-busy{display:inline;}
+  #syncCloud.err{color:#ff3b30;filter:drop-shadow(0 0 4px rgba(255,59,48,.8));}
+  #syncCloud.err .ic-err{display:inline;}
+  @keyframes syncCloudPulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+  @media (prefers-reduced-motion:reduce){ #syncCloud.busy{animation:none;} }
 
   /* Quick-access shortcuts on the green top bar: New Bill / History / Ledger, centered */
   .topbar-shortcuts{display:flex;gap:24px;justify-self:center;}
@@ -667,7 +670,7 @@
       <button type="button" class="topbar-shortcut-btn" id="btnTopReminder" title="Reminder" aria-label="Reminder"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fb923c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7"/><path d="M12 10v3l2 2"/><path d="M7 4L4.25 6M17 4l2.75 2"/></svg></button>
       <button type="button" class="topbar-shortcut-btn" id="btnTopStock" title="Stock" aria-label="Stock"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l8-8a4.94 4.94 0 0 1 7 7l-8 8a4.94 4.94 0 0 1-7-7"/><path d="M8.5 8.5l7 7"/></svg></button>
     </div>
-    <div id="syncLed" aria-hidden="true"></div>
+    <div id="syncCloud" title="Saved on this device only (not signed in)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.5-8.97A6 6 0 0 1 18 10.5 3.75 3.75 0 0 1 17.5 18z"/><path class="ic-ok" d="M9 13.5l2 2 4-4"/><g class="ic-busy"><path d="M12 16.5v-5"/><path d="M9.8 13.5L12 11.3l2.2 2.2"/></g><path class="ic-err" d="M4 4l16 16"/></svg></div>
   </div>
 
   <!-- Dims/reveals the rest of the page behind the mobile drawer; tapping it closes the drawer -->
@@ -2733,15 +2736,16 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v19';
+const APP_VERSION = '2026-10-31 safe-sync v20';
 /* iPhone/iPad Safari ignores user-scalable=no, so block the two-finger zoom gestures directly */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
 document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
-/* --- sync LED (thin line under the green top bar) ---
-   green = upload done · yellow = processing · red = internet / upload error · grey = off */
+/* --- sync cloud icon (right side of the green top bar) ---
+   green tick = upload done · yellow arrow = processing · red slash = internet / upload error · grey = not signed in */
 function setSyncLed(kind){
-  const el = document.getElementById('syncLed'); if(!el) return;
+  const el = document.getElementById('syncCloud'); if(!el) return;
   el.className = kind || '';
+  el.title = { ok:'Synced — all your data is saved in the cloud', busy:'Syncing…', err:'No internet or upload failed — saved on this device, will retry automatically' }[kind] || 'Saved on this device only (not signed in)';
 }
 function syncBadge(state){
   if(state==='ok') setSyncLed('ok');
