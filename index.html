@@ -132,7 +132,8 @@
 
   /* Quick-access shortcuts on the green top bar: New Bill / History / Ledger, centered */
   .topbar-shortcuts{display:flex;gap:24px;justify-self:center;}
-  @media (max-width:520px){ .topbar-shortcuts{gap:20px;} #mobileTopbar .title{display:none;} }
+  @media (max-width:520px){ #mobileTopbar{grid-template-columns:auto 1fr;} .topbar-shortcuts{gap:12px;justify-self:end;} #mobileTopbar .title{font-size:14px;} }
+  @media (max-width:360px){ .topbar-shortcuts{gap:8px;} #mobileTopbar .title{font-size:13px;} #mobileTopbar .topbar-left{gap:8px;} }
   .topbar-shortcut-btn{
     background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:#fff;
     border-radius:7px;font-size:10.5px;font-weight:700;font-family:inherit;
@@ -2553,12 +2554,23 @@ function syncApplyMerged(m){
     syncRebase();
   } finally { applyingRemoteUpdate = false; }
 }
+/* Not signed in: a save is only stored on this device. Still play the light (yellow moving, then green), then return to white after a few seconds. */
+let localLightTimer = null;
+function localSaveLight(){
+  setSyncLed('busy');
+  clearTimeout(localLightTimer);
+  localLightTimer = setTimeout(()=>{
+    setSyncLed('ok');
+    localLightTimer = setTimeout(()=>setSyncLed(''), 4500);
+  }, 600);
+}
+window.addEventListener('load', ()=>{ setTimeout(()=>{ try{ if(!currentUid) localSaveLight(); }catch(e){} }, 1200); });
 let syncPushing = false, syncPushAgain = false, syncRetryTimer = null;
 function pushToCloud(immediate){
   try{ syncTrackLocal(); }catch(e){ console.error('MCLAINE track error:', e); }
   try{ autoBackupMaybe(); }catch(e){}
   try{
-    if(!syncDb || !currentUid){ syncBadge('local'); syncPopup('local'); }
+    if(!syncDb || !currentUid){ syncBadge('local'); syncPopup('local'); localSaveLight(); }
     else if(!navigator.onLine){ syncBadge('wait'); syncPopup('wait'); }
     else { syncBadge('wait'); syncPopup('up'); }
   }catch(e){}
@@ -2732,7 +2744,7 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v24';
+const APP_VERSION = '2026-10-31 safe-sync v26';
 /* iPhone/iPad Safari ignores user-scalable=no, so block the two-finger zoom gestures directly */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
 document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
