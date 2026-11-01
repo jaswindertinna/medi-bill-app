@@ -246,6 +246,52 @@
   .ledger-dash-btn:hover{filter:brightness(1.08);}
 
   #main{flex:1;width:100%;padding:22px 27px;max-width:1180px;margin:0 auto;box-sizing:border-box;}
+  /* ---- Sale calendar: everything fits one screen, no scrolling ---- */
+  #view-salecal.active{display:flex;flex-direction:column;gap:8px;overflow:hidden;}
+  .sc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;flex-wrap:wrap;}
+  .sc-crumb{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:700;flex-wrap:wrap;}
+  .sc-crumb button{border:0;background:var(--primary-light);color:var(--primary-dark);border-radius:8px;padding:7px 12px;font-weight:700;font-size:13px;cursor:pointer;}
+  .sc-crumb .cur{background:var(--primary);color:#fff;border-radius:8px;padding:7px 12px;}
+  .sc-crumb i{font-style:normal;color:var(--muted);}
+  .sc-yr{display:flex;align-items:center;gap:8px;}
+  .sc-yr b{font-size:18px;min-width:56px;text-align:center;}
+  .sc-yr button{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--primary-dark);font-size:18px;font-weight:700;cursor:pointer;line-height:1;}
+  .sc-tot{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:none;}
+  .sc-tot>div{background:#fff;border:1px solid var(--border);border-radius:10px;padding:6px 10px;min-width:0;}
+  .sc-tot small{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;}
+  .sc-tot b{font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .sc-body{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:8px;}
+  .sc-m{background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;min-height:0;min-width:0;overflow:hidden;-webkit-tap-highlight-color:transparent;}
+  .sc-m:active{background:var(--primary-light);}
+  .sc-m.cur{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light);}
+  .sc-mh{font-weight:800;font-size:13px;color:var(--primary-dark);}
+  .sc-r{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;gap:4px;}
+  .sc-r span{color:var(--muted);font-size:11px;}
+  .sc-r b{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .sc-r b.pos{color:var(--primary-dark);} .sc-r b.neg{color:var(--danger);}
+  .sc-body.days{grid-template-columns:repeat(7,1fr);gap:6px;}
+  .sc-dh{text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;align-self:end;}
+  .sc-d{background:#fff;border:1px solid var(--border);border-radius:10px;padding:5px 7px;display:flex;flex-direction:column;justify-content:space-between;min-height:0;min-width:0;overflow:hidden;}
+  .sc-d.empty{background:transparent;border:0;}
+  .sc-d.zero{opacity:.55;}
+  .sc-d.today{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light);opacity:1;}
+  .sc-dn{font-weight:800;font-size:12px;color:var(--primary-dark);}
+  .sc-d .sc-r{font-size:11px;} .sc-d .sc-r span::before{content:attr(data-f);}
+  @media (max-width:700px){
+    .sc-body.days{gap:3px;}
+    .sc-d{padding:3px 3px;border-radius:7px;}
+    .sc-dn{font-size:10px;} .sc-dh{font-size:9px;}
+    .sc-d .sc-r{font-size:8.5px;gap:1px;letter-spacing:-.2px;} .sc-d .sc-r span{font-size:8px;} .sc-d .sc-r span::before{content:attr(data-s);}
+  }
+  @media (max-width:700px){
+    .sc-body{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:5px;}
+    .sc-m{padding:5px 6px;border-radius:9px;}
+    .sc-mh{font-size:11.5px;}
+    .sc-r{font-size:10px;} .sc-r span{font-size:9px;}
+    .sc-tot{gap:5px;} .sc-tot>div{padding:4px 6px;} .sc-tot b{font-size:11.5px;} .sc-tot small{font-size:9px;}
+    .sc-crumb button,.sc-crumb .cur{padding:6px 9px;font-size:12px;}
+    .sc-yr b{font-size:16px;min-width:46px;} .sc-yr button{width:32px;height:32px;}
+  }
   .view{display:none;}
   .view.active{display:block;}
   .page-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap;gap:8px;}
@@ -1024,6 +1070,7 @@
       <div class="nav-toggle" data-toggle="investment">INVESTMENT</div>
       <div class="nav-toggle" data-toggle="list">LIST</div>
       <div class="nav-toggle" data-toggle="notes">NOTES</div>
+      <div class="nav-toggle" data-toggle="sale">SALE</div>
       <div class="nav-toggle" data-toggle="account">ACCOUNT</div>
     </div>
   </div>
@@ -1057,6 +1104,10 @@
         <div class="nav-item" data-view="productsale"><span class="nav-dot"></span>Product-wise Sale</div>
         <div class="nav-item" data-view="expenses"><span class="nav-dot"></span>Expenses</div>
       </div>
+    </div>
+    <div class="nav-submenu" id="submenu-sale">
+      <div class="sec-heading">Sale</div>
+      <div class="nav-item" data-view="salecal"><span class="nav-dot"></span>Calendar</div>
     </div>
     <div class="nav-submenu" id="submenu-ledger">
       <div class="sec-heading">Bill Ledger</div>
@@ -2059,6 +2110,13 @@
     </div>
 
     <!-- COMPLETED NOTES -->
+    <!-- SALE CALENDAR -->
+    <div class="view" id="view-salecal">
+      <div class="sc-top"><div class="sc-crumb" id="scCrumb"></div><div class="sc-yr" id="scYear"></div></div>
+      <div class="sc-tot" id="scTot"></div>
+      <div id="scBody" class="sc-body"></div>
+    </div>
+
     <div class="view" id="view-completednotes">
       <div class="page-head"><div><h2>Completed Notes</h2><p>Notes you've ticked done, moved out of the way. Untick one to bring it back to Notes.</p></div></div>
       <div class="panel" style="padding:0;">
@@ -3422,6 +3480,7 @@ document.querySelectorAll('.nav-item').forEach(el=>{
 });
 /* Top-level accordion: Billing / Ledger / Dr Investment / Notes */
 const NOTES_GROUP_VIEWS = ['notes','completednotes'];
+const SALECAL_GROUP_VIEWS = ['salecal'];
 const LEDGER_GROUP_VIEWS = ['payments'];
 const INVESTMENT_GROUP_VIEWS = ['investment','drmargin','drreport','schedule','businessplan'];
 const LIST_GROUP_VIEWS = ['drlist','chemistlist','reminder'];
@@ -3438,6 +3497,12 @@ document.querySelectorAll('.nav-toggle').forEach(el=>{
       el.classList.add('open');
       submenu.classList.add('open');
       showView('dashboard');
+      return;
+    }
+    if(key==='sale'){
+      el.classList.add('open');
+      submenu.classList.add('open');
+      showView('salecal');
       return;
     }
     if(key==='notes'){
@@ -3529,6 +3594,7 @@ const MOBILE_MENU = [
       { label:'All Notes', view:'notes' },
       { label:'Completed Notes', view:'completednotes' },
   ]},
+  { label:'Sale', view:'salecal' },
   { label:'Account', view:'account' },
   { label:'Settings', view:'settings' },
 ];
@@ -3717,6 +3783,7 @@ document.getElementById('btnOpenMobileNav').addEventListener('click', openMobile
 const RAIL_ICONS = {
   'Dashboard':'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
   'Billing':'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7M9 17h7"/>',
+  'Sale':'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3M13 14h3M8 17.5h3"/>',
   'Bill Ledger':'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/>',
   'Investment':'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
   'List':'<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
@@ -3918,7 +3985,8 @@ document.getElementById('btnMobileNavBack').addEventListener('click', ()=>{
 function openNavGroupForView(name){
   activateSidebarSecondary();
   let group = 'billing';
-  if(NOTES_GROUP_VIEWS.includes(name)) group = 'notes';
+  if(SALECAL_GROUP_VIEWS.includes(name)) group = 'sale';
+  else if(NOTES_GROUP_VIEWS.includes(name)) group = 'notes';
   else if(LEDGER_GROUP_VIEWS.includes(name)) group = 'ledger';
   else if(INVESTMENT_GROUP_VIEWS.includes(name)) group = 'investment';
   else if(LIST_GROUP_VIEWS.includes(name)) group = 'list';
@@ -3961,6 +4029,7 @@ function showView(name){
   if(name==='returns') retEnter();
   if(name==='payments') renderPayments();
   if(name==='salesprofit'){ renderSalesProfitView(); }
+  if(name==='salecal'){ scEnter(); }
   if(name==='partysale'){ populatePartyOptions(); populatePartyCityOptions(); renderPartySaleReport(true); }
   if(name==='productsale'){ populateProductOptions(); populateSelectWithParties('psParty'); renderProductSaleReport(true); }
   if(name==='expenses'){ renderExpenses(); }
@@ -9484,6 +9553,122 @@ document.getElementById('btnSaveProfitSetting').addEventListener('click', async 
   toast(want ? 'Profit is now visible' : 'Profit is hidden');
 });
 function applyProfitVisibility(){ document.body.classList.toggle('hide-profit', settings.showProfit !== true); }
+
+/* ---------- SALE → Calendar: Year (12 month boxes) → Month (days) ----------
+   Sale   = billed total minus returns.
+   Cost   = purchase cost (incl. GST) of what was sold, minus the cost of returns.
+   Inv    = Dr Investment amounts (by investment date) + the doctors' monthly share (default 30%,
+            set per doctor in Doctor Margin) on the linked chemists' sale.
+   Profit = (Sale − Cost, as the app already works it out) − Inv.   Expenses are not included. */
+var scState = { year:new Date().getFullYear(), month:null };
+function scPad(n){ return String(n).padStart(2,'0'); }
+function scDk(d){ const x=new Date(d); return isNaN(x) ? null : x.getFullYear()+'-'+scPad(x.getMonth()+1)+'-'+scPad(x.getDate()); }
+function scMoney(n){ const v=Math.round(n||0); return (v<0?'-':'')+'₹'+Math.abs(v).toLocaleString('en-IN'); }
+function scCompute(year){
+  const days={}, yp=String(year)+'-';
+  const get=k=>days[k]||(days[k]={sale:0,cost:0,gross:0,inv:0});
+  bills.forEach(b=>{ const k=scDk(b.date); if(!k||k.indexOf(yp)!==0) return;
+    const p=computeProfit(b), e=get(k); e.sale+=Number(b.grandTotal)||0; e.cost+=p.cost; e.gross+=p.inclGst; });
+  (returns||[]).forEach(r=>{ const k=scDk(r.date); if(!k||k.indexOf(yp)!==0) return;
+    const t=computeReturnTotals(r), e=get(k); e.sale-=t.value; e.cost-=t.cost; e.gross-=t.inclGst; });
+  investments.forEach(i=>{ const a=Number(i.amount)||0; if(!(a>0)) return; const k=scDk(i.date); if(!k||k.indexOf(yp)!==0) return; get(k).inv+=a; });
+  dmDoctorNames().forEach(name=>{
+    const pct=drSharePct(name);
+    for(let m=1;m<=12;m++){
+      const rows=buildDrStatementData(name, yp+scPad(m)).rows;
+      rows.forEach(r=>{ const k=scDk(r.date); if(k) get(k).inv += r.net*pct/100; });
+    }
+  });
+  Object.keys(days).forEach(k=>{ days[k].profit = days[k].gross - days[k].inv; });
+  return days;
+}
+function scSum(days, prefix){
+  const t={sale:0,cost:0,inv:0,profit:0};
+  Object.keys(days).forEach(k=>{ if(k.indexOf(prefix)!==0) return; const e=days[k]; t.sale+=e.sale; t.cost+=e.cost; t.inv+=e.inv; t.profit+=e.profit; });
+  return t;
+}
+function scRowsHtml(t){
+  return `<div class="sc-r"><span>Sale</span><b>${scMoney(t.sale)}</b></div>`
+    +`<div class="sc-r profit-sec"><span>Cost</span><b>${scMoney(t.cost)}</b></div>`
+    +`<div class="sc-r"><span>Inv</span><b>${scMoney(t.inv)}</b></div>`
+    +`<div class="sc-r profit-sec"><span>Profit</span><b class="${t.profit<0?'neg':'pos'}">${scMoney(t.profit)}</b></div>`;
+}
+function scFit(){
+  const v=document.getElementById('view-salecal'); if(!v||!v.classList.contains('active')) return;
+  const top=v.getBoundingClientRect().top;
+  v.style.height=Math.max(280, window.innerHeight-top-12)+'px';
+  const extra=document.documentElement.scrollHeight-window.innerHeight;
+  if(extra>0) v.style.height=Math.max(280, v.getBoundingClientRect().height-extra)+'px';
+}
+function scEnter(){ scState.month=null; try{ window.scrollTo(0,0); }catch(e){} scRender(); }
+function scShort(n){
+  const v=Math.round(n||0), a=Math.abs(v), sg=v<0?'-':'';
+  if(a<1000) return sg+a;
+  if(a<100000) return sg+(a/1000).toFixed(1).replace(/\.0$/,'')+'k';
+  if(a<10000000) return sg+(a/100000).toFixed(1).replace(/\.0$/,'')+'L';
+  return sg+(a/10000000).toFixed(1).replace(/\.0$/,'')+'Cr';
+}
+var SC_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function scTotHtml(t){
+  return `<div><small>Sale</small><b>${scMoney(t.sale)}</b></div>`
+    +`<div class="profit-sec"><small>Cost</small><b>${scMoney(t.cost)}</b></div>`
+    +`<div><small>Inv</small><b>${scMoney(t.inv)}</b></div>`
+    +`<div class="profit-sec"><small>Profit</small><b style="color:${t.profit<0?'var(--danger)':'var(--primary-dark)'}">${scMoney(t.profit)}</b></div>`;
+}
+function scRender(){
+  const Y=scState.year, M=scState.month, days=scCompute(Y), now=new Date();
+  const body=document.getElementById('scBody');
+  if(!M){
+    document.getElementById('scCrumb').innerHTML = `<span class="cur">Year ${Y}</span>`;
+    document.getElementById('scYear').innerHTML = `<button data-scy="-1" aria-label="Previous year">‹</button><b>${Y}</b><button data-scy="1" aria-label="Next year">›</button>`;
+    document.getElementById('scTot').innerHTML = scTotHtml(scSum(days, Y+'-'));
+    const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    let h='';
+    for(let m=1;m<=12;m++){
+      const t=scSum(days, Y+'-'+scPad(m)+'-');
+      const cur=(Y===now.getFullYear() && m===now.getMonth()+1) ? ' cur' : '';
+      h+=`<div class="sc-m${cur}" data-scm="${m}"><div class="sc-mh">${names[m-1].toUpperCase()}</div>${scRowsHtml(t)}</div>`;
+    }
+    body.className='sc-body'; body.style.gridTemplateRows=''; body.innerHTML=h;
+  } else {
+    const small = window.innerWidth<=700;
+    document.getElementById('scCrumb').innerHTML = `<button data-scgo="year">Year ${Y}</button><i>›</i><span class="cur">${SC_MONTHS[M-1]} ${Y}</span>`;
+    document.getElementById('scYear').innerHTML = `<button data-scmv="-1" aria-label="Previous month">‹</button><b style="min-width:${small?70:110}px">${SC_MONTHS[M-1].slice(0,3)} ${Y}</b><button data-scmv="1" aria-label="Next month">›</button>`;
+    document.getElementById('scTot').innerHTML = scTotHtml(scSum(days, Y+'-'+scPad(M)+'-'));
+    const first=new Date(Y,M-1,1).getDay(), dim=new Date(Y,M,0).getDate(), rows=Math.ceil((first+dim)/7);
+    let h=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="sc-dh">${d}</div>`).join('');
+    for(let i=0;i<first;i++) h+='<div class="sc-d empty"></div>';
+    for(let d=1; d<=dim; d++){
+      const e=days[Y+'-'+scPad(M)+'-'+scPad(d)] || {sale:0,cost:0,inv:0,profit:0};
+      const zero = !(e.sale||e.cost||e.inv||e.profit);
+      const today = (Y===now.getFullYear() && M===now.getMonth()+1 && d===now.getDate());
+      const mny = n => small ? scShort(n) : scMoney(n);
+      h+=`<div class="sc-d${zero?' zero':''}${today?' today':''}"><div class="sc-dn">${d}</div>`
+        +`<div class="sc-r"><span data-f="Sale" data-s="S"></span><b>${mny(e.sale)}</b></div>`
+        +`<div class="sc-r profit-sec"><span data-f="Cost" data-s="C"></span><b>${mny(e.cost)}</b></div>`
+        +`<div class="sc-r"><span data-f="Inv" data-s="I"></span><b>${mny(e.inv)}</b></div>`
+        +`<div class="sc-r profit-sec"><span data-f="Profit" data-s="P"></span><b class="${e.profit<0?'neg':'pos'}">${mny(e.profit)}</b></div></div>`;
+    }
+    body.className='sc-body days'; body.style.gridTemplateRows='auto repeat('+rows+',1fr)'; body.innerHTML=h;
+  }
+  scFit();
+}
+document.getElementById('view-salecal').addEventListener('click', e=>{
+  const y=e.target.closest('[data-scy]');
+  if(y){ scState.year += Number(y.dataset.scy); scRender(); return; }
+  const mv=e.target.closest('[data-scmv]');
+  if(mv){
+    let m=scState.month+Number(mv.dataset.scmv), yr=scState.year;
+    if(m<1){ m=12; yr--; } else if(m>12){ m=1; yr++; }
+    scState.year=yr; scState.month=m; scRender(); return;
+  }
+  if(e.target.closest('[data-scgo]')){ scState.month=null; scRender(); return; }
+  const m=e.target.closest('[data-scm]');
+  if(m){ scState.month=Number(m.dataset.scm); scRender(); }
+});
+(function(){ let small=window.innerWidth<=700; window.addEventListener('resize', ()=>{ const s2=window.innerWidth<=700; if(s2!==small){ small=s2; const v=document.getElementById('view-salecal'); if(v.classList.contains('active')) scRender(); } }); })();
+window.addEventListener('resize', scFit);
+
 document.getElementById('btnSaveWhatsappSettings').addEventListener('click', async ()=>{
   settings.whatsappAuto = document.getElementById('sWhatsappAuto').checked;
   settings.whatsappCC = document.getElementById('sWhatsappCC').value.trim() || '91';
