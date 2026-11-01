@@ -1243,6 +1243,7 @@
         <div><h2>Medicine stock</h2><p>Add, edit and track your medicine inventory.</p></div>
         <div class="top-actions">
           <input style="width:210px" id="invSearch" placeholder="Search medicine...">
+          <button class="ghost" id="btnRecalcStock" title="Set every medicine's stock to purchased − sold + returned">Recalculate stock</button>
           <button class="primary" id="btnAddMed">+ Add medicine</button>
         </div>
       </div>
@@ -7684,6 +7685,62 @@ document.getElementById('btnPwView').addEventListener('click', ()=>renderPartySa
 /* Party dropdown and City/Location filters are mutually exclusive — picking one clears the other */
 document.getElementById('pwParty').addEventListener('change', function(){ if(this.value){ document.getElementById('pwCity').value=''; document.getElementById('pwLocation').value=''; document.getElementById('pwLocation').innerHTML='<option value="">All locations</option>'; } });
 document.getElementById('pwCity').addEventListener('change', function(){ if(this.value){ document.getElementById('pwParty').value=''; } });
+
+/* ---------- Recalculate stock ----------
+   Stock = everything purchased − everything sold (bill qty + free qty, bills and temp bills) + everything returned.
+   Shows a preview (current → new) and only changes stock after you confirm. */
+function computeRecalculatedStock(){
+  const key = n => (n||'').trim().toLowerCase();
+  const bal = new Map();
+  const add = (name, q)=>{ const k = key(name); if(!k) return; bal.set(k, (bal.get(k)||0) + q); };
+  purchases.forEach(pu=> (pu.items||[]).forEach(it=>{
+    const q = (it.stockQty!=null && it.stockQty!=='') ? Number(it.stockQty) : (Number(it.qty)||0)*(Number(it.unitsPerBox)||1);
+    add(it.name, q||0);
+  }));
+  const sold = it => (Number(it.qty)||0) + (Number(it.free)||0);
+  bills.forEach(b=> (b.items||[]).forEach(it=> add(it.name, -sold(it))));
+  tempBills.forEach(b=> (b.items||[]).forEach(it=> add(it.name, -sold(it))));
+  returns.forEach(r=> (r.items||[]).forEach(it=> add(it.name, sold(it))));
+  const r2 = v => Math.round(v*100)/100;
+  return medicines.map(m=>{
+    const raw = r2(bal.get(key(m.name)) || 0);
+    return { m, current: Number(m.stock)||0, next: Math.max(0, raw), raw };
+  });
+}
+document.getElementById('btnRecalcStock').addEventListener('click', ()=>{
+  const all = computeRecalculatedStock();
+  const diff = all.filter(x=> Math.abs(x.current - x.next) > 0.0001);
+  const old = document.getElementById('recalcModal'); if(old) old.remove();
+  const e = escapeHtml;
+  const rows = diff.map(x=>`<tr><td><b>${e(x.m.name)}</b></td><td class="num">${x.current}</td><td class="num" style="font-weight:700;">${x.next}</td>
+    <td class="num" style="color:${x.next-x.current<0?'var(--danger)':'inherit'};">${(x.next-x.current>0?'+':'')+(Math.round((x.next-x.current)*100)/100)}</td>
+    <td style="font-size:11px;color:var(--danger);">${x.raw<0?'sold more than purchased':''}</td></tr>`).join('');
+  const el = document.createElement('div'); el.id = 'recalcModal'; el.className = 'glass-backdrop';
+  el.style.cssText = 'position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+  el.innerHTML = `<div class="glass-modal" style="background:#fff;border-radius:12px;max-width:640px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
+      <div style="font-weight:700;font-size:15px;">Recalculate stock<div style="font-weight:400;font-size:11px;color:var(--muted);">New stock = purchased − sold (bill + free qty) + returned · ${diff.length} of ${all.length} medicines would change</div></div>
+      <button type="button" id="recalcClose" style="border:none;background:none;font-size:24px;line-height:1;cursor:pointer;color:var(--muted);">×</button>
+    </div>
+    <div style="overflow:auto;padding:4px 16px;">${diff.length ? `<table><thead><tr><th>Medicine</th><th class="num">Now</th><th class="num">New</th><th class="num">Change</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<p style="padding:18px;text-align:center;color:var(--muted);">Every medicine already matches. Nothing to change.</p>'}</div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--muted);flex:1;min-width:200px;">A medicine whose opening stock was never entered as a purchase will come out too low. Check the list before applying.</span>
+      <button type="button" class="ghost" id="recalcCancel">Cancel</button>
+      ${diff.length ? '<button type="button" class="primary" id="recalcApply">Apply to '+diff.length+' medicines</button>' : ''}
+    </div></div>`;
+  document.body.appendChild(el);
+  const close = ()=> el.remove();
+  el.addEventListener('click', ev=>{ if(ev.target===el) close(); });
+  document.getElementById('recalcClose').addEventListener('click', close);
+  document.getElementById('recalcCancel').addEventListener('click', close);
+  const ap = document.getElementById('recalcApply');
+  if(ap) ap.addEventListener('click', async ()=>{
+    diff.forEach(x=>{ x.m.stock = x.next; });
+    await saveMedicines();
+    close(); renderInventory(document.getElementById('invSearch').value||'');
+    toast('Stock recalculated for '+diff.length+' medicine(s)');
+  });
+});
 
 /* ---------- Product-wise sale ---------- */
 function populateProductOptions(){
