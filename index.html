@@ -269,6 +269,17 @@
   .sc-r span{color:var(--muted);font-size:11px;}
   .sc-r b{font-variant-numeric:tabular-nums;white-space:nowrap;}
   .sc-r b.pos{color:var(--primary-dark);} .sc-r b.neg{color:var(--danger);}
+  .sc-body.list{display:block;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:12px;-webkit-overflow-scrolling:touch;}
+  .sc-b{display:grid;grid-template-columns:minmax(0,1fr) 92px 92px 92px 56px;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;}
+  .sc-b.hd{position:sticky;top:0;background:var(--primary-light);font-size:11px;font-weight:700;color:var(--primary-dark);text-transform:uppercase;letter-spacing:.3px;z-index:1;}
+  .sc-b .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .sc-b .pty{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+  .sc-b .pty small{display:block;font-weight:400;color:var(--muted);font-size:11px;}
+  .sc-b.ret{color:var(--danger);} .sc-b.invr{background:#fffbeb;}
+  .sc-b button{padding:5px 8px;border-radius:8px;border:1px solid var(--primary);background:#fff;color:var(--primary-dark);font-weight:600;font-size:12px;cursor:pointer;}
+  .sc-b.hd button{display:none;}
+  .sc-none{padding:30px 16px;text-align:center;color:var(--muted);}
+  .sc-d[data-scd]{cursor:pointer;} .sc-d[data-scd]:active{background:var(--primary-light);}
   .sc-body.days{grid-template-columns:repeat(7,1fr);gap:6px;}
   .sc-dh{text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;align-self:end;}
   .sc-d{background:#fff;border:1px solid var(--border);border-radius:10px;padding:5px 7px;display:flex;flex-direction:column;justify-content:space-between;min-height:0;min-width:0;overflow:hidden;}
@@ -282,6 +293,8 @@
     .sc-d{padding:3px 3px;border-radius:7px;}
     .sc-dn{font-size:10px;} .sc-dh{font-size:9px;}
     .sc-d .sc-r{font-size:8.5px;gap:1px;letter-spacing:-.2px;} .sc-d .sc-r span{font-size:8px;} .sc-d .sc-r span::before{content:attr(data-s);}
+    .sc-b{grid-template-columns:minmax(0,1fr) 54px 54px 54px 40px;gap:4px;padding:8px 6px;font-size:11px;}
+    .sc-b .pty small{font-size:9.5px;} .sc-b button{padding:4px 5px;font-size:10.5px;}
   }
   @media (max-width:700px){
     .sc-body{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:5px;}
@@ -2010,7 +2023,7 @@
           <div class="field"><label>Sale date <span style="font-weight:400;">(sale is counted from this date)</span></label><input type="date" id="invSaleDate"></div>
         </div>
         <div class="row c2">
-          <div class="field"><label>Amount (₹) <span style="font-weight:400;">(0 = monthly investment)</span></label><input id="invAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label>Amount (₹) <span style="font-weight:400;">(0 = monthly Dr profit %)</span></label><input id="invAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
           <div class="field"><label>Investment type</label><input id="invType" placeholder="e.g. Cash, Gift, Sponsorship"></div>
         </div>
         <div class="field"><label>Note <span style="font-weight:400;">(optional)</span></label><input id="invNote" placeholder="e.g. Purpose or terms of investment"></div>
@@ -8224,8 +8237,10 @@ function invCycleEditHtml(c){
     <div class="inv-dates">
       <div class="inv-date"><div class="lbl">Inv date</div><div class="val">${invDateLabel(invStart(inv))}</div></div>
       <div class="inv-date"><div class="lbl">Sale date</div><div class="val">${invDateLabel(c.from)}</div></div>
-      <div class="inv-date"><div class="lbl">Inv value</div><div class="val">${fmt(c.amount)}</div></div>
+      <div class="inv-date"><div class="lbl">Inv value ₹ <span style="font-weight:400;">(editable)</span></div><div class="val"><input type="number" min="0" step="0.01" value="${c.amount}" data-invamt="${inv.id}" style="width:120px;padding:5px 7px;"></div></div>
+      ${c.amount===0 ? `<div class="inv-date"><div class="lbl">Dr profit % (monthly)</div><div class="val"><input type="number" min="0" max="100" step="0.5" value="${drSharePct(inv.doctor)}" data-invpct="${escapeHtml(inv.doctor)}" style="width:80px;padding:5px 7px;"> %</div></div>` : ''}
     </div>
+    <div class="inv-link-hint" style="margin:2px 0 8px;">Type 0 for a monthly arrangement: no fixed amount is given, the doctor gets the monthly profit % of the sale instead.</div>
     ${inv.note ? `<div class="inv-note">${escapeHtml(inv.note)}</div>` : ''}
     <div class="inv-links">
       <div class="inv-links-title">Linked chemists &amp; products — add more, or remove below</div>
@@ -8395,6 +8410,30 @@ function showLinkSuggestions(input){
 }
 document.addEventListener('input', e=>{ const t = e.target.closest && e.target.closest('[data-linksearch]'); if(t) showLinkSuggestions(t); });
 document.addEventListener('focusin', e=>{ const t = e.target.closest && e.target.closest('[data-linksearch]'); if(t) showLinkSuggestions(t); });
+/* Edit an investment's amount afterwards (0 = monthly Dr profit %), and the doctor's monthly % when it is 0 */
+document.addEventListener('change', async e=>{
+  const a = e.target.closest && e.target.closest('[data-invamt]');
+  if(a){
+    const inv = investments.find(i=>i.id===a.dataset.invamt); if(!inv) return;
+    const v = parseFloat(a.value);
+    if(isNaN(v) || v<0){ toast('Enter 0 or a positive amount'); renderInvestments(); return; }
+    inv.amount = v;
+    await saveInvestments();
+    renderInvestments();
+    toast(v===0 ? 'Saved — 0 means monthly Dr profit %' : 'Investment amount updated');
+    return;
+  }
+  const pc = e.target.closest && e.target.closest('[data-invpct]');
+  if(pc){
+    const v = parseFloat(pc.value);
+    if(isNaN(v) || v<0 || v>100){ toast('Enter a percentage between 0 and 100'); renderInvestments(); return; }
+    if(!settings.drSharePct) settings.drSharePct = {};
+    settings.drSharePct[invKey(pc.dataset.invpct)] = v;
+    await saveSettings();
+    renderInvestments();
+    toast('Monthly Dr profit % saved');
+  }
+});
 document.addEventListener('keydown', e=>{
   const t = e.target.closest && e.target.closest('[data-linksearch]');
   if(t && e.key==='Enter'){
@@ -9560,7 +9599,7 @@ function applyProfitVisibility(){ document.body.classList.toggle('hide-profit', 
    Inv    = Dr Investment amounts (by investment date) + the doctors' monthly share (default 30%,
             set per doctor in Doctor Margin) on the linked chemists' sale.
    Profit = (Sale − Cost, as the app already works it out) − Inv.   Expenses are not included. */
-var scState = { year:new Date().getFullYear(), month:null };
+var scState = { year:new Date().getFullYear(), month:null, day:null };
 function scPad(n){ return String(n).padStart(2,'0'); }
 function scDk(d){ const x=new Date(d); return isNaN(x) ? null : x.getFullYear()+'-'+scPad(x.getMonth()+1)+'-'+scPad(x.getDate()); }
 function scMoney(n){ const v=Math.round(n||0); return (v<0?'-':'')+'₹'+Math.abs(v).toLocaleString('en-IN'); }
@@ -9600,7 +9639,7 @@ function scFit(){
   const extra=document.documentElement.scrollHeight-window.innerHeight;
   if(extra>0) v.style.height=Math.max(280, v.getBoundingClientRect().height-extra)+'px';
 }
-function scEnter(){ scState.month=null; try{ window.scrollTo(0,0); }catch(e){} scRender(); }
+function scEnter(){ scState.month=null; scState.day=null; try{ window.scrollTo(0,0); }catch(e){} scRender(); }
 function scShort(n){
   const v=Math.round(n||0), a=Math.abs(v), sg=v<0?'-':'';
   if(a<1000) return sg+a;
@@ -9630,6 +9669,30 @@ function scRender(){
       h+=`<div class="sc-m${cur}" data-scm="${m}"><div class="sc-mh">${names[m-1].toUpperCase()}</div>${scRowsHtml(t)}</div>`;
     }
     body.className='sc-body'; body.style.gridTemplateRows=''; body.innerHTML=h;
+  } else if(scState.day){
+    const D=scState.day, small=window.innerWidth<=700, mny = n => small ? scShort(n) : scMoney(n);
+    const key=Y+'-'+scPad(M)+'-'+scPad(D), dt=new Date(Y,M-1,D);
+    const label=D+' '+SC_MONTHS[M-1].slice(0,3)+' '+Y;
+    document.getElementById('scCrumb').innerHTML = `<button data-scgo="year">Year ${Y}</button><i>›</i><button data-scgo="month">${SC_MONTHS[M-1]} ${Y}</button><i>›</i><span class="cur">${D} ${SC_MONTHS[M-1].slice(0,3)}</span>`;
+    document.getElementById('scYear').innerHTML = `<button data-scdv="-1" aria-label="Previous day">‹</button><b style="min-width:${small?78:120}px">${dt.toLocaleDateString('en-IN',{weekday:'short'})}, ${label}</b><button data-scdv="1" aria-label="Next day">›</button>`;
+    const e=days[key] || {sale:0,cost:0,inv:0,profit:0};
+    document.getElementById('scTot').innerHTML = scTotHtml(e);
+    let rows='';
+    bills.filter(b=>scDk(b.date)===key).sort((a,b)=>String(a.billNo).localeCompare(String(b.billNo),undefined,{numeric:true})).forEach(b=>{
+      const p=computeProfit(b);
+      rows+=`<div class="sc-b"><div class="pty">${escapeHtml(b.customerName||'Walk-in')}<small>${escapeHtml(String(b.billNo||''))}</small></div><div class="n">${mny(Number(b.grandTotal)||0)}</div><div class="n profit-sec">${mny(p.cost)}</div><div class="n profit-sec">${mny(p.inclGst)}</div><button onclick='viewBillById("${b.id}")'>View</button></div>`;
+    });
+    (returns||[]).filter(r=>scDk(r.date)===key).forEach(r=>{
+      const t=computeReturnTotals(r);
+      rows+=`<div class="sc-b ret"><div class="pty">${escapeHtml(r.party||'Return')}<small>Return</small></div><div class="n">${mny(-t.value)}</div><div class="n profit-sec">${mny(-t.cost)}</div><div class="n profit-sec">${mny(-t.inclGst)}</div><span></span></div>`;
+    });
+    investments.filter(i=>(Number(i.amount)||0)>0 && scDk(i.date)===key).forEach(i=>{
+      rows+=`<div class="sc-b invr"><div class="pty">${escapeHtml(i.doctor||'Dr')}<small>Dr Investment${i.invType?' · '+escapeHtml(i.invType):''}</small></div><div class="n" style="grid-column:2/5;font-weight:700;">Inv ${mny(Number(i.amount)||0)}</div><span></span></div>`;
+    });
+    body.className='sc-body list'; body.style.gridTemplateRows='';
+    body.innerHTML = `<div class="sc-b hd"><div>Party / Bill</div><div class="n">Sale</div><div class="n profit-sec">Cost</div><div class="n"><span class="profit-sec">Profit</span></div><span></span></div>`
+      + (rows || '<div class="sc-none">No bills on this day.</div>');
+    if(rows){ body.insertAdjacentHTML('beforeend', `<div style="padding:8px 12px;font-size:11px;color:var(--muted);">Yellow row = Dr Investment. The doctors' monthly share is included in the Inv total above.</div>`); }
   } else {
     const small = window.innerWidth<=700;
     document.getElementById('scCrumb').innerHTML = `<button data-scgo="year">Year ${Y}</button><i>›</i><span class="cur">${SC_MONTHS[M-1]} ${Y}</span>`;
@@ -9643,7 +9706,7 @@ function scRender(){
       const zero = !(e.sale||e.cost||e.inv||e.profit);
       const today = (Y===now.getFullYear() && M===now.getMonth()+1 && d===now.getDate());
       const mny = n => small ? scShort(n) : scMoney(n);
-      h+=`<div class="sc-d${zero?' zero':''}${today?' today':''}"><div class="sc-dn">${d}</div>`
+      h+=`<div class="sc-d${zero?' zero':''}${today?' today':''}" data-scd="${d}"><div class="sc-dn">${d}</div>`
         +`<div class="sc-r"><span data-f="Sale" data-s="S"></span><b>${mny(e.sale)}</b></div>`
         +`<div class="sc-r profit-sec"><span data-f="Cost" data-s="C"></span><b>${mny(e.cost)}</b></div>`
         +`<div class="sc-r"><span data-f="Inv" data-s="I"></span><b>${mny(e.inv)}</b></div>`
@@ -9660,9 +9723,17 @@ document.getElementById('view-salecal').addEventListener('click', e=>{
   if(mv){
     let m=scState.month+Number(mv.dataset.scmv), yr=scState.year;
     if(m<1){ m=12; yr--; } else if(m>12){ m=1; yr++; }
-    scState.year=yr; scState.month=m; scRender(); return;
+    scState.year=yr; scState.month=m; scState.day=null; scRender(); return;
   }
-  if(e.target.closest('[data-scgo]')){ scState.month=null; scRender(); return; }
+  const dv=e.target.closest('[data-scdv]');
+  if(dv){
+    const t=new Date(scState.year, scState.month-1, scState.day+Number(dv.dataset.scdv));
+    scState.year=t.getFullYear(); scState.month=t.getMonth()+1; scState.day=t.getDate(); scRender(); return;
+  }
+  const go=e.target.closest('[data-scgo]');
+  if(go){ if(go.dataset.scgo==='year') scState.month=null; scState.day=null; scRender(); return; }
+  const dc=e.target.closest('[data-scd]');
+  if(dc){ scState.day=Number(dc.dataset.scd); scRender(); return; }
   const m=e.target.closest('[data-scm]');
   if(m){ scState.month=Number(m.dataset.scm); scRender(); }
 });
