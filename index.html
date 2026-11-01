@@ -1125,7 +1125,8 @@
           <div class="value" style="color:var(--danger);font-size:15px;" id="atPending">₹0</div>
         </div>
         <div class="metric-card">
-          <div class="label">This month's sale</div>
+          <div class="label" id="moLabel">This month's sale</div>
+          <input type="month" class="dashMonthPick" onclick="event.stopPropagation()" onchange="setDashMonth(this.value)" style="margin-top:6px;width:100%;font-size:12px;padding:4px 6px;box-sizing:border-box;">
           <div class="value" id="moSale">₹0</div>
           <div class="profit-sec">
           <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Profit (without inv.)</div>
@@ -1133,19 +1134,20 @@
           <div style="font-size:10.5px;color:var(--muted);margin-top:6px;">Profit (with inv.)</div>
           <div class="value" style="font-size:15px;" id="moProfitWithInv">₹0</div>
           </div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Total payment pending</div>
-          <div class="value" style="color:var(--danger);font-size:15px;" id="moPending">₹0</div>
           <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Total payment rec. (all time)</div>
           <div class="value" style="font-size:15px;color:var(--primary-dark);" id="moTotalRec">₹0</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Total payment pending</div>
+          <div class="value" style="color:var(--danger);font-size:15px;" id="moPending">₹0</div>
         </div>
         <div class="metric-card">
-          <div class="label">This month's payments</div>
+          <div class="label" id="pmLabel">This month's payments</div>
+          <input type="month" class="dashMonthPick" onclick="event.stopPropagation()" onchange="setDashMonth(this.value)" style="margin-top:6px;width:100%;font-size:12px;padding:4px 6px;box-sizing:border-box;">
           <div style="font-size:10.5px;color:var(--muted);margin-top:8px;">Total payment (billed this month)</div>
           <div class="value" id="pmBilled">₹0</div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">This month payment pending</div>
-          <div class="value" style="color:var(--danger);font-size:15px;" id="pmPending">₹0</div>
           <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">This month payment rec.</div>
           <div class="value" style="font-size:15px;color:var(--primary-dark);" id="pmReceived">₹0</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">This month payment pending</div>
+          <div class="value" style="color:var(--danger);font-size:15px;" id="pmPending">₹0</div>
         </div>
         <div class="metric-card profit-sec">
           <div class="label">Total simple profit</div>
@@ -4138,6 +4140,18 @@ function openLowStockModal(){
 }
 document.addEventListener('click', e=>{ if(e.target.closest && e.target.closest('#cardLowStock')) openLowStockModal(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ const m=document.getElementById('lowStockModal'); if(m) m.remove(); } });
+let dashMonth = null; // null = current month, else 'YYYY-MM'
+function dashMonthRange(){
+  if(!dashMonth) return monthRange();
+  const [y,m] = dashMonth.split('-').map(Number);
+  return [new Date(y,m-1,1,0,0,0,0), new Date(y,m,0,23,59,59,999)];
+}
+function setDashMonth(v){
+  const now = new Date();
+  const cur = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  dashMonth = (!v || v===cur) ? null : v;
+  renderDashboard();
+}
 function renderDashboard(){
   const todayStr = new Date().toDateString();
   document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long', year:'numeric', month:'long', day:'numeric'});
@@ -4152,7 +4166,13 @@ function renderDashboard(){
   getAllPartyNames().forEach(p=>{ totalPending += Math.max(0, computePartyTotals(p).pending); });
 
   const [wkStart, wkEnd] = weekRange();
-  const [moStart, moEnd] = monthRange();
+  const [moStart, moEnd] = dashMonthRange();
+  const isCur = (dashMonth===null);
+  const mLbl = moStart.toLocaleDateString('en-IN',{month:'short',year:'numeric'});
+  document.getElementById('moLabel').textContent = isCur ? "This month's sale" : mLbl+" sale";
+  document.getElementById('pmLabel').textContent = isCur ? "This month's payments" : mLbl+" payments";
+  const pickVal = moStart.getFullYear()+'-'+String(moStart.getMonth()+1).padStart(2,'0');
+  document.querySelectorAll('.dashMonthPick').forEach(i=>{ if(i.value!==pickVal) i.value=pickVal; });
   const all = periodStats();
   const mo = periodStats(moStart, moEnd);
   const wk = periodStats(wkStart, wkEnd);
