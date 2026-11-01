@@ -2752,8 +2752,15 @@ document.getElementById('btnLogout').addEventListener('click', ()=>{
   syncAuth.signOut();
 });
 function refreshCurrentView(){
-  const activeEl = document.querySelector('.nav-item.active');
-  showView(activeEl ? activeEl.dataset.view : 'dashboard');
+  /* Re-draw whichever page is open. (It used to look only for the highlighted sidebar item, which
+     Schedule / Doctor Margin / Dr Investment / Business Plan don't have — so after every cloud sync
+     those pages jumped back to Home.) */
+  const act = document.querySelector('.view.active');
+  const name = act && act.id ? act.id.replace(/^view-/,'') : 'dashboard';
+  /* Never redraw a data-entry page while a field in it is being used — it would wipe what is being typed */
+  const typing = document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName) && act && act.contains(document.activeElement);
+  if(typing && ['schedule','businessplan','investment','newbill','newpurchase','purchaseorder','drmargin'].includes(name)) return;
+  showView(name);
 }
 function listenToCloud(){
   if(!syncDb || !currentUid) return;
