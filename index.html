@@ -1764,11 +1764,13 @@
           <div class="value" id="psProfitIncl">₹0</div><div style="font-size:10.5px;color:var(--muted);">incl. GST</div>
           <div class="value" style="font-size:16px;margin-top:6px;" id="psProfitSimple">₹0</div><div style="font-size:10.5px;color:var(--muted);">simple (sale − purchase rate)</div>
         </div>
-        <div class="metric-card"><div class="label">Qty sold</div><div class="value" id="psQty">0</div></div>
+        <div class="metric-card"><div class="label">Qty purchased</div><div class="value" id="psPurchased">0</div><div style="font-size:10.5px;color:var(--muted);" id="psPurchasedSub">&nbsp;</div></div>
+        <div class="metric-card"><div class="label">Qty sold</div><div class="value" id="psQty">0</div><div style="font-size:10.5px;color:var(--muted);" id="psQtySub">bill qty + free qty</div></div>
+        <div class="metric-card warn"><div class="label">Pending qty</div><div class="value" id="psPending">0</div><div style="font-size:10.5px;color:var(--muted);">purchased − sold</div></div>
       </div>
       <div class="panel" style="padding:0;overflow-x:auto;">
         <table>
-          <thead><tr><th>Bill no.</th><th>Date</th><th>Customer</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
+          <thead><tr><th>Bill no.</th><th>Date</th><th>Customer</th><th class="num">Qty (bill + free)</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
           <tbody id="psTableBody"></tbody>
         </table>
         <div class="empty" id="psEmpty" style="display:block;"><h3>No sales to show</h3><p>Select a product and, optionally, a party or date range, then click "View report".</p></div>
@@ -5296,12 +5298,13 @@ function renderPurchasesHistory(){
   document.getElementById('purchasesEmpty').style.display = list.length? 'none':'block';
   document.getElementById('purchasesTableBody').innerHTML = list.map(p=>`
     <tr>
-      <td><b>${p.invoiceNo}</b></td>
+      <td><b style="cursor:pointer;" onclick='viewPurchase("${p.id}")'>${p.invoiceNo}</b></td>
       <td>${new Date(p.date).toLocaleDateString('en-IN')}</td>
       <td>${p.party||'—'}</td>
       <td class="num">${p.items.length}</td>
       <td class="num">${fmt(p.grandTotal)}</td>
       <td><div style="display:flex;gap:6px;justify-content:flex-end;">
+        <button class="sm primary" onclick='viewPurchase("${p.id}")'>View</button>
         <button class="sm danger" onclick='deletePurchase("${p.id}")'>Delete</button>
       </div></td>
     </tr>`).join('');
@@ -5311,6 +5314,60 @@ window.deletePurchase = function(id){
   if(!confirm('Delete this purchase record? This will not reduce medicine stock.')) return;
   purchases = purchases.filter(p=>p.id!==id);
   savePurchases(); renderPurchasesHistory(); toast('Purchase record deleted');
+};
+
+/* View one purchase bill: supplier details, every medicine line and the totals */
+window.viewPurchase = function(id){
+  const p = purchases.find(x=>x.id===id); if(!p) return;
+  const old = document.getElementById('purchaseViewModal'); if(old) old.remove();
+  const e = escapeHtml, n = v => (v==null || v==='' || isNaN(Number(v))) ? '—' : fmt(Number(v));
+  const dt = d => d ? new Date(d).toLocaleDateString('en-IN') : '—';
+  const items = p.items||[];
+  const rows = items.map((it,i)=>`<tr>
+      <td>${i+1}</td>
+      <td><b>${e(it.name)}</b>${it.pack?'<div style="font-size:11px;color:var(--muted);">'+e(it.pack)+'</div>':''}</td>
+      <td>${e(it.batch||'—')}</td><td>${e(it.expiry||'—')}</td>
+      <td class="num">${e(String(it.qty))}</td>
+      <td class="num">${e(String(it.unitsPerBox||1))}</td>
+      <td class="num">+${e(String(it.stockQty!=null?it.stockQty:''))} ${e(it.unit||'')}</td>
+      <td class="num">${n(it.boxRate!=null?it.boxRate:it.purchaseRate)}</td>
+      <td class="num">${n(it.boxMrp!=null?it.boxMrp:it.mrp)}</td>
+      <td class="num">${e(String(it.gst!=null?it.gst:0))}%</td>
+      <td class="num">${n(it.amount)}</td></tr>`).join('');
+  const line = (label,val,bold)=>`<div style="display:flex;justify-content:space-between;padding:3px 0;${bold?'font-weight:700;border-top:1px solid var(--border);margin-top:4px;padding-top:7px;':''}"><span>${label}</span><span>${val}</span></div>`;
+  const info = (label,val)=> val ? `<div><div style="font-size:11px;color:var(--muted);">${label}</div><div style="font-weight:600;">${e(val)}</div></div>` : '';
+  const el = document.createElement('div'); el.id = 'purchaseViewModal'; el.className = 'glass-backdrop';
+  el.style.cssText = 'position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+  el.innerHTML = `<div class="glass-modal" style="background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
+      <div style="font-weight:700;font-size:15px;">Purchase bill ${e(p.invoiceNo)}<div style="font-weight:400;font-size:11px;color:var(--muted);">${dt(p.date)} · ${e(p.party||'No supplier')}</div></div>
+      <button type="button" id="purchaseViewClose" style="border:none;background:none;font-size:24px;line-height:1;cursor:pointer;color:var(--muted);">×</button>
+    </div>
+    <div style="overflow:auto;padding:12px 16px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;font-size:13px;">
+        ${info('Supplier',p.party)}${info('GSTIN',p.gstin)}${info('Bill date',dt(p.date))}${p.dueDate?info('Due date',dt(p.dueDate)):''}${info('Transport',p.transport)}${info('LR no.',p.lrNo)}
+      </div>
+      <div style="overflow-x:auto;"><table><thead><tr><th>Sr.</th><th>Medicine</th><th>Batch</th><th>Expiry</th><th class="num">Qty (box)</th><th class="num">Strips / box</th><th class="num">Stock added</th><th class="num">Rate ₹ / box</th><th class="num">MRP ₹ / box</th><th class="num">GST</th><th class="num">Amount ₹</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:18px;">No items</td></tr>'}</tbody></table></div>
+      <div style="max-width:320px;margin:14px 0 0 auto;font-size:13px;">
+        ${line('Basic amount',n(p.basicAmount!=null?p.basicAmount:p.subtotal))}
+        ${Number(p.freight)>0?line('Freight',n(p.freight)):''}
+        ${Number(p.discountAmt)>0?line('Discount ('+e(String(p.discountPct||0))+'%)','− '+n(p.discountAmt)):''}
+        ${line('Taxable value',n(p.taxableValue!=null?p.taxableValue:p.subtotal))}
+        ${line('GST',n(p.gstTotal))}
+        ${Number(p.rounding)?line('Rounding',(p.rounding<0?'− ':'')+n(Math.abs(p.rounding))):''}
+        ${line('Bill amount',n(p.grandTotal),true)}
+      </div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;"><button type="button" class="ghost" id="purchaseViewClose2">Close</button></div>
+  </div>`;
+  document.body.appendChild(el);
+  const close = ()=>{ el.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = ev=>{ if(ev.key==='Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  el.addEventListener('click', ev=>{ if(ev.target===el) close(); });
+  document.getElementById('purchaseViewClose').addEventListener('click', close);
+  document.getElementById('purchaseViewClose2').addEventListener('click', close);
 };
 
 /* ---------- New Bill ---------- */
@@ -7649,6 +7706,9 @@ function renderProductSaleReport(silent){
     document.getElementById('psProfitIncl').textContent = fmt(0);
     document.getElementById('psProfitSimple').textContent = fmt(0);
     document.getElementById('psQty').textContent = 0;
+    document.getElementById('psPurchased').textContent = 0;
+    document.getElementById('psPending').textContent = 0;
+    document.getElementById('psPurchasedSub').innerHTML = '&nbsp;';
     body.innerHTML = '';
     emptyEl.style.display = 'block';
     emptyEl.querySelector('h3').textContent = 'No sales to show';
@@ -7673,8 +7733,9 @@ function renderProductSaleReport(silent){
       sales += saleIncl;
       if(p.inclGst!=null) profitIncl += p.inclGst;
       if(p.simple!=null) profitSimple += p.simple;
-      qtyTotal += it.qty;
-      rows.push({ billNo:b.billNo, date:b.date, customer:b.customerName, qty:it.qty, rate:it.rate, amount:saleIncl });
+      const free = Number(it.free)||0, soldQ = (Number(it.qty)||0) + free;   // sold = bill qty + free qty
+      qtyTotal += soldQ;
+      rows.push({ billNo:b.billNo, date:b.date, customer:b.customerName, qty:soldQ, bill:Number(it.qty)||0, free, rate:it.rate, amount:saleIncl });
     });
   });
   returns.forEach(r=>{
@@ -7688,14 +7749,34 @@ function renderProductSaleReport(silent){
       sales -= f.saleIncl;
       if(f.inclGst!=null) profitIncl -= f.inclGst;
       if(f.simple!=null) profitSimple -= f.simple;
-      qtyTotal -= it.qty;
-      rows.push({ billNo:'↩ '+r.retNo, date:r.date, customer:r.party, qty:-it.qty, rate:it.rate, amount:-f.saleIncl });
+      const rFree = Number(it.free)||0, rQ = (Number(it.qty)||0) + rFree;     // goods that came back, bill + free
+      qtyTotal -= rQ;
+      rows.push({ billNo:'↩ '+r.retNo, date:r.date, customer:r.party, qty:-rQ, bill:-(Number(it.qty)||0), free:-rFree, rate:it.rate, amount:-f.saleIncl });
     });
   });
+  /* Purchased qty (in selling units = strips/pcs, same unit as stock and sales) in the same date range.
+     Purchases are not tied to a party, so with a party chosen purchased/pending are not shown. */
+  let purchasedQty = 0, purchasedBoxes = 0;
+  purchases.forEach(pu=>{
+    const d = new Date(pu.date);
+    if(from && d<from) return;
+    if(to && d>to) return;
+    (pu.items||[]).forEach(it=>{
+      if((it.name||'').trim().toLowerCase() !== product.trim().toLowerCase()) return;
+      const q = Number(it.qty)||0;
+      purchasedBoxes += q;
+      purchasedQty += (it.stockQty!=null && it.stockQty!=='') ? Number(it.stockQty) : q*(Number(it.unitsPerBox)||1);
+    });
+  });
+  const r2q = v => Math.round(v*100)/100;
+  const unitTxt = (findMedByName(product)||{}).unit || 'strip';
+  document.getElementById('psPurchased').textContent = party ? '—' : r2q(purchasedQty);
+  document.getElementById('psPurchasedSub').textContent = party ? 'all parties only' : (purchasedBoxes ? r2q(purchasedBoxes)+' box · '+unitTxt+' units' : unitTxt+' units');
+  document.getElementById('psPending').textContent = party ? '—' : r2q(purchasedQty - qtyTotal);
   document.getElementById('psSales').textContent = fmt(sales);
   document.getElementById('psProfitIncl').textContent = fmt(profitIncl);
   document.getElementById('psProfitSimple').textContent = fmt(profitSimple);
-  document.getElementById('psQty').textContent = qtyTotal;
+  document.getElementById('psQty').textContent = r2q(qtyTotal);
   rows.sort((a,b)=> new Date(b.date)-new Date(a.date));
   emptyEl.style.display = rows.length? 'none':'block';
   if(!rows.length){
@@ -7707,7 +7788,7 @@ function renderProductSaleReport(silent){
       <td><b>${r.billNo}</b></td>
       <td>${new Date(r.date).toLocaleDateString('en-IN')}</td>
       <td>${r.customer||'Walk-in'}</td>
-      <td class="num">${r.qty}</td>
+      <td class="num">${r.qty}${r.free ? '<div style="font-size:10.5px;color:var(--muted);">'+r.bill+' + '+r.free+' free</div>' : ''}</td>
       <td class="num">${fmt(r.rate)}</td>
       <td class="num">${fmt(r.amount)}</td>
     </tr>`).join('');
