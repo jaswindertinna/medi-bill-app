@@ -114,45 +114,24 @@
     padding:12px 14px;
     padding-top:calc(env(safe-area-inset-top, 0px) + 12px);
   }
+  /* sync LED line: a light that travels left → right while uploading, then fills green when done */
+  #syncLine{position:absolute;left:0;right:0;bottom:-2px;height:3px;background:#9ca3af;overflow:hidden;pointer-events:none;transition:background .25s, box-shadow .25s;}
+  #syncLine::before,#syncLine::after{content:none;position:absolute;top:0;bottom:0;}
+  #syncLine.s-up{background:rgba(250,204,21,.30);box-shadow:0 0 6px 1px rgba(250,204,21,.7);}
+  #syncLine.s-up::after{content:'';left:0;width:35%;background:linear-gradient(90deg,rgba(250,204,21,0),#facc15 45%,#fde047);animation:ledSweep 1.8s linear infinite;}
+  #syncLine.s-ok{background:rgba(34,197,94,.30);box-shadow:0 0 6px 1px rgba(34,197,94,.85);}
+  #syncLine.s-ok::before{content:'';left:0;right:0;background:#22c55e;transform-origin:left center;animation:ledFill 1.4s ease-out forwards;}
+  #syncLine.s-err{background:#ef4444;box-shadow:0 0 6px 1px rgba(239,68,68,.85);}
+  @keyframes ledSweep{from{transform:translateX(-100%);}to{transform:translateX(290%);}}
+  @keyframes ledFill{from{transform:scaleX(0);}to{transform:scaleX(1);}}
   #mobileTopbar .topbar-left{display:flex;align-items:center;gap:10px;min-width:0;}
   #mobileTopbar .hamburger{width:26px;height:20px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;flex-shrink:0;}
   #mobileTopbar .hamburger span{display:block;height:2.5px;background:#fff;border-radius:2px;}
   #mobileTopbar .title{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-  /* MCLAINE logo as the sync light.
-     yellow letter moving M to E = processing, letters turn green one by one, all green = upload done, all red = internet error */
-  #mobileTopbar .title{overflow:visible;}
-  #mobileTopbar .title span{transition:color .08s,text-shadow .08s;}
-  #mobileTopbar .title span.mv{color:#ffd60a;text-shadow:0 0 6px #ffd60a,0 0 14px #ffd60a;}
-  #mobileTopbar .title span.fix{color:#22e55c;text-shadow:0 0 6px #22e55c,0 0 14px #22e55c;}
-  #mobileTopbar .title span.errc{color:#ff3b30;text-shadow:0 0 6px #ff3b30,0 0 14px #ff3b30;}
-  #mobileTopbar .title span.wait{animation:logoWait 1s ease-in-out infinite;}
-  @keyframes logoWait{50%{opacity:.4;}}
-  @media (prefers-reduced-motion:reduce){ #mobileTopbar .title span.wait{animation:none;} }
-
   /* Quick-access shortcuts on the green top bar: New Bill / History / Ledger, centered */
   .topbar-shortcuts{display:flex;gap:24px;justify-self:center;}
-  /* Phone: no room for the whole name, so show only the "M". Its colour is the status: green = done, yellow = processing, red = error. */
-  @media (max-width:520px){
-    .topbar-shortcuts{gap:12px;}
-    #mobileTopbar .title{font-size:21px;}
-    #mobileTopbar .title span:nth-child(n+2){display:none;}
-    #mobileTopbar .title span:first-child{color:#fff !important;text-shadow:none !important;animation:none !important;}
-    #mobileTopbar .title[data-led="ok"] span:first-child{color:#22e55c !important;text-shadow:0 0 6px #22e55c,0 0 14px #22e55c !important;}
-    #mobileTopbar .title[data-led="busy"] span:first-child{color:#ffd60a !important;text-shadow:0 0 6px #ffd60a,0 0 14px #ffd60a !important;animation:logoWait 1s ease-in-out infinite !important;}
-    #mobileTopbar .title[data-led="err"] span:first-child{color:#ff3b30 !important;text-shadow:0 0 6px #ff3b30,0 0 14px #ff3b30 !important;}
-  }
-  @media (max-width:360px){ .topbar-shortcuts{gap:8px;} }
-
-  /* The three menu lines show the same status, top to bottom: green = upload done, yellow = processing, red = internet error.
-     The line for the current state shines, the other two stay dim. */
-  #mobileTopbar .hamburger span{opacity:.25;transition:opacity .25s ease,box-shadow .25s ease;}
-  #mobileTopbar .hamburger span:nth-child(1){background:#22e55c;}
-  #mobileTopbar .hamburger span:nth-child(2){background:#ffd60a;}
-  #mobileTopbar .hamburger span:nth-child(3){background:#ff3b30;}
-  #mobileTopbar .hamburger.ok span:nth-child(1){opacity:1;box-shadow:0 0 7px 1px #22e55c;}
-  #mobileTopbar .hamburger.busy span:nth-child(2){opacity:1;box-shadow:0 0 7px 1px #ffd60a;animation:logoWait 1s ease-in-out infinite;}
-  #mobileTopbar .hamburger.err span:nth-child(3){opacity:1;box-shadow:0 0 7px 1px #ff3b30;}
+  @media (max-width:520px){ .topbar-shortcuts{gap:20px;} #mobileTopbar .title{display:none;} }
   .topbar-shortcut-btn{
     background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:#fff;
     border-radius:7px;font-size:10.5px;font-weight:700;font-family:inherit;
@@ -336,7 +315,7 @@
 
   .empty{text-align:center;padding:32px 16px;color:var(--muted);}
   .empty h3{color:var(--text);margin-bottom:5px;font-size:13px;}
-  .toast{position:fixed;bottom:136px;right:18px;background:var(--primary-dark);color:#fff;padding:9px 14px;border-radius:7px;font-size:11px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:999;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;}
+  .toast{position:fixed;bottom:76px;right:18px;background:var(--primary-dark);color:#fff;padding:9px 14px;border-radius:7px;font-size:11px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:999;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;}
   .toast.show{opacity:1;transform:translateY(0);}
 
   /* New bill layout */
@@ -679,8 +658,9 @@
   <div id="mobileTopbar">
     <div class="topbar-left">
       <div class="hamburger" id="btnOpenMobileNav"><span></span><span></span><span></span></div>
-      <div class="title" id="btnMobileLogoHome" role="button" title="Go to Dashboard" aria-label="MCLAINE"><span aria-hidden="true">M</span><span aria-hidden="true">C</span><span aria-hidden="true">L</span><span aria-hidden="true">A</span><span aria-hidden="true">I</span><span aria-hidden="true">N</span><span aria-hidden="true">E</span></div>
+      <div class="title" id="btnMobileLogoHome" role="button" title="Go to Dashboard">MCLAINE</div>
     </div>
+    <div id="syncLine" class="s-off" title="Sync status"></div>
     <div class="topbar-shortcuts">
       <button type="button" class="topbar-shortcut-btn" id="btnTopNewBill" title="New Bill" aria-label="New Bill"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6M9 14h6"/></svg></button>
       <button type="button" class="topbar-shortcut-btn" id="btnTopLedger" title="Bill Ledger" aria-label="Bill Ledger"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M9 4v16"/><path d="M13 8h2M13 12h2"/></svg></button>
@@ -2401,7 +2381,6 @@ function listenToCloud(){
     console.error('MCLAINE sync error:', err);
     setSyncStatus('Sync error: '+err.message+' (see browser console for details)');
     try{ hideOpeningGate(false); }catch(e){}
-    setSyncLed('err');
   });
 }
 /* =====================================================================
@@ -2573,25 +2552,14 @@ function syncApplyMerged(m){
     syncRebase();
   } finally { applyingRemoteUpdate = false; }
 }
-/* Not signed in: a save is stored on this device. The light still plays (yellow moving, then green). */
-let localLightTimer = null;
-function localSaveLight(){
-  setSyncLed('busy');
-  clearTimeout(localLightTimer);
-  localLightTimer = setTimeout(()=>setSyncLed('ok'), 600);
-}
-/* When the app opens, always show the full movement once. */
-window.addEventListener('load', ()=>{ setTimeout(()=>{ try{
-  if(logoIntro && !logoRunning){ if(currentUid) setSyncLed('busy'); else localSaveLight(); }
-}catch(e){} }, 1200); });
 let syncPushing = false, syncPushAgain = false, syncRetryTimer = null;
 function pushToCloud(immediate){
   try{ syncTrackLocal(); }catch(e){ console.error('MCLAINE track error:', e); }
   try{ autoBackupMaybe(); }catch(e){}
   try{
-    if(!syncDb || !currentUid){ syncBadge('local'); syncPopup('local'); localSaveLight(); }
+    if(!syncDb || !currentUid){ syncBadge('local'); syncPopup('local'); }
     else if(!navigator.onLine){ syncBadge('wait'); syncPopup('wait'); }
-    else { syncBadge('wait'); syncPopup('up'); }
+    else { syncBadge('up'); syncPopup('up'); }
   }catch(e){}
   if(!syncDb || !currentUid || applyingRemoteUpdate) return;
   clearTimeout(syncPushTimer);
@@ -2622,7 +2590,7 @@ async function syncPushNow(){
     } else { syncPushAgain = true; } // you kept working while it synced — sync once more
   }catch(e){
     console.error('MCLAINE push error:', e);
-    try{ syncBadge('wait'); syncPopup(navigator.onLine ? 'fail' : 'wait'); }catch(er){}
+    try{ syncBadge(navigator.onLine ? 'fail' : 'wait'); syncPopup(navigator.onLine ? 'fail' : 'wait'); }catch(er){}
     setSyncStatus('Sync paused: '+(e && e.message ? e.message : e)+' — your data is safe on this device and will sync automatically.');
     clearTimeout(syncRetryTimer);
     syncRetryTimer = setTimeout(()=>pushToCloud(true), 20000);
@@ -2763,67 +2731,37 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v27';
+const APP_VERSION = '2026-10-31 safe-sync v16';
 /* iPhone/iPad Safari ignores user-scalable=no, so block the two-finger zoom gestures directly */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
 document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
-/* --- sync light: the MCLAINE name in the top bar (yellow moving = processing · all green = upload done · all red = internet / upload error · white = not signed in) --- */
-const logoSleep = ms => new Promise(r=>setTimeout(r,ms));
-let logoState = '', logoToken = 0, logoRunning = false, logoIntro = true;
-function logoSpans(){ return Array.prototype.slice.call(document.querySelectorAll('#btnMobileLogoHome span')); }
-/* The light: starts at M and moves letter by letter to E, E stays green. Again from M to N, N stays green. And so on,
-   until every letter is green — then it stops (no repeat). The last letter (M) keeps blinking until the work is really finished. */
-async function logoRun(){
-  const L = logoSpans(); const n = L.length; if(!n) return;
-  logoRunning = true; const token = ++logoToken;
-  L.forEach(x=>{ x.className=''; });
-  for(let k=0;k<n-1;k++){
-    const t = n-1-k;
-    for(let i=0;i<=t;i++){
-      if(token!==logoToken) return;
-      if(i>0) L[i-1].className = '';
-      L[i].className = 'mv';
-      await logoSleep((logoState==='ok' && !logoIntro) ? 25 : 130);
-    }
-    if(token!==logoToken) return;
-    L[t].className = 'fix';
-    await logoSleep((logoState==='ok' && !logoIntro) ? 25 : 260);
-  }
-  if(token!==logoToken) return;
-  L[0].className = 'mv wait';
-  while(logoState==='busy'){ await logoSleep(120); if(token!==logoToken) return; }
-  if(token!==logoToken) return;
-  logoRunning = false; logoIntro = false;
-  L.forEach(x=>{ x.className='fix'; });
-  setMenuLines(logoState);
+/* --- sync LED line (thin line where the green top bar meets the white page) ---
+   green = uploaded / in sync · yellow = uploading or waiting · red = internet error or upload failed · grey = not signed in */
+let ledUpAt = 0, ledTimer = null, ledCur = '';
+function ledApply(cls, tip){
+  const el = document.getElementById('syncLine'); if(!el) return;
+  el.className = cls; el.title = tip;
 }
-function setMenuLines(kind){
-  const hb = document.getElementById('btnOpenMobileNav'); if(!hb) return;
-  hb.className = 'hamburger' + (kind ? ' '+kind : ''); hb.title = SYNC_TIPS[kind] || '';
-}
-const SYNC_TIPS = { ok:'Synced — all your data is saved', busy:'Processing…', err:'No internet or upload failed — saved on this device, will retry automatically' };
-function setSyncLed(kind){
-  logoState = kind || '';
-  const logo = document.getElementById('btnMobileLogoHome');
-  if(logo) logo.setAttribute('data-led', kind || '');
-  setMenuLines((kind==='ok' && logoRunning) ? 'busy' : kind);   // lines say "done" only when the light has really finished
-  const L = logoSpans(); if(!L.length) return;
-  if(kind==='busy'){ if(!logoRunning) logoRun(); return; }
-  if(kind==='ok'){
-    if(logoRunning) return;                                   // light still moving: it finishes green by itself
-    if(logoIntro){ logoRun(); return; }                       // first time after opening: show the full movement
-    L.forEach(x=>{ x.className='fix'; }); return;
-  }
-  logoToken++; logoRunning = false; if(kind==='err') logoIntro = false;   // error / off: stop at once
-  L.forEach(x=>{ x.className = (kind==='err') ? 'errc' : ''; });
-}
-function ledLocal(){ if(!logoRunning) setSyncLed(''); }       // 'not signed in' must not cut a moving light short
 function syncBadge(state){
-  if(state==='ok') setSyncLed('ok');
-  else if(state==='wait') setSyncLed(navigator.onLine ? 'busy' : 'err');
-  else ledLocal();   // 'local' = not signed in, nothing to sync
+  let cls = 's-off', tip = 'Saved on this device only (not signed in)';
+  if(state==='ok'){ cls = 's-ok'; tip = 'Synced — all data is saved in the cloud'; }
+  else if(state==='up'){ cls = 's-up'; tip = 'Uploading…'; }
+  else if(state==='wait'){
+    if(navigator.onLine===false){ cls = 's-err'; tip = 'No internet — saved on this device, will upload when internet returns'; }
+    else { cls = 's-up'; tip = 'Waiting to sync…'; }
+  }
+  else if(state==='fail'){ cls = 's-err'; tip = 'Upload failed — saved on this device, retrying'; }
+  clearTimeout(ledTimer);
+  // keep the travelling yellow light going for at least two full passes (3.6 s) so you can see it, then it fills green
+  if(cls==='s-up' && ledCur!=='s-up') ledUpAt = Date.now();
+  if(cls==='s-ok' && ledCur==='s-up'){
+    const left = 3600 - (Date.now() - ledUpAt);
+    if(left > 0){ ledTimer = setTimeout(()=>{ ledCur = 's-ok'; ledApply('s-ok', tip); }, left); return; }
+  }
+  ledCur = cls; ledApply(cls, tip);
 }
 window.addEventListener('offline', ()=>syncBadge(currentUid ? 'wait' : 'local'));
+window.addEventListener('online', ()=>syncBadge(currentUid ? 'up' : 'local'));
 
 /* --- cloud backups --- */
 async function gzipB64(str){
@@ -2949,7 +2887,6 @@ let syncPopupReady = false, syncPopupTimer = null, gateShown = false, gateTimer 
   document.head.appendChild(st);
 })();
 function syncPopup(state){
-  if(state==='local') ledLocal(); else setSyncLed({ up:'busy', ok:'ok', fail:'err', wait:(navigator.onLine ? 'busy' : 'err') }[state]);
   if(!syncPopupReady) return;
   const m = {
     up:    ['⬆ Uploading…', '#e6f0ff', '#1d4ed8'],
@@ -2962,7 +2899,7 @@ function syncPopup(state){
   let el = document.getElementById('syncPopup');
   if(!el){
     el = document.createElement('div'); el.id = 'syncPopup';
-    el.style.cssText = 'position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom, 0px));z-index:965;width:max-content;text-align:left;max-width:calc(100% - 44px);font:600 12.5px/1.35 Inter,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);cursor:pointer;display:none;';
+    el.style.cssText = 'position:fixed;right:22px;bottom:calc(18px + env(safe-area-inset-bottom, 0px));z-index:965;width:max-content;text-align:left;max-width:calc(100% - 44px);font:600 12.5px/1.35 Inter,system-ui,sans-serif;padding:10px 14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);cursor:pointer;display:none;';
     el.addEventListener('click', ()=>{ el.style.display = 'none'; });
     document.body.appendChild(el);
   }
@@ -2973,7 +2910,6 @@ function syncPopup(state){
 }
 function showOpeningGate(){
   if(gateShown) return; gateShown = true;
-  setSyncLed(navigator.onLine ? 'busy' : 'err');
   const el = document.createElement('div'); el.id = 'openGate';
   el.style.cssText = 'position:fixed;inset:0;z-index:1900;background:var(--bg,#fff);color:var(--text,#222);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px;font-family:Inter,system-ui,sans-serif;';
   el.innerHTML = '<div id="gateSpin" style="width:38px;height:38px;border:4px solid #d9e2dd;border-top-color:var(--primary,#0f766e);border-radius:50%;animation:gateSpin .9s linear infinite;"></div>'
@@ -2994,7 +2930,6 @@ function gateOffline(){
   const t = document.getElementById('gateTitle'), s = document.getElementById('gateSub'), sp = document.getElementById('gateSpin');
   if(!t) return;
   clearTimeout(gateTimer); clearTimeout(gateSlowTimer);
-  setSyncLed('err');
   if(sp) sp.style.display = 'none';
   t.textContent = 'No connection — opening with this device\'s data';
   if(s) s.textContent = 'Everything you enter is saved here and uploads by itself when the internet is back.';
