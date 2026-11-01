@@ -132,8 +132,27 @@
 
   /* Quick-access shortcuts on the green top bar: New Bill / History / Ledger, centered */
   .topbar-shortcuts{display:flex;gap:24px;justify-self:center;}
-  @media (max-width:520px){ #mobileTopbar{grid-template-columns:auto 1fr;} .topbar-shortcuts{gap:12px;justify-self:end;} #mobileTopbar .title{font-size:14px;} }
-  @media (max-width:360px){ .topbar-shortcuts{gap:8px;} #mobileTopbar .title{font-size:13px;} #mobileTopbar .topbar-left{gap:8px;} }
+  /* Phone: no room for the whole name, so show only the "M". Its colour is the status: green = done, yellow = processing, red = error. */
+  @media (max-width:520px){
+    .topbar-shortcuts{gap:12px;}
+    #mobileTopbar .title{font-size:21px;}
+    #mobileTopbar .title span:nth-child(n+2){display:none;}
+    #mobileTopbar .title span:first-child{color:#fff !important;text-shadow:none !important;animation:none !important;}
+    #mobileTopbar .title[data-led="ok"] span:first-child{color:#22e55c !important;text-shadow:0 0 6px #22e55c,0 0 14px #22e55c !important;}
+    #mobileTopbar .title[data-led="busy"] span:first-child{color:#ffd60a !important;text-shadow:0 0 6px #ffd60a,0 0 14px #ffd60a !important;animation:logoWait 1s ease-in-out infinite !important;}
+    #mobileTopbar .title[data-led="err"] span:first-child{color:#ff3b30 !important;text-shadow:0 0 6px #ff3b30,0 0 14px #ff3b30 !important;}
+  }
+  @media (max-width:360px){ .topbar-shortcuts{gap:8px;} }
+
+  /* The three menu lines show the same status, top to bottom: green = upload done, yellow = processing, red = internet error.
+     The line for the current state shines, the other two stay dim. */
+  #mobileTopbar .hamburger span{opacity:.25;transition:opacity .25s ease,box-shadow .25s ease;}
+  #mobileTopbar .hamburger span:nth-child(1){background:#22e55c;}
+  #mobileTopbar .hamburger span:nth-child(2){background:#ffd60a;}
+  #mobileTopbar .hamburger span:nth-child(3){background:#ff3b30;}
+  #mobileTopbar .hamburger.ok span:nth-child(1){opacity:1;box-shadow:0 0 7px 1px #22e55c;}
+  #mobileTopbar .hamburger.busy span:nth-child(2){opacity:1;box-shadow:0 0 7px 1px #ffd60a;animation:logoWait 1s ease-in-out infinite;}
+  #mobileTopbar .hamburger.err span:nth-child(3){opacity:1;box-shadow:0 0 7px 1px #ff3b30;}
   .topbar-shortcut-btn{
     background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.3);color:#fff;
     border-radius:7px;font-size:10.5px;font-weight:700;font-family:inherit;
@@ -2554,17 +2573,17 @@ function syncApplyMerged(m){
     syncRebase();
   } finally { applyingRemoteUpdate = false; }
 }
-/* Not signed in: a save is only stored on this device. Still play the light (yellow moving, then green), then return to white after a few seconds. */
+/* Not signed in: a save is stored on this device. The light still plays (yellow moving, then green). */
 let localLightTimer = null;
 function localSaveLight(){
   setSyncLed('busy');
   clearTimeout(localLightTimer);
-  localLightTimer = setTimeout(()=>{
-    setSyncLed('ok');
-    localLightTimer = setTimeout(()=>setSyncLed(''), 4500);
-  }, 600);
+  localLightTimer = setTimeout(()=>setSyncLed('ok'), 600);
 }
-window.addEventListener('load', ()=>{ setTimeout(()=>{ try{ if(!currentUid) localSaveLight(); }catch(e){} }, 1200); });
+/* When the app opens, always show the full movement once. */
+window.addEventListener('load', ()=>{ setTimeout(()=>{ try{
+  if(logoIntro && !logoRunning){ if(currentUid) setSyncLed('busy'); else localSaveLight(); }
+}catch(e){} }, 1200); });
 let syncPushing = false, syncPushAgain = false, syncRetryTimer = null;
 function pushToCloud(immediate){
   try{ syncTrackLocal(); }catch(e){ console.error('MCLAINE track error:', e); }
@@ -2744,16 +2763,16 @@ document.addEventListener('click', async (e)=>{
    • Cloud backups inside your own Firebase (one per day, last 10 days kept, compressed)
    • Asks the browser to keep this site's data permanently + reminds you to download a backup
    ===================================================================== */
-const APP_VERSION = '2026-10-31 safe-sync v26';
+const APP_VERSION = '2026-10-31 safe-sync v27';
 /* iPhone/iPad Safari ignores user-scalable=no, so block the two-finger zoom gestures directly */
 ['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
 document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, {passive:false});
 /* --- sync light: the MCLAINE name in the top bar (yellow moving = processing · all green = upload done · all red = internet / upload error · white = not signed in) --- */
 const logoSleep = ms => new Promise(r=>setTimeout(r,ms));
-let logoState = '', logoToken = 0, logoRunning = false;
+let logoState = '', logoToken = 0, logoRunning = false, logoIntro = true;
 function logoSpans(){ return Array.prototype.slice.call(document.querySelectorAll('#btnMobileLogoHome span')); }
-/* While processing: a yellow light moves M to E and leaves E green, then M to N and leaves N green, and so on.
-   The last letter (M) keeps blinking yellow until the upload really finishes — then everything is green and it stops (no repeat). */
+/* The light: starts at M and moves letter by letter to E, E stays green. Again from M to N, N stays green. And so on,
+   until every letter is green — then it stops (no repeat). The last letter (M) keeps blinking until the work is really finished. */
 async function logoRun(){
   const L = logoSpans(); const n = L.length; if(!n) return;
   logoRunning = true; const token = ++logoToken;
@@ -2764,31 +2783,45 @@ async function logoRun(){
       if(token!==logoToken) return;
       if(i>0) L[i-1].className = '';
       L[i].className = 'mv';
-      await logoSleep(logoState==='ok' ? 25 : 130);
+      await logoSleep((logoState==='ok' && !logoIntro) ? 25 : 130);
     }
     if(token!==logoToken) return;
     L[t].className = 'fix';
-    await logoSleep(logoState==='ok' ? 25 : 260);
+    await logoSleep((logoState==='ok' && !logoIntro) ? 25 : 260);
   }
   if(token!==logoToken) return;
   L[0].className = 'mv wait';
   while(logoState==='busy'){ await logoSleep(120); if(token!==logoToken) return; }
   if(token!==logoToken) return;
-  logoRunning = false;
+  logoRunning = false; logoIntro = false;
   L.forEach(x=>{ x.className='fix'; });
+  setMenuLines(logoState);
 }
+function setMenuLines(kind){
+  const hb = document.getElementById('btnOpenMobileNav'); if(!hb) return;
+  hb.className = 'hamburger' + (kind ? ' '+kind : ''); hb.title = SYNC_TIPS[kind] || '';
+}
+const SYNC_TIPS = { ok:'Synced — all your data is saved', busy:'Processing…', err:'No internet or upload failed — saved on this device, will retry automatically' };
 function setSyncLed(kind){
-  const L = logoSpans(); if(!L.length) return;
   logoState = kind || '';
+  const logo = document.getElementById('btnMobileLogoHome');
+  if(logo) logo.setAttribute('data-led', kind || '');
+  setMenuLines((kind==='ok' && logoRunning) ? 'busy' : kind);   // lines say "done" only when the light has really finished
+  const L = logoSpans(); if(!L.length) return;
   if(kind==='busy'){ if(!logoRunning) logoRun(); return; }
-  if(kind==='ok'){ if(!logoRunning) L.forEach(x=>{ x.className='fix'; }); return; }   // if the light is still moving, it speeds up and finishes green by itself
-  logoToken++; logoRunning = false;                                                    // error / not signed in: stop at once
+  if(kind==='ok'){
+    if(logoRunning) return;                                   // light still moving: it finishes green by itself
+    if(logoIntro){ logoRun(); return; }                       // first time after opening: show the full movement
+    L.forEach(x=>{ x.className='fix'; }); return;
+  }
+  logoToken++; logoRunning = false; if(kind==='err') logoIntro = false;   // error / off: stop at once
   L.forEach(x=>{ x.className = (kind==='err') ? 'errc' : ''; });
 }
+function ledLocal(){ if(!logoRunning) setSyncLed(''); }       // 'not signed in' must not cut a moving light short
 function syncBadge(state){
   if(state==='ok') setSyncLed('ok');
   else if(state==='wait') setSyncLed(navigator.onLine ? 'busy' : 'err');
-  else setSyncLed('');   // 'local' = not signed in, nothing to sync
+  else ledLocal();   // 'local' = not signed in, nothing to sync
 }
 window.addEventListener('offline', ()=>syncBadge(currentUid ? 'wait' : 'local'));
 
@@ -2916,7 +2949,7 @@ let syncPopupReady = false, syncPopupTimer = null, gateShown = false, gateTimer 
   document.head.appendChild(st);
 })();
 function syncPopup(state){
-  setSyncLed({ up:'busy', ok:'ok', fail:'err', wait:(navigator.onLine ? 'busy' : 'err'), local:'' }[state]);
+  if(state==='local') ledLocal(); else setSyncLed({ up:'busy', ok:'ok', fail:'err', wait:(navigator.onLine ? 'busy' : 'err') }[state]);
   if(!syncPopupReady) return;
   const m = {
     up:    ['⬆ Uploading…', '#e6f0ff', '#1d4ed8'],
