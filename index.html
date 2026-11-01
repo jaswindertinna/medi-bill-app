@@ -1135,15 +1135,17 @@
           </div>
           <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Total payment pending</div>
           <div class="value" style="color:var(--danger);font-size:15px;" id="moPending">₹0</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Total payment rec. (all time)</div>
+          <div class="value" style="font-size:15px;color:var(--primary-dark);" id="moTotalRec">₹0</div>
         </div>
         <div class="metric-card">
           <div class="label">This month's payments</div>
           <div style="font-size:10.5px;color:var(--muted);margin-top:8px;">Total payment (billed this month)</div>
           <div class="value" id="pmBilled">₹0</div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Payment received (this month)</div>
-          <div class="value" style="font-size:15px;color:var(--primary-dark);" id="pmReceived">₹0</div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">Payment pending (all parties)</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">This month payment pending</div>
           <div class="value" style="color:var(--danger);font-size:15px;" id="pmPending">₹0</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">This month payment rec.</div>
+          <div class="value" style="font-size:15px;color:var(--primary-dark);" id="pmReceived">₹0</div>
         </div>
         <div class="metric-card profit-sec">
           <div class="label">Total simple profit</div>
@@ -1157,7 +1159,7 @@
           <div class="value" style="font-size:14px;" id="spWeekNet">₹0</div><div style="font-size:9.5px;color:var(--muted);">after expenses</div>
         </div>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin:8px 0 16px;">Profit (without inv./with inv.) is GST-inclusive real margin (sale − purchase cost), already after deducting expenses for that period — "with inv." additionally deducts that period's doctor investment. Simple profit uses sale rate − purchase rate with no GST adjustment. "Total payment pending" is the current outstanding balance across all customers — it doesn't reset by month or week, so the same figure shows in all three cards.</p>
+      <p style="font-size:11px;color:var(--muted);margin:8px 0 16px;">Profit (without inv./with inv.) is GST-inclusive real margin (sale − purchase cost), already after deducting expenses for that period — "with inv." additionally deducts that period's doctor investment. Simple profit uses sale rate − purchase rate with no GST adjustment. "Total payment pending" is the current outstanding balance across all customers — it doesn't reset by month or week. "This month payment pending" is only this month's billing minus this month's payments received.</p>
       <div class="grid metrics">
         <div class="metric-card"><div class="label">Bills today</div><div class="value" id="mTodayBills">0</div></div>
         <div class="metric-card warn" id="cardLowStock" style="cursor:pointer;" title="Tap to see the low stock items"><div class="label">Low stock items</div><div class="value" id="mLowStock">0</div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Tap to view ›</div></div>
@@ -4169,7 +4171,8 @@ function renderDashboard(){
   const monthReceived = payments.filter(p=>{ const d=new Date(p.date); return d>=moStart && d<=moEnd; }).reduce((t,p)=>t+(Number(p.amount)||0),0);
   document.getElementById('pmBilled').textContent = fmt(mo.sale);
   document.getElementById('pmReceived').textContent = fmt(monthReceived);
-  document.getElementById('pmPending').textContent = fmt(totalPending);
+  document.getElementById('pmPending').textContent = fmt(Math.max(0, mo.sale - monthReceived));
+  document.getElementById('moTotalRec').textContent = fmt(payments.reduce((t,p)=>t+(Number(p.amount)||0),0));
 
   document.getElementById('spTotalGross').textContent = fmt(all.profitSimpleGross);
   document.getElementById('spTotalNet').textContent = fmt(all.profitSimpleNet);
