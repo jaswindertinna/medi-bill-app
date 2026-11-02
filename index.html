@@ -976,6 +976,42 @@
     .topbar-shortcut-btn .tb-lbl{font-size:5.5px;letter-spacing:.1px;}
     .topbar-shortcut-btn svg{width:20px;height:20px;}
   }
+
+  /* Dashboard: collapsible "More details" */
+  .dash-more{margin:18px 0 8px;}
+  .dash-more>summary{cursor:pointer;list-style:none;font-size:12.5px;font-weight:600;color:var(--primary-dark);padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+  .dash-more>summary::-webkit-details-marker{display:none;}
+  .dash-more>summary::before{content:"▸ ";}
+  .dash-more[open]>summary::before{content:"▾ ";}
+
+  /* ---- Top shortcut bar: same liquid glass as the cards / menu pill ---- */
+  #mobileTopbar .topbar-shortcuts{
+    justify-self:center;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;
+    background:radial-gradient(120% 90% at 0% 0%,rgba(255,255,255,.55),rgba(255,255,255,0) 55%),linear-gradient(135deg,rgba(255,255,255,.68),rgba(255,255,255,.34));
+    -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+    border:1px solid var(--glass-line);box-shadow:var(--glass-shadow);
+  }
+  #mobileTopbar .topbar-shortcuts .topbar-shortcut-btn,
+  #mobileTopbar .topbar-shortcuts .topbar-shortcut-btn:hover{
+    background:transparent;border:1px solid transparent;box-shadow:none;border-radius:999px;
+  }
+  #mobileTopbar .topbar-shortcuts .topbar-shortcut-btn:hover{background:rgba(255,255,255,.55);}
+  #mobileTopbar .topbar-shortcuts .topbar-shortcut-btn.active{
+    background:linear-gradient(180deg,#fff,rgba(225,240,236,.85));
+    border:1px solid rgba(15,107,92,.30);box-shadow:0 3px 10px rgba(15,107,92,.18),inset 0 1px 0 #fff;
+  }
+  @media (max-width:520px){ #mobileTopbar .topbar-shortcuts{gap:2px;padding:3px 5px;} }
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ #mobileTopbar .topbar-shortcuts{background:rgba(255,255,255,.96);} }
+  @media (prefers-reduced-transparency:reduce){ #mobileTopbar .topbar-shortcuts{background:rgba(255,255,255,.97);-webkit-backdrop-filter:none;backdrop-filter:none;} }
+
+  /* Dr Investment (merged with Doctor Margin): tap a doctor, then switch tabs */
+  #drInvSummaryTable tr.inv-row{cursor:pointer;}
+  #drInvSummaryTable tr.inv-row:hover{background:rgba(255,255,255,.55);}
+  #drInvSummaryTable .inv-chev{width:28px;text-align:right;color:var(--muted);font-size:16px;}
+  .inv-tabs-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0;}
+  .inv-tabs{display:inline-flex;gap:4px;padding:3px;border-radius:999px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.9);}
+  .inv-tabs button{border:none;box-shadow:none;background:transparent;padding:7px 16px;font-size:12.5px;font-weight:600;color:var(--muted);}
+  .inv-tabs button.active{background:#fff;color:var(--primary-dark);box-shadow:0 2px 8px rgba(15,107,92,.18);}
 </style>
 </head>
 <body class="hide-profit">
@@ -1132,7 +1168,6 @@
       <div class="sec-heading">Dr Investment</div>
       <div class="nav-subtoggle-row">
         <div class="nav-subtoggle" data-view="investment"><span class="nav-dot"></span>Dr Investment</div>
-        <div class="nav-subtoggle" data-view="drmargin"><span class="nav-dot"></span>Doctor Margin</div>
         <div class="nav-subtoggle" data-view="drreport"><span class="nav-dot"></span>Report</div>
         <div class="nav-subtoggle" data-view="schedule"><span class="nav-dot"></span>Schedule</div>
         <div class="nav-subtoggle" data-view="businessplan"><span class="nav-dot"></span>Business Plan</div>
@@ -1165,7 +1200,18 @@
       <div class="page-head">
         <div><h2 id="dashGreeting">Dashboard</h2><p id="dashDate"></p></div>
       </div>
+
+      <!-- Key numbers only -->
       <div class="grid metrics">
+        <div class="metric-card"><div class="label">Bills today</div><div class="value" id="mTodayBills">0</div></div>
+        <div class="metric-card"><div class="label">This month's sale</div><div class="value" id="qSale">₹0</div></div>
+        <div class="metric-card"><div class="label">Payment pending</div><div class="value" style="color:var(--danger);" id="qPending">₹0</div></div>
+        <div class="metric-card warn" id="cardLowStock" style="cursor:pointer;" title="Tap to see the low stock items"><div class="label">Low stock items</div><div class="value" id="mLowStock">0</div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Tap to view ›</div></div>
+        <div class="metric-card danger"><div class="label">Expiring soon</div><div class="value" id="mExpiring">0</div></div>
+      </div>
+
+      <!-- Schedule -->
+      <div class="grid metrics" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));">
         <div class="metric-card schedule-card" id="todayScheduleCard" onclick="showView('schedule')" title="Open full Schedule">
           <div class="label">Today's Schedule</div>
           <div id="todaySchedBody"></div>
@@ -1174,6 +1220,18 @@
           <div class="label">Tomorrow's Schedule</div>
           <div id="tomorrowSchedBody"></div>
         </div>
+      </div>
+
+      <!-- Recent bills -->
+      <div class="panel">
+        <h3>Recent bills <span id="dashRecentCount" style="font-weight:400;font-size:12px;color:var(--muted);">(last 30 days)</span></h3>
+        <div id="dashRecentBills" style="max-height:360px;overflow:auto;"></div>
+      </div>
+
+      <!-- Everything else, hidden until needed -->
+      <details class="dash-more">
+        <summary>More details — sales, profit &amp; payments</summary>
+        <div class="grid metrics" style="margin-top:12px;">
         <div class="metric-card">
           <div class="label">Total sale (all time)</div>
           <div class="value" id="atSale">₹0</div>
@@ -1224,17 +1282,9 @@
           <div class="value" style="font-size:15px;" id="spWeekGross">₹0</div><div style="font-size:9.5px;color:var(--muted);">before expenses</div>
           <div class="value" style="font-size:14px;" id="spWeekNet">₹0</div><div style="font-size:9.5px;color:var(--muted);">after expenses</div>
         </div>
-      </div>
-      <p style="font-size:11px;color:var(--muted);margin:8px 0 16px;">Profit (without inv./with inv.) is GST-inclusive real margin (sale − purchase cost), already after deducting expenses for that period — "with inv." additionally deducts that period's doctor investment. Simple profit uses sale rate − purchase rate with no GST adjustment. "Total payment pending" is the current outstanding balance across all customers — it doesn't reset by month or week. "This month payment pending" is only this month's billing minus this month's payments received.</p>
-      <div class="grid metrics">
-        <div class="metric-card"><div class="label">Bills today</div><div class="value" id="mTodayBills">0</div></div>
-        <div class="metric-card warn" id="cardLowStock" style="cursor:pointer;" title="Tap to see the low stock items"><div class="label">Low stock items</div><div class="value" id="mLowStock">0</div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Tap to view ›</div></div>
-        <div class="metric-card danger"><div class="label">Expiring soon</div><div class="value" id="mExpiring">0</div></div>
-      </div>
-      <div class="panel">
-        <h3>Recent bills <span id="dashRecentCount" style="font-weight:400;font-size:12px;color:var(--muted);">(last 30 days)</span></h3>
-        <div id="dashRecentBills" style="max-height:480px;overflow:auto;"></div>
-      </div>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:8px 0 16px;">Profit (without inv./with inv.) is GST-inclusive real margin (sale − purchase cost), already after deducting expenses for that period — "with inv." additionally deducts that period's doctor investment. Simple profit uses sale rate − purchase rate with no GST adjustment. "Total payment pending" is the current outstanding balance across all customers — it doesn't reset by month or week. "This month payment pending" is only this month's billing minus this month's payments received.</p>
+      </details>
     </div>
 
     <!-- INVENTORY -->
@@ -2005,7 +2055,7 @@
     <!-- DR INVESTMENT -->
     <div class="view" id="view-investment">
       <div class="page-head">
-        <div><h2>Dr Investment</h2><p>Pending = 4× the amount invested. Completed = sale from the chemists and products you link.</p></div>
+        <div><h2>Dr Investment</h2><p>Tap a doctor to see investment and monthly margin.</p></div>
         <button class="primary" id="btnInvNew">+ New investment</button>
       </div>
 
@@ -2050,7 +2100,7 @@
       </div>
 
       <div id="invDetailCol">
-        <div class="empty" id="invDetailEmpty"><h3>Select a doctor</h3><p>Tap View to see each investment's dates, sale, payment status and bills — or Edit to link/unlink chemists and products.</p></div>
+        <div class="empty" id="invDetailEmpty"><h3>Select a doctor</h3><p>Tap a doctor above to open details.</p></div>
         <div id="invDetailContent" style="display:none;"></div>
       </div>
     </div>
@@ -2066,19 +2116,6 @@
       <div id="drReportBody">
         <div class="empty" id="drReportEmpty"><h3>No doctor selected</h3><p>Choose a doctor above who has at least one investment recorded.</p></div>
       </div>
-    </div>
-
-    <!-- DOCTOR MARGIN -->
-    <div class="view" id="view-drmargin">
-      <div class="page-head"><div><h2>Doctor Margin</h2><p>Select a doctor to see month-wise net sale and his share.</p></div></div>
-      <div class="panel">
-        <div class="field chemist-picker" id="dmPicker" style="max-width:360px;">
-          <label>Select Dr</label>
-          <input id="dmSearch" autocomplete="off" placeholder="Search doctor…">
-          <div class="chemist-suggestions" id="dmList" style="display:none;"></div>
-        </div>
-      </div>
-      <div id="dmBody"></div>
     </div>
 
     <!-- BUSINESS PLAN -->
@@ -2763,7 +2800,7 @@ function refreshCurrentView(){
   const name = act && act.id ? act.id.replace(/^view-/,'') : 'dashboard';
   /* Never redraw a data-entry page while a field in it is being used — it would wipe what is being typed */
   const typing = document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName) && act && act.contains(document.activeElement);
-  if(typing && ['schedule','businessplan','investment','newbill','newpurchase','purchaseorder','drmargin'].includes(name)) return;
+  if(typing && ['schedule','businessplan','investment','newbill','newpurchase','purchaseorder'].includes(name)) return;
   showView(name);
 }
 function listenToCloud(){
@@ -3506,7 +3543,7 @@ document.querySelectorAll('.nav-item').forEach(el=>{
 const NOTES_GROUP_VIEWS = ['notes','completednotes'];
 const SALECAL_GROUP_VIEWS = ['salecal'];
 const LEDGER_GROUP_VIEWS = ['payments'];
-const INVESTMENT_GROUP_VIEWS = ['investment','drmargin','drreport','schedule','businessplan'];
+const INVESTMENT_GROUP_VIEWS = ['investment','drreport','schedule','businessplan'];
 const LIST_GROUP_VIEWS = ['drlist','chemistlist','reminder'];
 const ACCOUNT_GROUP_VIEWS = ['account'];
 document.querySelectorAll('.nav-toggle').forEach(el=>{
@@ -3604,7 +3641,6 @@ const MOBILE_MENU = [
   { label:'Bill Ledger', dynamic:'ledgerParties' },
   { label:'Investment', children:[
       { label:'Dr Investment', view:'investment' },
-      { label:'Doctor Margin', view:'drmargin' },
       { label:'Report', view:'drreport' },
       { label:'Schedule', view:'schedule' },
       { label:'Business Plan', view:'businessplan' },
@@ -4065,7 +4101,6 @@ function showView(name){
   if(name==='reminder'){ remEnter(); }
   if(name==='partylist'){ renderSidebarPartyListForList(); renderPartyListDetail(); }
   if(name==='investment'){ populateInvestmentSelects(); renderInvestments(); }
-  if(name==='drmargin'){ renderDrMargin(); }
   if(name==='drreport'){ populateReportDoctorSelect(); renderDrReport(); }
   if(name==='schedule'){ renderSchedule(); }
   if(name==='businessplan'){ renderBusinessPlan(); }
@@ -4275,6 +4310,7 @@ function renderDashboard(){
   document.getElementById('atProfitNoInv').textContent = fmt(all.profitInclNet);
   document.getElementById('atProfitWithInv').textContent = fmt(all.profitInclNetWithInv);
   document.getElementById('atPending').textContent = fmt(totalPending);
+  { const q1=document.getElementById('qSale'); if(q1) q1.textContent=fmt(mo.sale); const q2=document.getElementById('qPending'); if(q2) q2.textContent=fmt(totalPending); }
 
   document.getElementById('moSale').textContent = fmt(mo.sale);
   document.getElementById('moProfitNoInv').textContent = fmt(mo.profitInclNet);
@@ -7436,44 +7472,8 @@ window.drMonthWhatsApp = function(name, ym){
   sendWhatsAppMessage(phone, msg);
 };
 
-/* ---------- Doctor Margin page: search box → list of investment doctors → month list ---------- */
-var dmSelected = null;
-function dmDoctorNames(){
-  const seen = {};
-  investments.forEach(i=>{ const k = invKey(i.doctor); if(k && !seen[k]) seen[k] = (i.doctor||'').trim(); });
-  return Object.keys(seen).map(k=>seen[k]).sort((a,b)=>a.localeCompare(b));
-}
-function dmRenderList(){
-  const box = document.getElementById('dmList'), inp = document.getElementById('dmSearch');
-  let q = inp.value.trim().toLowerCase();
-  if(dmSelected && q===dmSelected.toLowerCase()) q = '';
-  const names = dmDoctorNames().filter(n=>!q || n.toLowerCase().includes(q));
-  box.innerHTML = names.length
-    ? names.map(n=>`<div class="chemist-suggestion-item" data-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`).join('')
-    : '<div class="chemist-suggestion-empty">No doctor with an investment found</div>';
-  box.style.display = 'block';
-}
-function renderDrMargin(){
-  const inp = document.getElementById('dmSearch'); if(!inp) return;
-  if(document.activeElement!==inp) inp.value = dmSelected || '';
-  document.getElementById('dmBody').innerHTML = dmSelected
-    ? drMonthlyPanelHtml(dmSelected)
-    : '<div class="empty"><h3>Select a doctor</h3><p>Tap the search box and choose a doctor to see the month-wise list.</p></div>';
-}
-(function(){
-  const inp = document.getElementById('dmSearch'), box = document.getElementById('dmList');
-  if(!inp) return;
-  inp.addEventListener('focus', dmRenderList);
-  inp.addEventListener('click', dmRenderList);
-  inp.addEventListener('input', dmRenderList);
-  box.addEventListener('click', e=>{
-    const it = e.target.closest('.chemist-suggestion-item'); if(!it) return;
-    dmSelected = it.dataset.name; drOpenMonth = null;
-    inp.value = dmSelected; box.style.display = 'none'; inp.blur();
-    renderDrMargin();
-  });
-  document.addEventListener('click', e=>{ if(!e.target.closest('#dmPicker')) box.style.display = 'none'; });
-})();
+/* Doctor Margin now lives inside Dr Investment → open a doctor → "Monthly margin" tab */
+function renderDrMargin(){ renderInvestments(); }
 
 async function shareDrStatementPdf(name, ym){
   toast('Preparing PDF…');
@@ -8227,6 +8227,7 @@ document.getElementById('btnAddDr').addEventListener('click', async ()=>{
 const INV_TARGET_MULT = 4;
 let invDraftLinks = [];      // chemist/product links being built in the "New investment" form
 let selectedInvDoctor = null; // lower-cased doctor name whose tabs are open below the table
+let selectedInvTab = 'inv'; // 'inv' (investments) or 'margin' (month-wise share)
 let selectedInvMode = 'view'; // 'view' (read-only summary + bill list) or 'edit' (chemist/product linker)
 let invLastFocus = null;      // "ctx|kind|idx" — search box to refocus after a re-render
 
@@ -8483,15 +8484,12 @@ function renderInvestments(){
 
   document.getElementById('drInvSummaryEmpty').style.display = list.length ? 'none' : 'block';
   document.getElementById('drInvSummaryBody').innerHTML = list.map(d=>`
-    <tr class="${d.key===selectedInvDoctor?'sel':''}">
-      <td>${escapeHtml(d.name)}</td>
+    <tr class="inv-row ${d.key===selectedInvDoctor?'sel':''}" data-invact="select-doc" data-key="${escapeHtml(d.key)}">
+      <td><b>${escapeHtml(d.name)}</b></td>
       <td class="num">${fmt(d.invested)}</td>
       <td class="num" style="color:var(--primary);">${fmt(d.completed)}</td>
       <td class="num" style="${d.pending>0?'color:var(--danger);':''}">${fmt(d.pending)}</td>
-      <td><div class="inv-actions-cell">
-        <button type="button" class="inv-view-btn ${d.key===selectedInvDoctor && selectedInvMode==='view' ? 'active' : ''}" data-invact="select-doc-view" data-key="${escapeHtml(d.key)}">View</button>
-        <button type="button" class="inv-edit-btn ${d.key===selectedInvDoctor && selectedInvMode==='edit' ? 'active' : ''}" data-invact="select-doc-edit" data-key="${escapeHtml(d.key)}">Edit</button>
-      </div></td>
+      <td class="inv-chev">${d.key===selectedInvDoctor?'▾':'›'}</td>
     </tr>`).join('');
 
   const sel = list.find(d=>d.key===selectedInvDoctor);
@@ -8513,12 +8511,20 @@ function renderInvestments(){
       if(drInfo.phone) meta.push(`<span class="dr-meta"><b>Phone:</b> ${escapeHtml(drInfo.phone)}</span>`);
     }
     const cycleHtmlFn = selectedInvMode==='edit' ? invCycleEditHtml : invCycleViewHtml;
+    const tab = selectedInvTab;
     content.innerHTML = `
       <div class="dr-card-head" style="justify-content:space-between;align-items:center;">
         <div style="display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;"><h3>${escapeHtml(sel.name)}</h3>${meta.join('')}</div>
         <button class="sm primary" data-invact="new-for-doc" data-name="${escapeHtml(sel.name)}">+ New investment</button>
       </div>
-      ${sel.cycles.map(cycleHtmlFn).join('')}`;
+      <div class="inv-tabs-row">
+        <div class="inv-tabs">
+          <button type="button" class="${tab==='inv'?'active':''}" data-invact="tab-inv">Investment</button>
+          <button type="button" class="${tab==='margin'?'active':''}" data-invact="tab-margin">Monthly margin</button>
+        </div>
+        ${tab==='inv' ? `<button type="button" class="sm ghost" data-invact="toggle-edit">${selectedInvMode==='edit' ? 'Done' : 'Edit'}</button>` : ''}
+      </div>
+      ${tab==='margin' ? drMonthlyPanelHtml(sel.name) : sel.cycles.map(cycleHtmlFn).join('')}`;
   }
   invRefocus();
 }
@@ -8580,7 +8586,7 @@ document.getElementById('btnAddInvestment').addEventListener('click', async ()=>
   investments.push({ id:uid(), date, saleFrom, doctor, amount, invType, chemists:links.map(l=>l.chemist), links, note });
   await saveInvestments();
   selectedInvDoctor = invKey(doctor);
-  selectedInvMode = 'edit';
+  selectedInvMode = 'edit'; selectedInvTab = 'inv';
   closeInvForm();
   renderInvestments();
   document.getElementById('invDetailCol').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -8672,18 +8678,18 @@ document.addEventListener('click', async e=>{
     return;
   }
   const act = el.dataset.invact, ctx = el.dataset.ctx;
-  if(act==='select-doc-view'){
-    const same = selectedInvDoctor===el.dataset.key && selectedInvMode==='view';
+  if(act==='select-doc'){
+    const same = selectedInvDoctor===el.dataset.key;
     selectedInvDoctor = same ? null : el.dataset.key;
-    selectedInvMode = 'view';
+    selectedInvTab = 'inv'; selectedInvMode = 'view';
     renderInvestments();
     if(!same) document.getElementById('invDetailCol').scrollIntoView({ behavior:'smooth', block:'start' });
-  } else if(act==='select-doc-edit'){
-    const same = selectedInvDoctor===el.dataset.key && selectedInvMode==='edit';
-    selectedInvDoctor = same ? null : el.dataset.key;
-    selectedInvMode = 'edit';
-    renderInvestments();
-    if(!same) document.getElementById('invDetailCol').scrollIntoView({ behavior:'smooth', block:'start' });
+  } else if(act==='tab-inv'){
+    selectedInvTab = 'inv'; renderInvestments();
+  } else if(act==='tab-margin'){
+    selectedInvTab = 'margin'; renderInvestments();
+  } else if(act==='toggle-edit'){
+    selectedInvMode = selectedInvMode==='edit' ? 'view' : 'edit'; renderInvestments();
   } else if(act==='new-for-doc'){
     openInvForm(el.dataset.name);
   } else if(act==='pick'){
