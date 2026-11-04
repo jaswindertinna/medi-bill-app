@@ -503,10 +503,10 @@
   .pc-phone{margin-left:0 !important;margin-top:2px;}
   .pc-top{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:28px;row-gap:2px;}
   .pc-addr{font-size:11px;color:var(--muted);line-height:1.35;word-break:break-word;}
-  .pc-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1.9fr;align-items:stretch;}
+  .pc-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 2.7fr;align-items:stretch;}
   body.hide-profit .pc-grid{grid-template-columns:1.3fr 1fr 1fr 1fr;}
   .pc-cpbox{margin:0 !important;display:block !important;font-size:inherit;font-weight:inherit;}
-  .pc-cpbox .pc-cpwrap{display:flex;align-items:center;gap:18px;border:1px solid var(--border);border-radius:8px;padding:4px 10px;background:rgba(0,0,0,.02);}
+  .pc-cpbox .pc-cpwrap{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:8px;padding:4px 10px;background:rgba(0,0,0,.02);}
   .pc-cpbox .pc-cpcol{flex:1;min-width:0;}
   .pc-cpbox .eye{flex-shrink:0;background:none;border:1px solid var(--border);border-radius:6px;padding:2px 7px;cursor:pointer;line-height:1;}
   .pc-info{padding:2px 10px 2px 0;min-width:0;display:flex;flex-direction:column;justify-content:center;}
@@ -1012,6 +1012,20 @@
   .inv-tabs{display:inline-flex;gap:4px;padding:3px;border-radius:999px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.9);}
   .inv-tabs button{border:none;box-shadow:none;background:transparent;padding:7px 16px;font-size:12.5px;font-weight:600;color:var(--muted);}
   .inv-tabs button.active{background:#fff;color:var(--primary-dark);box-shadow:0 2px 8px rgba(15,107,92,.18);}
+
+  /* Dr & Chemist List (merged) */
+  .list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px;}
+  .list-toolbar input{width:220px;max-width:100%;}
+  .list-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .badge-inv{display:inline-block;font-size:10px;font-weight:700;color:var(--primary-dark);background:var(--primary-light);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:middle;}
+
+  /* Avg month profit */
+  .avg-strip{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px;padding:12px;border-bottom:1px solid var(--border);}
+  .avg-lbl{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+  .avg-val{font-size:20px;font-weight:800;color:var(--primary-dark);line-height:1.2;}
+  .avg-sub{font-size:11px;color:var(--muted);}
+  .avg-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .avg-chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--primary-light);color:var(--primary-dark);}
 </style>
 </head>
 <body class="hide-profit">
@@ -1175,8 +1189,7 @@
     </div>
     <div class="nav-submenu" id="submenu-list">
       <div class="sec-heading">List</div>
-      <div class="nav-item" data-view="drlist"><span class="nav-dot"></span>Dr List</div>
-      <div class="nav-item" data-view="chemistlist"><span class="nav-dot"></span>Chemist List</div>
+      <div class="nav-item" data-view="drlist"><span class="nav-dot"></span>Dr &amp; Chemist List</div>
       <div class="nav-item" data-view="reminder"><span class="nav-dot"></span>Reminder</div>
     </div>
     <div class="nav-submenu" id="submenu-notes">
@@ -1871,9 +1884,23 @@
 
     <!-- DR LIST -->
     <div class="view" id="view-drlist">
-      <div class="page-head"><div><h2 id="drListFormTitle">Dr List</h2><p>Add the doctors you work with. They'll then be selectable under Dr Investment.</p></div></div>
-      <div class="panel">
-        <div class="row c3">
+      <div class="page-head">
+        <div><h2>Dr &amp; Chemist List</h2><p>Your doctors and chemists in one place.</p></div>
+        <button class="primary" id="btnListAdd" type="button">+ Add doctor</button>
+      </div>
+      <div class="list-toolbar">
+        <div class="inv-tabs">
+          <button type="button" id="listTabDr" class="active">Doctors</button>
+          <button type="button" id="listTabChem">Chemists</button>
+        </div>
+        <input id="listSearch" placeholder="Search name, city…">
+      </div>
+
+      <!-- DOCTORS -->
+      <div id="listPaneDr">
+        <div class="panel" id="drFormPanel" style="display:none;">
+          <h3 id="drListFormTitle" style="margin-top:0;">Add doctor</h3>
+          <div class="row c3">
           <div class="field"><label>Doctor name *</label><input id="drfName" placeholder="e.g. Dr. Sharma"></div>
           <div class="field"><label>Type</label><input id="drfType" placeholder="e.g. Cardiologist, MD"></div>
           <div class="field"><label>City</label><input id="drfCity" list="drfCityList" placeholder="City" autocomplete="off"><datalist id="drfCityList"></datalist></div>
@@ -1898,35 +1925,29 @@
             <div id="drKnownLocations" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
           </div>
         </div>
-        <div class="row" style="gap:8px;">
-          <button class="primary" id="btnAddDr">+ Add doctor</button>
-          <button class="ghost" id="btnCancelDrEdit" style="display:none;">Cancel edit</button>
+          <div class="row" style="gap:8px;">
+            <button class="primary" id="btnAddDr">+ Add doctor</button>
+            <button class="ghost" id="btnCancelDrEdit">Cancel</button>
+          </div>
+        </div>
+        <div class="panel" style="padding:0;overflow-x:auto;">
+          <table>
+            <thead><tr><th>Doctor</th><th>City</th><th>Phone</th><th></th></tr></thead>
+            <tbody id="drListTableBody"></tbody>
+          </table>
+          <div class="empty" id="drListEmpty" style="display:none;"><h3>No doctors yet</h3><p>Tap "+ Add doctor" to add the first one.</p></div>
         </div>
       </div>
-      <div class="panel" style="padding:0;overflow-x:auto;">
-        <table>
-          <thead><tr><th>Doctor</th><th>Type</th><th>City</th><th>Location</th><th>Phone</th><th>DOB</th><th>DOM</th><th></th></tr></thead>
-          <tbody id="drListTableBody"></tbody>
-        </table>
-        <div class="empty" id="drListEmpty" style="display:none;"><h3>No doctors yet</h3><p>Add a doctor above to get started.</p></div>
-      </div>
-    </div>
 
-    <!-- CHEMIST LIST -->
-    <div class="view" id="view-chemistlist">
-      <div class="page-head">
-        <div><h2>Chemist list</h2><p>Parties tagged as Medical Store on the Party form.</p></div>
-        <div class="top-actions">
-          <input style="width:200px" id="chemistListSearch" placeholder="Search name, city...">
-          <button class="primary" id="btnAddChemist" type="button">+ Add chemist</button>
+      <!-- CHEMISTS -->
+      <div id="listPaneChem" style="display:none;">
+        <div class="panel" style="padding:0;overflow-x:auto;">
+          <table>
+            <thead><tr><th>Chemist</th><th>City</th><th>Phone</th><th class="num">Pending ₹</th><th class="num">Avg month profit ₹</th><th></th></tr></thead>
+            <tbody id="chemistListTableBody"></tbody>
+          </table>
+          <div class="empty" id="chemistListEmpty" style="display:none;"><h3>No chemists yet</h3><p>Tap "+ Add chemist" to add the first one.</p></div>
         </div>
-      </div>
-      <div class="panel" style="padding:0;overflow-x:auto;">
-        <table>
-          <thead><tr><th>Party name</th><th>Phone</th><th>City</th><th>Location</th><th>DL No. A/B</th><th>GST No.</th><th class="num">Pending ₹</th><th style="text-align:center;">Under Inv</th><th></th></tr></thead>
-          <tbody id="chemistListTableBody"></tbody>
-        </table>
-        <div class="empty" id="chemistListEmpty" style="display:none;"><h3>No chemists yet</h3><p>Tag a party as Medical Store on the Party form, or add one here.</p></div>
       </div>
     </div>
 
@@ -3646,8 +3667,7 @@ const MOBILE_MENU = [
       { label:'Business Plan', view:'businessplan' },
   ]},
   { label:'List', children:[
-      { label:'Dr List', view:'drlist' },
-      { label:'Chemist List', view:'chemistlist' },
+      { label:'Dr & Chemist List', view:'drlist' },
       { label:'Reminder', view:'reminder' },
   ]},
   { label:'Notes', children:[
@@ -4067,6 +4087,7 @@ function openNavGroupForView(name){
 }
 function showView(name){
   if(name==='partylist') name='payments';   /* History is now part of Bill Ledger */
+  if(name==='chemistlist'){ name='drlist'; setListTab('chem'); }   /* Chemist List now lives inside Dr & Chemist List */
   applyProfitVisibility();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
@@ -4096,8 +4117,7 @@ function showView(name){
   if(name==='notes'){ renderNotes(); }
   if(name==='completednotes'){ renderCompletedNotes(); }
   if(name==='account'){ renderAccount(); }
-  if(name==='drlist'){ renderDrList(); }
-  if(name==='chemistlist'){ renderChemistList(); }
+  if(name==='drlist'){ renderListPage(); }
   if(name==='reminder'){ remEnter(); }
   if(name==='partylist'){ renderSidebarPartyListForList(); renderPartyListDetail(); }
   if(name==='investment'){ populateInvestmentSelects(); renderInvestments(); }
@@ -6517,6 +6537,7 @@ document.getElementById('pfType').addEventListener('change', updatePfUnderInvVis
 /* New Bill's + Add doctor / + Add chemist just open the real list pages, where new ones are added */
 document.getElementById('btnQuickAddDoctor').addEventListener('click', ()=>{
   resetDrForm();
+  setListTab('dr'); showDrForm(true);
   showView('drlist');
   setTimeout(()=>{ const f=document.getElementById('drfName'); if(f) f.focus(); }, 50);
 });
@@ -6577,11 +6598,17 @@ document.getElementById('btnSaveParty').addEventListener('click', async ()=>{
   showView(partyFormReturnView);
   if(partyFormReturnView==='newbill'){ try{ repriceCartForParty(); }catch(e){} }
 });
-document.getElementById('btnAddChemist').addEventListener('click', ()=>openPartyForm(null, 'chemistlist', 'Medical Store'));
+document.getElementById('btnListAdd').addEventListener('click', ()=>{
+  if(listTab==='chem'){ openPartyForm(null, 'chemistlist', 'Medical Store'); return; }
+  resetDrForm(); showDrForm(true);
+  setTimeout(()=>{ const f=document.getElementById('drfName'); if(f) f.focus(); }, 50);
+});
+document.getElementById('listTabDr').addEventListener('click', ()=>setListTab('dr'));
+document.getElementById('listTabChem').addEventListener('click', ()=>setListTab('chem'));
 /* Chemists (parties tagged Medical Store) have their own list below. Doctors live only on the main
    Dr List — they are not added as parties by hand; they show in History once billed. */
 function renderChemistList(){
-  const q = (document.getElementById('chemistListSearch').value||'').trim().toLowerCase();
+  const q = (document.getElementById('listSearch').value||'').trim().toLowerCase();
   const investedNames = getChemistNamesUnderInvestment();
   const rows = getAllPartyRows().filter(r=> r.type==='Medical Store')
     .filter(r=> !q || r.name.toLowerCase().includes(q) || r.city.toLowerCase().includes(q) || r.location.toLowerCase().includes(q));
@@ -6589,21 +6616,19 @@ function renderChemistList(){
   document.getElementById('chemistListEmpty').style.display = rows.length ? 'none' : 'block';
   body.innerHTML = rows.map(r=>{
     const underInv = r.underInv || investedNames.has(r.name.trim().toLowerCase());
+    const av = partyAvgMonthProfit(r.name);
     return `
     <tr>
-      <td><b>${r.name}</b></td>
-      <td>${r.phone || '—'}</td>
+      <td><b>${r.name}</b>${underInv ? '<span class="badge-inv" title="Under investment">Inv</span>' : ''}${r.location ? `<div class="list-sub">${r.location}</div>` : ''}</td>
       <td>${r.city || '—'}</td>
-      <td>${r.location || '—'}</td>
-      <td style="font-size:12px;">${r.dlA || '—'}${r.dlB ? (' / '+r.dlB) : ''}</td>
-      <td style="font-size:12px;">${r.gstNo || '—'}</td>
+      <td>${r.phone || '—'}</td>
       <td class="num" style="${r.pending>0?'color:var(--danger);font-weight:600;':''}">${fmt(r.pending)}</td>
-      <td style="text-align:center;" title="${underInv ? 'Under investment — linked to a Dr Investment entry and/or ticked manually on the party form' : 'Not under investment'}">${underInv ? '<span style="color:var(--primary-dark);font-weight:700;">✓</span>' : '—'}</td>
+      <td class="num" title="${av.months ? 'Average over '+av.months+' calendar month(s) since '+drMonthLabel(av.since) : 'No business yet'}">${av.months ? fmt(av.avg) : '—'}</td>
       <td><button class="sm ghost" onclick="openPartyForm('${r.name.replace(/'/g,"\\'")}','chemistlist')">Edit</button></td>
     </tr>`;
   }).join('');
 }
-document.getElementById('chemistListSearch').addEventListener('input', renderChemistList);
+document.getElementById('listSearch').addEventListener('input', ()=>{ renderDrList(); renderChemistList(); });
 /* History (under Billing > Bill) — everyone who has been billed at least once. Bills can only go to
    Dr List / Chemist List entries, so a doctor or chemist appears here automatically after their
    first bill. Works like Ledger: a searchable list in the green sidebar (desktop) / mobile menu,
@@ -6972,6 +6997,8 @@ function renderLedgerPartyCard(){
     }
   });
   { const rt = sumReturns(r=>(r.party||'').trim().toLowerCase()===pKey); pCost -= rt.cost; pProfit -= rt.inclGst; }
+  const pAvg = partyAvgMonthProfit(selectedLedgerParty);
+  const pInv = chemistInvProfit(selectedLedgerParty);   /* only when this chemist is linked to a doctor */
   const addrParts = [];
   [rec.address, (d&&d.location)||rec.location, (d&&d.city)||rec.city].forEach(v=>{
     v = String(v||'').trim();
@@ -6987,6 +7014,8 @@ function renderLedgerPartyCard(){
         <div class="pc-cpwrap">
           <div class="pc-cpcol"><div class="pc-lbl">Cost</div><div class="pc-val"><span class="v" data-v="${fmt(pCost)}">••••</span></div></div>
           <div class="pc-cpcol"><div class="pc-lbl">Profit</div><div class="pc-val"><span class="v" data-v="${fmt(pProfit)}" style="color:${pProfit<0?'var(--danger)':'var(--primary-dark)'};">••••</span></div></div>
+          ${pInv ? `<div class="pc-cpcol" title="Profit on products linked to Dr ${esc(pInv.doctors.join(', '))}"><div class="pc-lbl">Inv Profit</div><div class="pc-val"><span class="v" data-v="${fmt(pInv.profit)}" style="color:${pInv.profit<0?'var(--danger)':'var(--primary-dark)'};">••••</span></div></div>` : ''}
+          <div class="pc-cpcol" title="${pAvg.months ? 'Over '+pAvg.months+' calendar months since '+drMonthLabel(pAvg.since) : 'No business yet'}"><div class="pc-lbl">Avg / month</div><div class="pc-val"><span class="v" data-v="${pAvg.months ? fmt(pAvg.avg) : '—'}" style="color:${pAvg.avg<0?'var(--danger)':'var(--primary-dark)'};">••••</span></div></div>
           <button type="button" class="eye" title="Show / hide cost &amp; profit" onclick="event.stopPropagation();blToggleCP(this)">${BL_EYE_SHUT}</button>
         </div>
       </div>
@@ -7391,6 +7420,56 @@ function drMonthsFor(name){
   returns.forEach(r=>{ const l = links[invKey(r.party)]; if(l) (r.items||[]).forEach(it=>note(r.date, it, l)); });
   return [...set].sort().reverse();
 }
+/* Average month profit = total profit ÷ EVERY calendar month from the first month with business up to this month
+   (months with no business count as zero). Works for any party — chemist, doctor, etc. */
+function calMonthsSince(ym){
+  const [Y,M] = String(ym).split('-').map(Number), n = new Date();
+  return Math.max(1, (n.getFullYear()-Y)*12 + (n.getMonth()+1-M) + 1);
+}
+function partyAvgMonthProfit(name){
+  const k = invKey(name), m = {};
+  const ymOf = d => { const x = new Date(d); return isNaN(x) ? null : x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'); };
+  bills.forEach(b=>{ if(invKey(b.customerName)!==k) return; const ym = ymOf(b.date); if(!ym) return; m[ym] = (m[ym]||0) + (computeProfit(b).inclGst||0); });
+  returns.forEach(r=>{ if(invKey(r.party)!==k) return; const ym = ymOf(r.date); if(!ym) return; m[ym] = (m[ym]||0) - (computeReturnTotals(r).inclGst||0); });
+  const ks = Object.keys(m).sort(); if(!ks.length) return { avg:0, months:0, total:0 };
+  const total = ks.reduce((t,x)=>t+m[x],0), months = calMonthsSince(ks[0]);
+  return { avg: total/months, months, total, since: ks[0] };
+}
+/* Profit on the part of a chemist's business that is under a doctor's investment (same method as the doctor's
+   Monthly margin: only the products linked to the doctor, bills less returns). null → chemist isn't linked to any doctor. */
+function chemistInvProfit(chemistName){
+  const ck = invKey(chemistName); if(!ck) return null;
+  const docs = [], seen = new Set();
+  investments.forEach(i=>{ const dk = invKey(i.doctor); if(dk && !seen.has(dk)){ seen.add(dk); docs.push(String(i.doctor).trim()); } });
+  const merged = { all:false, want:new Set() }, doctors = [];
+  docs.forEach(dn=>{
+    const l = drStmtLinks(dn)[ck]; if(!l) return;
+    doctors.push(dn);
+    if(l.all) merged.all = true; l.want.forEach(x=>merged.want.add(x));
+  });
+  if(!doctors.length) return null;
+  const take = it => merged.all || merged.want.has(invKey(it.name));
+  let profit = 0;
+  bills.forEach(b=>{
+    if(invKey(b.customerName)!==ck) return;
+    (b.items||[]).forEach(it=>{
+      if(!take(it)) return;
+      let net = itemProfit(it, findMedByName(it.name)).inclGst;
+      if(net==null) net = itemSaleAmounts(it).saleIncl;
+      profit += net;
+    });
+  });
+  returns.forEach(r=>{
+    if(invKey(r.party)!==ck) return;
+    (r.items||[]).forEach(it=>{
+      if(!take(it)) return;
+      const f = retItemFigures(it);
+      let net = f.inclGst; if(net==null) net = f.saleIncl;
+      profit -= net;
+    });
+  });
+  return { profit, doctors };
+}
 function drMonthNumbers(name, ym){
   const data = buildDrStatementData(name, ym);
   const net = data.rows.reduce((t,r)=>t+r.net,0);
@@ -7401,8 +7480,13 @@ function drMonthlyPanelHtml(name){
   const months = drMonthsFor(name);
   const pct = drSharePct(name);
   const key = invKey(name);
+  let totNet = 0, totShare = 0;
+  const chemTot = {};
+  const calM = months.length ? calMonthsSince(months[months.length-1]) : 1;   /* months come newest-first */
   const rows = months.map(ym=>{
     const n = drMonthNumbers(name, ym);
+    totNet += n.net; totShare += n.share;
+    n.data.rows.forEach(r=>{ const o = chemTot[r.chemist] || (chemTot[r.chemist] = { total:0, first:ym }); o.total += r.net; if(ym < o.first) o.first = ym; });
     const paid = drPaidInfo(name, ym);
     const open = drOpenMonth === key+'|'+ym;
     const status = paid
@@ -7415,8 +7499,9 @@ function drMonthlyPanelHtml(name){
         <td style="font-weight:700;">${drMonthLabel(ym)}</td>
         <td class="num">${fmt(n.net)}</td>
         <td class="num">${fmt(n.share)}</td>
+        <td class="num" style="font-weight:600;">${fmt(n.net - n.share)}</td>
         <td>${status}${extra}</td></tr>
-      ${open ? `<tr><td colspan="4" style="background:#fafcfb;">
+      ${open ? `<tr><td colspan="5" style="background:#fafcfb;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">
           <button class="sm ghost" style="border:1px solid var(--primary);background:#fff;color:var(--primary-dark);padding:6px 14px;border-radius:8px;font-weight:600;cursor:pointer;" onclick="drMonthView(this.dataset.name,this.dataset.ym)" ${attrs}>View</button>
           ${paid ? `<button class="sm ghost" disabled style="opacity:.8;border:1px solid var(--primary);background:#fff;color:var(--primary-dark);padding:6px 14px;border-radius:8px;font-weight:600;">Paid ✔ ${new Date(paid.date).toLocaleDateString('en-IN')}</button>`
@@ -7427,14 +7512,19 @@ function drMonthlyPanelHtml(name){
   }).join('');
   return `<div class="panel" style="padding:0;overflow-x:auto;margin:10px 0 14px;">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border);">
-      <b style="margin-right:auto;">Month-wise net sale &amp; doctor share</b>
+      <b style="margin-right:auto;">Month-wise profit, doctor share &amp; what you keep</b>
       <label style="font-size:12px;display:inline-flex;align-items:center;gap:6px;">Share %
         <input type="number" min="0" max="100" step="0.5" value="${pct}" style="width:70px;padding:4px 6px;" data-name="${escapeHtml(name)}" onchange="drSetSharePct(this.dataset.name,this.value)">
       </label>
     </div>
+    ${months.length ? `<div class="avg-strip">
+      <div><div class="avg-lbl">Avg month profit</div><div class="avg-val">${fmt(totNet / calM)}</div><div class="avg-sub">over ${calM} month${calM>1?'s':''} since ${drMonthLabel(months[months.length-1])}</div></div>
+      <div class="avg-chips">${Object.entries(chemTot).sort((a,b)=>a[0].localeCompare(b[0])).map(([c,o])=>`<span class="avg-chip">${escapeHtml(c)} <b>${fmt(o.total / calMonthsSince(o.first))}</b>/mo</span>`).join('')}</div>
+    </div>` : ''}
     <table>
-      <thead><tr><th>Month</th><th class="num">Net sale ₹</th><th class="num">${pct}% share ₹</th><th>Status</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:14px;">No sale yet from the linked chemists &amp; products</td></tr>'}</tbody>
+      <thead><tr><th>Month</th><th class="num">Profit ₹</th><th class="num">Dr ${pct}% ₹</th><th class="num">You keep ₹</th><th>Status</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:14px;">No sale yet from the linked chemists &amp; products</td></tr>'}</tbody>
+      ${rows ? `<tfoot><tr style="font-weight:700;background:var(--primary-light);"><td>Total</td><td class="num">${fmt(totNet)}</td><td class="num">${fmt(totShare)}</td><td class="num">${fmt(totNet - totShare)}</td><td></td></tr></tfoot>` : ''}
     </table>
   </div>`;
 }
@@ -8138,6 +8228,20 @@ window.fillDrLocation = function(loc){
   document.getElementById('drfLocation').value = loc;
 };
 document.getElementById('drfCity').addEventListener('input', updateDrLocationHints);
+var listTab = 'dr';
+function showDrForm(on){
+  const p = document.getElementById('drFormPanel'); if(p) p.style.display = on ? '' : 'none';
+  if(on){ const c = document.getElementById('btnCancelDrEdit'); if(c) c.style.display = 'inline-block'; }
+}
+function setListTab(t){
+  listTab = (t==='chem') ? 'chem' : 'dr';
+  document.getElementById('listTabDr').classList.toggle('active', listTab==='dr');
+  document.getElementById('listTabChem').classList.toggle('active', listTab==='chem');
+  document.getElementById('listPaneDr').style.display = listTab==='dr' ? '' : 'none';
+  document.getElementById('listPaneChem').style.display = listTab==='chem' ? '' : 'none';
+  document.getElementById('btnListAdd').textContent = listTab==='dr' ? '+ Add doctor' : '+ Add chemist';
+}
+function renderListPage(){ setListTab(listTab); renderDrList(); renderChemistList(); }
 function resetDrForm(){
   editingDrId = null;
   document.getElementById('drfName').value='';
@@ -8149,23 +8253,23 @@ function resetDrForm(){
   document.getElementById('drfDom').value='';
   document.getElementById('btnAddDr').textContent='+ Add doctor';
   document.getElementById('btnCancelDrEdit').style.display='none';
-  document.getElementById('drListFormTitle').textContent='Dr List';
+  document.getElementById('drListFormTitle').textContent='Add doctor';
+  showDrForm(false);
   updateDrLocationHints();
 }
 function renderDrList(){
   populateDrListHints();
   const body = document.getElementById('drListTableBody');
-  const list = [...drList].sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+  const q = ((document.getElementById('listSearch')||{}).value||'').trim().toLowerCase();
+  const list = [...drList]
+    .filter(d=> !q || [d.name,d.type,d.city,d.location,d.phone].some(x=>(x||'').toLowerCase().includes(q)))
+    .sort((a,b)=> (a.name||'').localeCompare(b.name||''));
   document.getElementById('drListEmpty').style.display = list.length ? 'none' : 'block';
   body.innerHTML = list.map(d=>`
     <tr>
-      <td><b>${escapeHtml(d.name)}</b></td>
-      <td>${escapeHtml(d.type)||'—'}</td>
-      <td>${escapeHtml(d.city)||'—'}</td>
-      <td>${escapeHtml(d.location)||'—'}</td>
+      <td><b>${escapeHtml(d.name)}</b>${d.type ? `<div class="list-sub">${escapeHtml(d.type)}</div>` : ''}</td>
+      <td>${escapeHtml(d.city)||'—'}${d.location ? `<div class="list-sub">${escapeHtml(d.location)}</div>` : ''}</td>
       <td>${escapeHtml(d.phone)||'—'}</td>
-      <td>${d.dob? new Date(d.dob).toLocaleDateString('en-IN') : '—'}</td>
-      <td>${d.dom? new Date(d.dom).toLocaleDateString('en-IN') : '—'}</td>
       <td>
         <button class="sm ghost" onclick="editDr('${d.id}')">Edit</button>
         <button class="sm danger" onclick="deleteDr('${d.id}')">Delete</button>
@@ -8176,6 +8280,7 @@ window.editDr = function(id){
   const d = drList.find(x=>x.id===id);
   if(!d) return;
   editingDrId = id;
+  setListTab('dr'); showDrForm(true);
   document.getElementById('drfName').value = d.name||'';
   document.getElementById('drfType').value = d.type||'';
   document.getElementById('drfCity').value = d.city||'';
